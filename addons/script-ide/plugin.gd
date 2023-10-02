@@ -210,7 +210,10 @@ func _process(delta: float) -> void:
 	set_process(false)
 	
 func _input(event: InputEvent) -> void:
-	if (popup != null && event.is_action_pressed("ui_text_submit")):
+	if (!filter_txt.has_focus()):
+		return
+	
+	if (event.is_action_pressed("ui_text_submit")):
 		var items: PackedInt32Array = outline.get_selected_items()
 		
 		if (items.is_empty()):
@@ -218,9 +221,6 @@ func _input(event: InputEvent) -> void:
 			
 		var index: int = items[0]
 		scroll_to_index(index)
-	
-	if (!filter_txt.has_focus()):
-		return
 	
 	if (event.is_action_pressed("ui_down", true)):
 		var items: PackedInt32Array = outline.get_selected_items()
@@ -242,7 +242,7 @@ func _input(event: InputEvent) -> void:
 	elif (event.is_action_pressed("ui_up", true)):
 		var items: PackedInt32Array = outline.get_selected_items()
 		
-		var index: int 
+		var index: int
 		if (items.is_empty()):
 			index = outline.item_count
 		else:
@@ -539,7 +539,7 @@ func on_tab_hovered(idx: int):
 	last_tab_hovered = idx
 
 func on_tab_bar_gui_input(event: InputEvent):
-	if last_tab_hovered == -1: 
+	if last_tab_hovered == -1:
 		return
 		
 	if event is InputEventMouseMotion:
