@@ -2,6 +2,7 @@
 extends EditorPlugin
 
 const OUTLINE_POPUP_TRIGGER: Key = KeyModifierMask.KEY_MASK_CTRL + Key.KEY_O
+const OUTLINE_POPUP_TRIGGER_ALT: Key = KeyModifierMask.KEY_MASK_META + Key.KEY_O
 const POPUP_SCRIPT: GDScript = preload("res://addons/script-ide/Popup.gd")
 
 const keywords: Dictionary = {
@@ -203,7 +204,6 @@ func _exit_tree() -> void:
 		
 	if (popup):
 		popup.hide()
-		popup = null
 		
 func _process(delta: float) -> void:
 	update_editor()
@@ -257,7 +257,10 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 	
 func _unhandled_key_input(event: InputEvent) -> void:
-	if (event is InputEventKey && event.get_keycode_with_modifiers() == OUTLINE_POPUP_TRIGGER):
+	if !(event is InputEventKey):
+		return
+	
+	if (event.get_keycode_with_modifiers() == OUTLINE_POPUP_TRIGGER || event.get_keycode_with_modifiers() == OUTLINE_POPUP_TRIGGER_ALT):
 		var button_flags: Array[bool] = []
 		for child in filter_box.get_children():
 			var btn: Button = child
