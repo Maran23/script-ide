@@ -149,6 +149,7 @@ func _enter_tree() -> void:
 	register_virtual_methods("Object")
 	for subcls in ClassDB.get_inheriters_from_class("Object"):
 		register_virtual_methods(subcls)
+	keywords["_static_init"]=0
 
 func _exit_tree() -> void:
 	var file_system: EditorFileSystem = get_editor_interface().get_resource_filesystem()
