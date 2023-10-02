@@ -267,6 +267,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			button_flags.append(btn.button_pressed)
 			
 			btn.button_pressed = true
+	
+		var old_text: String = filter_txt.text
+		filter_txt.text = ""
 		
 		update_outline()
 
@@ -279,7 +282,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		popup.popup_hide.connect(func():
 			outline_container.reparent(split_container)
 			
-			filter_txt.text = ""
+			filter_txt.text = old_text
 			
 			var index: int = 0
 			for flag in button_flags:
@@ -308,7 +311,6 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		
 		popup.popup_exclusive_on_parent(script_editor, Rect2i(position, size))
 		
-		filter_txt.text = ""
 		filter_txt.grab_focus()
 	
 func scroll_to_index(selected_idx: int):
