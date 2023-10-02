@@ -517,7 +517,7 @@ func add_to_outline_ext(items: Array[String], icon_callable: Callable, type: Str
 	for item in items:
 		if (text.is_empty() || text.is_subsequence_ofn(item)):
 			var icon: Texture2D = icon_callable.call(item)
-			outline.add_item(item, icon, false)
+			outline.add_item(item, icon, true)
 			
 			var dict: Dictionary = {
 				"type": type,
