@@ -289,13 +289,24 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			
 			update_outline()
 			
-			script_editor.remove_child(popup)
+			popup.queue_free()
 			popup = null
 		)
 		
-		script_editor.add_child(popup)
+		var window_rect: Rect2
+		if (script_editor.get_parent().get_parent() is Window):
+			# Popup mode
+			var window: Window = script_editor.get_parent().get_parent()
+			window_rect = window.get_visible_rect()
+		else:
+			window_rect = get_editor_interface().get_base_control().get_rect()
 		
-		popup.popup_centered(Vector2(400, 600))
+		var size: Vector2i = Vector2i(400, 550)
+		var x: int = window_rect.size.x / 2 - size.x / 2
+		var y: int = window_rect.size.y / 2 - size.y / 2
+		var position: Vector2i = Vector2i(x, y)
+		
+		popup.popup_exclusive_on_parent(script_editor, Rect2i(position, size))
 		
 		filter_txt.text = ""
 		filter_txt.grab_focus()
