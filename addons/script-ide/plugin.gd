@@ -382,7 +382,6 @@ func create_filter_btn(icon: Texture2D, title: String) -> Button:
 func attach_script_listener(script: Script):
 	if (old_script_editor_base != null):
 		old_script_editor_base.edited_script_changed.disconnect(update_outline)
-		#old_script_editor_base.request_open_script_at_line.disconnect(update_outline)
 	
 	var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
 	var script_editor_base: ScriptEditorBase = script_editor.get_current_editor()
@@ -390,7 +389,6 @@ func attach_script_listener(script: Script):
 	if (script_editor_base != null):
 		# Update the outline as Godot will do internally first
 		script_editor_base.edited_script_changed.connect(update_outline)
-		#script_editor_base.request_open_script_at_line.connect(update_outline.unbind(2))
 		
 		old_script_editor_base = script_editor_base
 		
@@ -570,11 +568,7 @@ func on_active_tab_rearranged(idx_to: int):
 
 func on_tab_selected(tab_idx: int):
 	last_tab_selected = tab_idx
-	
-	var path: String = get_res_path(tab_idx)
-	filter_box.visible = path != ''
-	outline.visible = path != ''
-	
+
 	var item_idx: int = find_list_item_idx_by_tab_idx(tab_idx)
 	if (item_idx == -1):
 		return
@@ -582,6 +576,11 @@ func on_tab_selected(tab_idx: int):
 	if (!scripts_item_list.is_selected(item_idx)):
 		scripts_item_list.select(item_idx)
 		scripts_item_list.item_selected.emit(item_idx)
+		
+		var path: String = get_res_path(tab_idx)
+		var is_gd_script: bool = path != '' && path.ends_with(".gd")
+		filter_box.visible = is_gd_script
+		outline.visible = is_gd_script
 
 func on_tab_rmb(tab_idx: int):
 	simulate_item_clicked(tab_idx, MOUSE_BUTTON_RIGHT)
