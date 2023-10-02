@@ -5,29 +5,7 @@ const OUTLINE_POPUP_TRIGGER: Key = KeyModifierMask.KEY_MASK_CTRL + Key.KEY_O
 const OUTLINE_POPUP_TRIGGER_ALT: Key = KeyModifierMask.KEY_MASK_META + Key.KEY_O
 const POPUP_SCRIPT: GDScript = preload("res://addons/script-ide/Popup.gd")
 
-const keywords: Dictionary = {
-	"_ready": 0,
-	"_process": 0,
-	"_physics_process": 0,
-	"_init": 0,
-	"_enter_tree": 0,
-	"_exit_tree": 0,
-	"_unhandled_input": 0,
-	"_input": 0,
-	"_unhandled_key_input": 0,
-	"_draw": 0,
-	"_notification": 0,
-	"_to_string": 0,
-	"_get": 0,
-	"_get_property_list": 0,
-	"_set": 0,
-	"_property_can_revert": 0,
-	"_property_get_revert": 0,
-	"_gui_input": 0,
-	"_get_drag_data": 0,
-	"_drop_data": 0,
-	"_can_drop_data": 0
-}
+static var keywords: Dictionary = {}
 
 const keyword_icon: Texture2D = preload("res://addons/script-ide/icon/keyword.png")
 const func_icon: Texture2D = preload("res://addons/script-ide/icon/func.png")
@@ -71,6 +49,12 @@ var last_tab_hovered: int = -1
 
 var outline_container: Node
 var popup: PopupPanel
+
+static func register_virtual_methods(cls: String)->void:
+	for method in ClassDB.class_get_method_list(cls):
+		if method.flags & METHOD_FLAG_VIRTUAL > 0:
+			keywords[method.name]=0
+	
 
 func _enter_tree() -> void:
 	# Update on save
@@ -162,6 +146,9 @@ func _enter_tree() -> void:
 		scripts_item_list.get_parent().visible = false
 			
 	attach_script_listener(script_editor.get_current_script())
+	register_virtual_methods("Object")
+	for subcls in ClassDB.get_inheriters_from_class("Object"):
+		register_virtual_methods(subcls)
 
 func _exit_tree() -> void:
 	var file_system: EditorFileSystem = get_editor_interface().get_resource_filesystem()
