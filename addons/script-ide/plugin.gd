@@ -39,6 +39,8 @@ const signal_icon: Texture2D = preload("res://addons/script-ide/icon/signal.png"
 const constant_icon: Texture2D = preload("res://addons/script-ide/icon/constant.png")
 const class_icon: Texture2D = preload("res://addons/script-ide/icon/class.png")
 
+static var static_var_regex:=RegEx.create_from_string("(?m)^static\\s+var\\s+([\\d\\w_]+)")
+
 # Existing controls
 var outline_parent: Node
 var scripts_tab_container: TabContainer
@@ -447,6 +449,12 @@ func update_outline_cache():
 		else:
 			outline_cache.funcs.append(func_name)
 	
+	# Static variables
+	if script.has_source_code():
+		var a := static_var_regex.search_all(script.source_code)
+		for m in a:
+			outline_cache.properties.append(m.get_string(1))
+
 	# Properties / Exports
 	for dict in script.get_script_property_list():
 		var property: String = dict["name"]
