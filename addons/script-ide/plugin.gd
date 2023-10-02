@@ -84,7 +84,7 @@ func _enter_tree() -> void:
 	# Change the layout of the split container so it looks like any modern IDE
 	# Improve the outline
 	split_container = find_or_null(script_editor.find_children("*", "HSplitContainer", true, false))
-	if (split_container):
+	if (split_container != null):
 		# Move outline container to the right
 		outline_container = split_container.get_child(0)
 		split_container.move_child(outline_container, 1)
@@ -135,21 +135,16 @@ func _enter_tree() -> void:
 		sort_btn = find_or_null(outline_container.find_children("*", "Button", true, false))
 		sort_btn.pressed.connect(update_outline)
 	
-	# Make script item list invisible
-	scripts_item_list = find_or_null(script_editor.find_children("*", "ItemList", true, false))
-	if (scripts_item_list):
-		scripts_item_list.get_parent().visible = false
-	
 	# Make tab container visible
 	scripts_tab_container = find_or_null(script_editor.find_children("*", "TabContainer", true, false))
-	if (scripts_tab_container):
+	if (scripts_tab_container != null):
 		scripts_tab_bar = get_tab_bar_of(scripts_tab_container)
 		tab_state.save(scripts_tab_container, scripts_tab_bar)
 		
 		scripts_tab_container.tabs_visible = true
 		scripts_tab_container.drag_to_rearrange_enabled = true
 
-		if (scripts_tab_bar):
+		if (scripts_tab_bar != null):
 			scripts_tab_bar.tab_close_display_policy = TabBar.CLOSE_BUTTON_SHOW_ACTIVE_ONLY
 			scripts_tab_bar.select_with_rmb = true
 			scripts_tab_bar.drag_to_rearrange_enabled = true
@@ -160,6 +155,11 @@ func _enter_tree() -> void:
 			scripts_tab_bar.mouse_exited.connect(on_tab_bar_mouse_exited)
 			scripts_tab_bar.active_tab_rearranged.connect(on_active_tab_rearranged)
 			scripts_tab_bar.gui_input.connect(on_tab_bar_gui_input)
+			
+	# Make script item list invisible
+	scripts_item_list = find_or_null(script_editor.find_children("*", "ItemList", true, false))
+	if (scripts_item_list != null):
+		scripts_item_list.get_parent().visible = false
 			
 	attach_script_listener(script_editor.get_current_script())
 
@@ -173,7 +173,7 @@ func _exit_tree() -> void:
 	if (old_script_editor_base):
 		old_script_editor_base.edited_script_changed.disconnect(update_outline)
 	
-	if (split_container):
+	if (split_container != null):
 		if (split_container != outline_container.get_parent()):
 			split_container.add_child(outline_container)
 		split_container.move_child(outline_container, 0)
@@ -187,7 +187,7 @@ func _exit_tree() -> void:
 		outline_parent.add_child(old_outline)
 		outline_parent.remove_child(outline)
 	
-	if (scripts_tab_container):
+	if (scripts_tab_container != null):
 		tab_state.restore(scripts_tab_container, scripts_tab_bar)
 		
 		if (scripts_tab_bar):
@@ -199,10 +199,10 @@ func _exit_tree() -> void:
 			scripts_tab_bar.tab_hovered.disconnect(on_tab_hovered)
 			scripts_tab_bar.active_tab_rearranged.disconnect(on_active_tab_rearranged)
 
-	if (scripts_item_list):
+	if (scripts_item_list != null):
 		scripts_item_list.get_parent().visible = true
 		
-	if (popup):
+	if (popup != null):
 		popup.hide()
 		
 func _process(delta: float) -> void:
@@ -225,7 +225,7 @@ func _input(event: InputEvent) -> void:
 	if (event.is_action_pressed("ui_down", true)):
 		var items: PackedInt32Array = outline.get_selected_items()
 		
-		var index: int 
+		var index: int
 		if (items.is_empty()):
 			index = -1
 		else:
