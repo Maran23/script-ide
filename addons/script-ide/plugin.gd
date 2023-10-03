@@ -50,6 +50,8 @@ var last_tab_hovered: int = -1
 var outline_container: Node
 var popup: PopupPanel
 
+var old_script_type: StringName
+
 func _enter_tree() -> void:
 	# Update on save
 	var file_system: EditorFileSystem = get_editor_interface().get_resource_filesystem()
@@ -393,12 +395,20 @@ func attach_script_listener(script: Script):
 		
 		old_script_editor_base = script_editor_base
 		
-	keywords.clear()
-	keywords["_static_init"] = 0
-	if (script != null):
-		register_virtual_methods(script.get_instance_base_type())
-
+	update_keywords(script)
 	schedule_update()
+	
+func update_keywords(script: Script):
+	if (script == null):
+		return
+	
+	var new_script_type: StringName = script.get_instance_base_type()
+	if (old_script_type != new_script_type):
+		old_script_type = new_script_type
+		
+		keywords.clear()
+		keywords["_static_init"] = 0
+		register_virtual_methods(script.get_instance_base_type())
 
 func schedule_update():
 	set_process(true)
@@ -425,6 +435,8 @@ func update_outline_cache():
 	var script: Script = script_editor.get_current_script()
 	if (!script):
 		return
+		
+	update_keywords(script)
 		
 	outline_cache = OutlineCache.new()
 	
