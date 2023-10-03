@@ -186,6 +186,9 @@ func _exit_tree() -> void:
 		outline_parent.remove_child(filter_box)
 		outline_parent.add_child(old_outline)
 		outline_parent.remove_child(outline)
+		
+		filter_box.free()
+		outline.free()
 	
 	if (scripts_tab_container != null):
 		tab_state.restore(scripts_tab_container, scripts_tab_bar)
@@ -204,6 +207,9 @@ func _exit_tree() -> void:
 		
 	if (popup != null):
 		popup.hide()
+		
+	outline_cache.free()
+	tab_state.free()
 		
 func _process(delta: float) -> void:
 	update_editor()
