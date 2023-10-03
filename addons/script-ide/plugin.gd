@@ -80,7 +80,33 @@ func _enter_tree() -> void:
 	# Attach listener to script editor
 	var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
 	script_editor.editor_script_changed.connect(attach_script_listener)
+	
+	# Make tab container visible
+	scripts_tab_container = find_or_null(script_editor.find_children("*", "TabContainer", true, false))
+	if (scripts_tab_container != null):
+		scripts_tab_bar = get_tab_bar_of(scripts_tab_container)
+		tab_state.save(scripts_tab_container, scripts_tab_bar)
+		
+		scripts_tab_container.tabs_visible = true
+		scripts_tab_container.drag_to_rearrange_enabled = true
 
+		if (scripts_tab_bar != null):
+			scripts_tab_bar.tab_close_display_policy = TabBar.CLOSE_BUTTON_SHOW_ACTIVE_ONLY
+			scripts_tab_bar.select_with_rmb = true
+			scripts_tab_bar.drag_to_rearrange_enabled = true
+			scripts_tab_bar.tab_close_pressed.connect(on_tab_close)
+			scripts_tab_bar.tab_rmb_clicked.connect(on_tab_rmb)
+			scripts_tab_bar.tab_selected.connect(on_tab_selected)
+			scripts_tab_bar.tab_hovered.connect(on_tab_hovered)
+			scripts_tab_bar.mouse_exited.connect(on_tab_bar_mouse_exited)
+			scripts_tab_bar.active_tab_rearranged.connect(on_active_tab_rearranged)
+			scripts_tab_bar.gui_input.connect(on_tab_bar_gui_input)
+			
+	# Make script item list invisible
+	scripts_item_list = find_or_null(script_editor.find_children("*", "ItemList", true, false))
+	if (scripts_item_list != null):
+		scripts_item_list.get_parent().visible = false
+	
 	# Change the layout of the split container so it looks like any modern IDE
 	# Improve the outline
 	split_container = find_or_null(script_editor.find_children("*", "HSplitContainer", true, false))
@@ -134,32 +160,6 @@ func _enter_tree() -> void:
 		# Callback when the sorting changed
 		sort_btn = find_or_null(outline_container.find_children("*", "Button", true, false))
 		sort_btn.pressed.connect(update_outline)
-	
-	# Make tab container visible
-	scripts_tab_container = find_or_null(script_editor.find_children("*", "TabContainer", true, false))
-	if (scripts_tab_container != null):
-		scripts_tab_bar = get_tab_bar_of(scripts_tab_container)
-		tab_state.save(scripts_tab_container, scripts_tab_bar)
-		
-		scripts_tab_container.tabs_visible = true
-		scripts_tab_container.drag_to_rearrange_enabled = true
-
-		if (scripts_tab_bar != null):
-			scripts_tab_bar.tab_close_display_policy = TabBar.CLOSE_BUTTON_SHOW_ACTIVE_ONLY
-			scripts_tab_bar.select_with_rmb = true
-			scripts_tab_bar.drag_to_rearrange_enabled = true
-			scripts_tab_bar.tab_close_pressed.connect(on_tab_close)
-			scripts_tab_bar.tab_rmb_clicked.connect(on_tab_rmb)
-			scripts_tab_bar.tab_selected.connect(on_tab_selected)
-			scripts_tab_bar.tab_hovered.connect(on_tab_hovered)
-			scripts_tab_bar.mouse_exited.connect(on_tab_bar_mouse_exited)
-			scripts_tab_bar.active_tab_rearranged.connect(on_active_tab_rearranged)
-			scripts_tab_bar.gui_input.connect(on_tab_bar_gui_input)
-			
-	# Make script item list invisible
-	scripts_item_list = find_or_null(script_editor.find_children("*", "ItemList", true, false))
-	if (scripts_item_list != null):
-		scripts_item_list.get_parent().visible = false
 			
 	attach_script_listener(script_editor.get_current_script())
 
@@ -207,9 +207,6 @@ func _exit_tree() -> void:
 		
 	if (popup != null):
 		popup.hide()
-		
-	outline_cache.free()
-	tab_state.free()
 		
 func _process(delta: float) -> void:
 	update_editor()
