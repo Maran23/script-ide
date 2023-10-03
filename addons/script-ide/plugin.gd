@@ -2,8 +2,11 @@
 extends EditorPlugin
 
 # NOTE: Those variables can be customized to your needs.
+## First shortcut to trigger the Outline popup
 const OUTLINE_POPUP_TRIGGER: Key = KeyModifierMask.KEY_MASK_CTRL + Key.KEY_O
+## Second shortcut to trigger the Outline popup
 const OUTLINE_POPUP_TRIGGER_ALT: Key = KeyModifierMask.KEY_MASK_META + Key.KEY_O
+## Position of the Outline popup. True = Right side, False = Left side.
 const OUTLINE_POSITION_RIGHT: bool = true
 
 const POPUP_SCRIPT: GDScript = preload("res://addons/script-ide/Popup.gd")
@@ -56,6 +59,7 @@ var popup: PopupPanel
 
 var old_script_type: StringName
 
+## Change the Godot script UI and transform into an IDE like UI
 func _enter_tree() -> void:
 	# Update on save
 	var file_system: EditorFileSystem = get_editor_interface().get_resource_filesystem()
@@ -147,6 +151,7 @@ func _enter_tree() -> void:
 			
 	attach_script_listener(script_editor.get_current_script())
 
+## Restore the old Godot script UI and free everything we created
 func _exit_tree() -> void:
 	var file_system: EditorFileSystem = get_editor_interface().get_resource_filesystem()
 	file_system.script_classes_updated.disconnect(schedule_update)
@@ -192,10 +197,12 @@ func _exit_tree() -> void:
 	if (popup != null):
 		popup.hide()
 		
+## Lazy pattern to update the editor only once per frame
 func _process(delta: float) -> void:
 	update_editor()
 	set_process(false)
 	
+## Add navigation to the Outline
 func _input(event: InputEvent) -> void:
 	if (!filter_txt.has_focus()):
 		return
@@ -243,6 +250,7 @@ func _input(event: InputEvent) -> void:
 		outline.ensure_current_is_visible()
 		get_viewport().set_input_as_handled()
 	
+## Triggers the Outline popup
 func _unhandled_key_input(event: InputEvent) -> void:
 	if !(event is InputEventKey):
 		return
@@ -301,6 +309,10 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		popup.popup_exclusive_on_parent(script_editor, Rect2i(position, size))
 		
 		filter_txt.grab_focus()
+		
+## Schedules an update on the frame
+func schedule_update():
+	set_process(true)
 	
 func scroll_to_index(selected_idx: int):
 	if (popup != null):
@@ -415,9 +427,6 @@ func update_keywords(script: Script):
 		keywords.clear()
 		keywords["_static_init"] = 0
 		register_virtual_methods(script.get_instance_base_type())
-
-func schedule_update():
-	set_process(true)
 		
 func update_editor():
 	update_tabs()
