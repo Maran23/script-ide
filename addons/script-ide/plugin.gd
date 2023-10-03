@@ -14,15 +14,15 @@ const POPUP_SCRIPT: GDScript = preload("res://addons/script-ide/Popup.gd")
 var keywords: Dictionary = {}
 
 # Icons
-const keyword_icon: Texture2D = preload("res://addons/script-ide/icon/keyword.png")
-const func_icon: Texture2D = preload("res://addons/script-ide/icon/func.png")
-const func_get_icon: Texture2D = preload("res://addons/script-ide/icon/func_get.png")
-const func_set_icon: Texture2D = preload("res://addons/script-ide/icon/func_set.png")
-const property_icon: Texture2D = preload("res://addons/script-ide/icon/property.png")
-const export_icon: Texture2D = preload("res://addons/script-ide/icon/export.png")
-const signal_icon: Texture2D = preload("res://addons/script-ide/icon/signal.png")
-const constant_icon: Texture2D = preload("res://addons/script-ide/icon/constant.png")
-const class_icon: Texture2D = preload("res://addons/script-ide/icon/class.png")
+const keyword_icon: Texture2D = preload("res://addons/script-ide/icon/keyword.svg")
+const func_icon: Texture2D = preload("res://addons/script-ide/icon/func.svg")
+const func_get_icon: Texture2D = preload("res://addons/script-ide/icon/func_get.svg")
+const func_set_icon: Texture2D = preload("res://addons/script-ide/icon/func_set.svg")
+const property_icon: Texture2D = preload("res://addons/script-ide/icon/property.svg")
+const export_icon: Texture2D = preload("res://addons/script-ide/icon/export.svg")
+const signal_icon: Texture2D = preload("res://addons/script-ide/icon/signal.svg")
+const constant_icon: Texture2D = preload("res://addons/script-ide/icon/constant.svg")
+const class_icon: Texture2D = preload("res://addons/script-ide/icon/class.svg")
 
 # Existing controls we modify
 var outline_parent: Node
@@ -382,16 +382,18 @@ func create_filter_btn(icon: Texture2D, title: String) -> Button:
 	btn.pressed.connect(update_outline)
 	
 	btn.add_theme_color_override("icon_pressed_color", Color.WHITE)
+	btn.add_theme_color_override("icon_hover_color", Color.WHITE)
+	btn.add_theme_color_override("icon_focus_color", Color.WHITE)
 	
 	var style_box_empty: StyleBoxEmpty = StyleBoxEmpty.new()
-	style_box_empty.set_content_margin_all(8)
+	style_box_empty.set_content_margin_all(4 * get_editor_scale())
 	btn.add_theme_stylebox_override("normal", style_box_empty)
 	
 	var style_box: StyleBoxFlat = StyleBoxFlat.new()
 	style_box.draw_center = false
 	style_box.border_color = Color(0.41, 0.61, 0.91)
-	style_box.set_border_width_all(1)
-	style_box.set_corner_radius_all(3)
+	style_box.set_border_width_all(1 * get_editor_scale())
+	style_box.set_corner_radius_all(3 * get_editor_scale())
 	btn.add_theme_stylebox_override("focus", style_box)
 	
 	return btn
@@ -650,6 +652,9 @@ func trigger_script_editor_update_script_names():
 	# for now it is the only way to trigger script_editor._update_script_names
 	script_editor.notification(Control.NOTIFICATION_THEME_CHANGED)
 
+func get_editor_scale() -> float:
+	return get_editor_interface().get_editor_scale()
+	
 static func find_or_null(arr: Array[Node], index: int = 0) -> Node:
 	if arr.is_empty():
 		return null
