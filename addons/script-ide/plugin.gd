@@ -5,29 +5,7 @@ const OUTLINE_POPUP_TRIGGER: Key = KeyModifierMask.KEY_MASK_CTRL + Key.KEY_O
 const OUTLINE_POPUP_TRIGGER_ALT: Key = KeyModifierMask.KEY_MASK_META + Key.KEY_O
 const POPUP_SCRIPT: GDScript = preload("res://addons/script-ide/Popup.gd")
 
-const keywords: Dictionary = {
-	"_ready": 0,
-	"_process": 0,
-	"_physics_process": 0,
-	"_init": 0,
-	"_enter_tree": 0,
-	"_exit_tree": 0,
-	"_unhandled_input": 0,
-	"_input": 0,
-	"_unhandled_key_input": 0,
-	"_draw": 0,
-	"_notification": 0,
-	"_to_string": 0,
-	"_get": 0,
-	"_get_property_list": 0,
-	"_set": 0,
-	"_property_can_revert": 0,
-	"_property_get_revert": 0,
-	"_gui_input": 0,
-	"_get_drag_data": 0,
-	"_drop_data": 0,
-	"_can_drop_data": 0
-}
+var keywords: Dictionary = {}
 
 const keyword_icon: Texture2D = preload("res://addons/script-ide/icon/keyword.png")
 const func_icon: Texture2D = preload("res://addons/script-ide/icon/func.png")
@@ -398,6 +376,11 @@ func create_filter_btn(icon: Texture2D, title: String) -> Button:
 	
 	return btn
 
+func register_virtual_methods(clazz: String) -> void:
+	for method in ClassDB.class_get_method_list(clazz):
+		if method.flags & METHOD_FLAG_VIRTUAL > 0:
+			keywords[method.name] = 0
+
 func attach_script_listener(script: Script):
 	if (old_script_editor_base != null):
 		old_script_editor_base.edited_script_changed.disconnect(update_outline)
@@ -406,11 +389,15 @@ func attach_script_listener(script: Script):
 	var script_editor_base: ScriptEditorBase = script_editor.get_current_editor()
 	
 	if (script_editor_base != null):
-		# Update the outline as Godot will do internally first
 		script_editor_base.edited_script_changed.connect(update_outline)
 		
 		old_script_editor_base = script_editor_base
 		
+	keywords.clear()
+	keywords["_static_init"] = 0
+	if (script != null):
+		register_virtual_methods(script.get_instance_base_type())
+
 	schedule_update()
 
 func schedule_update():
