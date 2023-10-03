@@ -1,12 +1,16 @@
 @tool
 extends EditorPlugin
 
+# NOTE: Those variables can be customized to your needs.
 const OUTLINE_POPUP_TRIGGER: Key = KeyModifierMask.KEY_MASK_CTRL + Key.KEY_O
 const OUTLINE_POPUP_TRIGGER_ALT: Key = KeyModifierMask.KEY_MASK_META + Key.KEY_O
+const OUTLINE_POSITION_RIGHT: bool = true
+
 const POPUP_SCRIPT: GDScript = preload("res://addons/script-ide/Popup.gd")
 
 var keywords: Dictionary = {}
 
+# Icons
 const keyword_icon: Texture2D = preload("res://addons/script-ide/icon/keyword.png")
 const func_icon: Texture2D = preload("res://addons/script-ide/icon/func.png")
 const func_get_icon: Texture2D = preload("res://addons/script-ide/icon/func_get.png")
@@ -17,7 +21,7 @@ const signal_icon: Texture2D = preload("res://addons/script-ide/icon/signal.png"
 const constant_icon: Texture2D = preload("res://addons/script-ide/icon/constant.png")
 const class_icon: Texture2D = preload("res://addons/script-ide/icon/class.png")
 
-# Existing controls
+# Existing controls we modify
 var outline_parent: Node
 var scripts_tab_container: TabContainer
 var scripts_tab_bar: TabBar
@@ -27,7 +31,7 @@ var old_outline: ItemList
 var filter_txt: LineEdit
 var sort_btn: Button
 
-# Own controls
+# Own controls we add
 var outline: ItemList
 var filter_box: HBoxContainer
 var class_btn: Button
@@ -87,22 +91,22 @@ func _enter_tree() -> void:
 	if (scripts_item_list != null):
 		scripts_item_list.get_parent().visible = false
 	
-	# Change the layout of the split container so it looks like any modern IDE
-	# Improve the outline
+	# Remove existing outline and add own outline
 	split_container = find_or_null(script_editor.find_children("*", "HSplitContainer", true, false))
 	if (split_container != null):
-		# Move outline container to the right
 		outline_container = split_container.get_child(0)
-		split_container.move_child(outline_container, 1)
+		
+		if (OUTLINE_POSITION_RIGHT):
+			split_container.move_child(outline_container, 1)
 		
 		old_outline = find_or_null(outline_container.find_children("*", "ItemList", true, false), 1)
-		
 		outline_parent = old_outline.get_parent()
+		outline_parent.remove_child(old_outline)
+		
 		outline = ItemList.new()
 		outline.allow_reselect = true
 		outline.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		outline_parent.add_child(outline)
-		outline_parent.remove_child(old_outline)
 		
 		outline.item_selected.connect(scroll_to_index)
 		
@@ -164,9 +168,9 @@ func _exit_tree() -> void:
 		outline.item_selected.disconnect(scroll_to_index)
 		
 		outline_parent.remove_child(filter_box)
-		outline_parent.add_child(old_outline)
 		outline_parent.remove_child(outline)
-		
+		outline_parent.add_child(old_outline)
+
 		filter_box.free()
 		outline.free()
 	
@@ -264,6 +268,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
 		popup.popup_hide.connect(func():
 			outline_container.reparent(split_container)
+			if (!OUTLINE_POSITION_RIGHT):
+				split_container.move_child(outline_container, 0)
 			
 			filter_txt.text = old_text
 			
