@@ -61,7 +61,7 @@ var old_script_type: StringName
 
 ## Change the Godot script UI and transform into an IDE like UI
 func _enter_tree() -> void:
-	_enter_tree_deferrd.call_deferred()
+	_enter_tree_deferred.call_deferred()
 
 func _enter_tree_deferred() -> void:
 		# Update on save
