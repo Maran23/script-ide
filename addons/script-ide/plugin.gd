@@ -8,6 +8,8 @@ const OUTLINE_POPUP_TRIGGER: Key = KeyModifierMask.KEY_MASK_CTRL + Key.KEY_O
 const OUTLINE_POPUP_TRIGGER_ALT: Key = KeyModifierMask.KEY_MASK_META + Key.KEY_O
 ## Position of the Outline popup. True = Right side, False = Left side.
 const OUTLINE_POSITION_RIGHT: bool = true
+## Hide private methods and properties
+const HIDE_PRIVATE_MEMBERS: bool = false
 
 const POPUP_SCRIPT: GDScript = preload("res://addons/script-ide/Popup.gd")
 
@@ -461,6 +463,9 @@ func update_outline_cache():
 	for dict in script.get_script_method_list():
 		var func_name: String = dict["name"]
 		
+		if HIDE_PRIVATE_MEMBERS && func_name.begins_with("_"):
+					continue
+
 		if (keywords.has(func_name)):
 			outline_cache.engine_funcs.append(func_name)
 		else:
@@ -471,6 +476,9 @@ func update_outline_cache():
 		var property: String = dict["name"]
 		var usage: int = dict["usage"]
 		
+		if HIDE_PRIVATE_MEMBERS && property.begins_with("_"):
+			continue
+
 		if (usage == PROPERTY_USAGE_SCRIPT_VARIABLE | PROPERTY_USAGE_STORAGE | PROPERTY_USAGE_EDITOR):
 			outline_cache.exports.append(property)
 		elif (usage == PROPERTY_USAGE_SCRIPT_VARIABLE):
@@ -486,6 +494,10 @@ func update_outline_cache():
 	
 	# Constants/Classes
 	for name_key in script.get_script_constant_map():
+
+		if HIDE_PRIVATE_MEMBERS && name_key.begins_with("_"):
+			continue
+		
 		var object: Variant = script.get_script_constant_map().get(name_key)
 		if (object is GDScript && object.get_instance_base_type() == "RefCounted"):
 			outline_cache.classes.append(name_key)
