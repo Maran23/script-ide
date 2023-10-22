@@ -464,7 +464,7 @@ func update_outline_cache():
 		var func_name: String = dict["name"]
 		
 		if HIDE_PRIVATE_MEMBERS && func_name.begins_with("_"):
-					continue
+			continue
 
 		if (keywords.has(func_name)):
 			outline_cache.engine_funcs.append(func_name)
