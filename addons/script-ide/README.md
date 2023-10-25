@@ -17,8 +17,11 @@ This includes the following changes:
 - You can navigate through the Outline with the arrow keys and scroll to the select item with ENTER
 - The Outline can be toggled via `File -> Toggle Scripts Panel`. This will hide or show it
 
-To change the position of the Outline or the shortcut of the popup, just checkout the first lines of `plugin.gd`.
+There are mutliple properties that can be configured by your needs. Just checkout the first lines of `plugin.gd`.
+- OUTLINE_POPUP_TRIGGER / OUTLINE_POPUP_TRIGGER_ALT = Shortcut to trigger the Outline popup (default=CTRL+O, META+O)
+- OUTLINE_POSITION_RIGHT = Flag to set whether the outline should be on the right or on the left (default=true)
+- HIDE_PRIVATE_MEMBERS = Flag to set whether private members (methods/constants starting with '_') should be hidden in the Outline
 
-![Example of the outline](https://user-images.githubusercontent.com/66004280/271794386-d60978a8-4db0-4798-84e1-e5e2468162dd.png)
+![Example of the outline](https://github.com/godotengine/godot/assets/66004280/30d04924-ba53-415d-b796-92b2fc086ff9)
 
-![Example of the outline popup](https://user-images.githubusercontent.com/66004280/271794388-fa44cb4e-e90c-4967-bd54-3993fb895d69.png)
+![Example of the outline popup](https://github.com/godotengine/godot/assets/66004280/cad0e00e-dbb6-4d3d-980b-c36da6af2cb8)

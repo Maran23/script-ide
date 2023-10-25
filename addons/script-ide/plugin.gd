@@ -2,13 +2,13 @@
 extends EditorPlugin
 
 # NOTE: Those variables can be customized to your needs.
-## First shortcut to trigger the Outline popup
+## First shortcut to trigger the Outline popup.
 const OUTLINE_POPUP_TRIGGER: Key = KeyModifierMask.KEY_MASK_CTRL + Key.KEY_O
-## Second shortcut to trigger the Outline popup
+## Second shortcut to trigger the Outline popup.
 const OUTLINE_POPUP_TRIGGER_ALT: Key = KeyModifierMask.KEY_MASK_META + Key.KEY_O
 ## Position of the Outline popup. True = Right side, False = Left side.
 const OUTLINE_POSITION_RIGHT: bool = true
-## Hide private methods and properties
+## Hide private methods and constants. All methods/constants starting with '_' are considered as private-
 const HIDE_PRIVATE_MEMBERS: bool = false
 
 const POPUP_SCRIPT: GDScript = preload("res://addons/script-ide/Popup.gd")
@@ -474,10 +474,10 @@ func update_outline_cache():
 	# Properties / Exports
 	for dict in script.get_script_property_list():
 		var property: String = dict["name"]
-		var usage: int = dict["usage"]
-		
 		if HIDE_PRIVATE_MEMBERS && property.begins_with("_"):
 			continue
+		
+		var usage: int = dict["usage"]
 
 		if (usage == PROPERTY_USAGE_SCRIPT_VARIABLE | PROPERTY_USAGE_STORAGE | PROPERTY_USAGE_EDITOR):
 			outline_cache.exports.append(property)
@@ -494,7 +494,6 @@ func update_outline_cache():
 	
 	# Constants/Classes
 	for name_key in script.get_script_constant_map():
-
 		if HIDE_PRIVATE_MEMBERS && name_key.begins_with("_"):
 			continue
 		
