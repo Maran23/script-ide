@@ -13,9 +13,9 @@ const HIDE_PRIVATE_MEMBERS: bool = false
 
 const POPUP_SCRIPT: GDScript = preload("res://addons/script-ide/Popup.gd")
 
-var keywords: Dictionary = {}
+var keywords: Dictionary = {} # Basically used as Set, since Godot has none. [String, int = 0]
 
-# Icons
+# Outline icons
 const keyword_icon: Texture2D = preload("res://addons/script-ide/icon/keyword.svg")
 const func_icon: Texture2D = preload("res://addons/script-ide/icon/func.svg")
 const func_get_icon: Texture2D = preload("res://addons/script-ide/icon/func_get.svg")
@@ -27,6 +27,7 @@ const constant_icon: Texture2D = preload("res://addons/script-ide/icon/constant.
 const class_icon: Texture2D = preload("res://addons/script-ide/icon/class.svg")
 
 # Existing controls we modify
+var outline_container: Node
 var outline_parent: Node
 var scripts_tab_container: TabContainer
 var scripts_tab_bar: TabBar
@@ -38,7 +39,9 @@ var sort_btn: Button
 
 # Own controls we add
 var outline: ItemList
+var outline_popup: PopupPanel
 var filter_box: HBoxContainer
+
 var class_btn: Button
 var constant_btn: Button
 var signal_btn: Button
@@ -46,32 +49,25 @@ var property_btn: Button
 var export_btn: Button
 var func_btn: Button
 var engine_func_btn: Button
-var floating_btn: Button
 
 var outline_cache: OutlineCache
+var tab_state: TabContainerState = TabContainerState.new()
 
 var old_script_editor_base: ScriptEditorBase
-
-var tab_state: TabContainerState = TabContainerState.new()
-var last_tab_selected: int = -1
-var last_tab_hovered: int = -1
-
-var outline_container: Node
-var popup: PopupPanel
-
 var old_script_type: StringName
+
+var selected_tab: int = -1
+var last_tab_hovered: int = -1
+var sync_script_list: bool
 
 ## Change the Godot script UI and transform into an IDE like UI
 func _enter_tree() -> void:
-	# Update on save
+	# Update on filesystem changed (e.g. save operation).
 	var file_system: EditorFileSystem = get_editor_interface().get_resource_filesystem()
-	file_system.script_classes_updated.connect(schedule_update, CONNECT_DEFERRED)
-	
-	# Attach listener to script editor
-	var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
-	script_editor.editor_script_changed.connect(attach_script_listener)
+	file_system.filesystem_changed.connect(schedule_update)
 	
 	# Make tab container visible
+	var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
 	scripts_tab_container = find_or_null(script_editor.find_children("*", "TabContainer", true, false))
 	if (scripts_tab_container != null):
 		scripts_tab_bar = get_tab_bar_of(scripts_tab_container)
@@ -86,11 +82,12 @@ func _enter_tree() -> void:
 			scripts_tab_bar.drag_to_rearrange_enabled = true
 			scripts_tab_bar.tab_close_pressed.connect(on_tab_close)
 			scripts_tab_bar.tab_rmb_clicked.connect(on_tab_rmb)
-			scripts_tab_bar.tab_selected.connect(on_tab_selected)
 			scripts_tab_bar.tab_hovered.connect(on_tab_hovered)
 			scripts_tab_bar.mouse_exited.connect(on_tab_bar_mouse_exited)
 			scripts_tab_bar.active_tab_rearranged.connect(on_active_tab_rearranged)
 			scripts_tab_bar.gui_input.connect(on_tab_bar_gui_input)
+			
+			scripts_tab_bar.tab_changed.connect(on_tab_changed)
 			
 	# Make script item list invisible
 	scripts_item_list = find_or_null(script_editor.find_children("*", "ItemList", true, false))
@@ -151,18 +148,15 @@ func _enter_tree() -> void:
 		sort_btn = find_or_null(outline_container.find_children("*", "Button", true, false))
 		sort_btn.pressed.connect(update_outline)
 			
-	attach_script_listener(script_editor.get_current_script())
+	on_tab_changed(scripts_tab_bar.current_tab)
 
 ## Restore the old Godot script UI and free everything we created
 func _exit_tree() -> void:
 	var file_system: EditorFileSystem = get_editor_interface().get_resource_filesystem()
-	file_system.script_classes_updated.disconnect(schedule_update)
+	file_system.filesystem_changed.disconnect(schedule_update)
 	
-	var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
-	script_editor.editor_script_changed.disconnect(attach_script_listener)
-	
-	if (old_script_editor_base):
-		old_script_editor_base.edited_script_changed.disconnect(update_outline)
+	if (old_script_editor_base != null):
+		old_script_editor_base.edited_script_changed.disconnect(update_selected_tab)
 	
 	if (split_container != null):
 		if (split_container != outline_container.get_parent()):
@@ -177,6 +171,7 @@ func _exit_tree() -> void:
 		outline_parent.remove_child(filter_box)
 		outline_parent.remove_child(outline)
 		outline_parent.add_child(old_outline)
+		outline_parent.move_child(old_outline, 1)
 
 		filter_box.free()
 		outline.free()
@@ -189,15 +184,16 @@ func _exit_tree() -> void:
 			scripts_tab_bar.gui_input.disconnect(on_tab_bar_gui_input)
 			scripts_tab_bar.tab_close_pressed.disconnect(on_tab_close)
 			scripts_tab_bar.tab_rmb_clicked.disconnect(on_tab_rmb)
-			scripts_tab_bar.tab_selected.disconnect(on_tab_selected)
 			scripts_tab_bar.tab_hovered.disconnect(on_tab_hovered)
 			scripts_tab_bar.active_tab_rearranged.disconnect(on_active_tab_rearranged)
+			
+			scripts_tab_bar.tab_changed.disconnect(on_tab_changed)
 
 	if (scripts_item_list != null):
 		scripts_item_list.get_parent().visible = true
 		
-	if (popup != null):
-		popup.hide()
+	if (outline_popup != null):
+		outline_popup.hide()
 		
 ## Lazy pattern to update the editor only once per frame
 func _process(delta: float) -> void:
@@ -270,13 +266,13 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		
 		update_outline()
 
-		popup = POPUP_SCRIPT.new()
-		popup.input_listener = _input
+		outline_popup = POPUP_SCRIPT.new()
+		outline_popup.input_listener = _input
 		
-		outline_container.reparent(popup)
+		outline_container.reparent(outline_popup)
 
 		var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
-		popup.popup_hide.connect(func():
+		outline_popup.popup_hide.connect(func():
 			outline_container.reparent(split_container)
 			if (!OUTLINE_POSITION_RIGHT):
 				split_container.move_child(outline_container, 0)
@@ -291,8 +287,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			
 			update_outline()
 			
-			popup.queue_free()
-			popup = null
+			outline_popup.queue_free()
+			outline_popup = null
 		)
 		
 		var window_rect: Rect2
@@ -308,7 +304,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		var y: int = window_rect.size.y / 2 - size.y / 2
 		var position: Vector2i = Vector2i(x, y)
 		
-		popup.popup_exclusive_on_parent(script_editor, Rect2i(position, size))
+		outline_popup.popup_exclusive_on_parent(script_editor, Rect2i(position, size))
 		
 		filter_txt.grab_focus()
 		
@@ -317,8 +313,8 @@ func schedule_update():
 	set_process(true)
 	
 func scroll_to_index(selected_idx: int):
-	if (popup != null):
-		popup.hide.call_deferred()
+	if (outline_popup != null):
+		outline_popup.hide.call_deferred()
 	
 	var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
 	var script: Script = script_editor.get_current_script()
@@ -400,25 +396,43 @@ func create_filter_btn(icon: Texture2D, title: String) -> Button:
 	
 	return btn
 
-func register_virtual_methods(clazz: String) -> void:
+func register_virtual_methods(clazz: String):
 	for method in ClassDB.class_get_method_list(clazz):
 		if method.flags & METHOD_FLAG_VIRTUAL > 0:
 			keywords[method.name] = 0
 
-func attach_script_listener(script: Script):
+func on_tab_changed(idx: int):
+	selected_tab = idx;
+	
 	if (old_script_editor_base != null):
-		old_script_editor_base.edited_script_changed.disconnect(update_outline)
+		old_script_editor_base.edited_script_changed.disconnect(update_selected_tab)
+		old_script_editor_base = null
 	
 	var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
 	var script_editor_base: ScriptEditorBase = script_editor.get_current_editor()
 	
 	if (script_editor_base != null):
-		script_editor_base.edited_script_changed.connect(update_outline)
+		script_editor_base.edited_script_changed.connect(update_selected_tab)
 		
 		old_script_editor_base = script_editor_base
-		
-	update_keywords(script)
+	
+	sync_script_list = true
 	schedule_update()
+	
+func update_selected_tab():
+	if (selected_tab == -1):
+		return
+		
+	if (scripts_item_list.item_count == 0):
+		return
+	
+	scripts_tab_container.set_tab_title(selected_tab, scripts_item_list.get_item_text(selected_tab))
+	scripts_tab_container.set_tab_icon(selected_tab, scripts_item_list.get_item_icon(selected_tab))
+	
+func update_tabs():
+	for index in scripts_tab_container.get_tab_count():
+		scripts_tab_container.set_tab_title(index, scripts_item_list.get_item_text(index))
+		scripts_tab_container.set_tab_icon(index, scripts_item_list.get_item_icon(index))
 	
 func update_keywords(script: Script):
 	if (script == null):
@@ -433,26 +447,20 @@ func update_keywords(script: Script):
 		register_virtual_methods(script.get_instance_base_type())
 		
 func update_editor():
+	if (sync_script_list):
+		sync_tab_with_script_list()
+		sync_script_list = false
+	
 	update_tabs()
 	update_outline_cache()
 	update_outline()
-
-func update_tabs():
-	if !scripts_tab_container or !scripts_item_list:
-		return
-
-	for item_idx in scripts_item_list.item_count:
-		var tab_idx = get_item_list_tab_idx(item_idx)
-		if tab_idx != -1:
-			scripts_tab_container.set_tab_title(tab_idx, scripts_item_list.get_item_text(item_idx))
-			scripts_tab_container.set_tab_icon(tab_idx, scripts_item_list.get_item_icon(item_idx))
 
 func update_outline_cache():
 	outline_cache = null
 	
 	var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
 	var script: Script = script_editor.get_current_script()
-	if (!script):
+	if (script == null):
 		return
 		
 	update_keywords(script)
@@ -604,29 +612,29 @@ func get_res_path(idx: int) -> String:
 	return path_var
 
 func on_active_tab_rearranged(idx_to: int):
-	var control: Control = scripts_tab_container.get_tab_control(last_tab_selected)
+	var control: Control = scripts_tab_container.get_tab_control(selected_tab)
 	if (!control):
 		return
 		
 	scripts_tab_container.move_child(control, idx_to)
 	scripts_tab_container.current_tab = scripts_tab_container.current_tab
+	selected_tab = scripts_tab_container.current_tab
 	trigger_script_editor_update_script_names()
-
-func on_tab_selected(tab_idx: int):
-	last_tab_selected = tab_idx
-
-	var item_idx: int = find_list_item_idx_by_tab_idx(tab_idx)
-	if (item_idx == -1):
-		return
-		
-	if (!scripts_item_list.is_selected(item_idx)):
-		scripts_item_list.select(item_idx)
-		scripts_item_list.item_selected.emit(item_idx)
-		
-		var path: String = get_res_path(tab_idx)
-		var is_gd_script: bool = path != '' && path.ends_with(".gd")
-		filter_box.visible = is_gd_script
-		outline.visible = is_gd_script
+	
+func sync_tab_with_script_list():
+	# For some reason the selected tab is wrong. Looks like a Godot bug.
+	if (selected_tab >= scripts_item_list.item_count):
+		selected_tab = scripts_tab_bar.current_tab
+	
+	# Sync with script item list.
+	if (selected_tab != -1 && !scripts_item_list.is_selected(selected_tab)):
+		scripts_item_list.select(selected_tab)
+		scripts_item_list.item_selected.emit(selected_tab)
+	
+	var path: String = get_res_path(selected_tab)
+	var is_gd_script: bool = path != '' && path.ends_with(".gd")
+	filter_box.visible = is_gd_script
+	outline.visible = is_gd_script
 
 func on_tab_rmb(tab_idx: int):
 	simulate_item_clicked(tab_idx, MOUSE_BUTTON_RIGHT)
@@ -635,28 +643,7 @@ func on_tab_close(tab_idx: int):
 	simulate_item_clicked(tab_idx, MOUSE_BUTTON_MIDDLE)
 
 func simulate_item_clicked(tab_idx: int, mouse_idx: int):
-	if (!scripts_item_list):
-		return
-		
-	var item_idx: int = find_list_item_idx_by_tab_idx(tab_idx)
-	if item_idx == -1:
-		return
-		
-	scripts_item_list.item_clicked.emit(item_idx, scripts_item_list.get_local_mouse_position(), mouse_idx)
-
-func get_item_list_tab_idx(item_idx: int) -> int:
-	var metadata: Variant = scripts_item_list.get_item_metadata(item_idx)
-	if !(metadata is int):
-		return -1
-	else:
-		return metadata
-
-func find_list_item_idx_by_tab_idx(tab_idx: int) -> int:
-	for i in scripts_item_list.item_count:
-		if scripts_item_list.get_item_metadata(i) == tab_idx:
-			return i
-	
-	return -1
+	scripts_item_list.item_clicked.emit(tab_idx, scripts_item_list.get_local_mouse_position(), mouse_idx)
 
 func trigger_script_editor_update_script_names():
 	var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
@@ -694,18 +681,18 @@ class TabContainerState:
 	var tab_close_display_policy: TabBar.CloseButtonDisplayPolicy
 	var select_with_rmb: bool
 	
-	func save(src: TabContainer, tab_bar: TabBar):
-		if src:
-			tabs_visible = src.tabs_visible
-		if tab_bar:
+	func save(tab_container: TabContainer, tab_bar: TabBar):
+		if tab_container != null:
+			tabs_visible = tab_container.tabs_visible
+		if tab_bar != null:
 			drag_to_rearrange_enabled = tab_bar.drag_to_rearrange_enabled
 			tab_close_display_policy = tab_bar.tab_close_display_policy
-		select_with_rmb = tab_bar.select_with_rmb
+			select_with_rmb = tab_bar.select_with_rmb
 	
-	func restore(src: TabContainer, tab_bar: TabBar):
-		if src:
-			src.tabs_visible = tabs_visible
-		if tab_bar:
+	func restore(tab_container: TabContainer, tab_bar: TabBar):
+		if tab_container != null:
+			tab_container.tabs_visible = tabs_visible
+		if tab_bar != null:
 			tab_bar.drag_to_rearrange_enabled = drag_to_rearrange_enabled
 			tab_bar.tab_close_display_policy = tab_close_display_policy
 			tab_bar.select_with_rmb = select_with_rmb
