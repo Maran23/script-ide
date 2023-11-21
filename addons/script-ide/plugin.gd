@@ -493,6 +493,19 @@ func update_outline_cache():
 			outline_cache.properties.append(property)
 		else:
 			continue
+	
+	# Static variables are separated for whatever reason
+	for dict in script.get_property_list():
+		var property: String = dict["name"]
+		if HIDE_PRIVATE_MEMBERS && property.begins_with("_"):
+			continue
+			
+		var usage: int = dict["usage"]
+			
+		if (usage == PROPERTY_USAGE_SCRIPT_VARIABLE):
+			outline_cache.properties.append(property)
+		else:
+			continue
 		
 	# Signals
 	for dict in script.get_script_signal_list():
