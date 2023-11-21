@@ -263,8 +263,6 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	
 		var old_text: String = filter_txt.text
 		filter_txt.text = ""
-		
-		update_outline()
 
 		outline_popup = POPUP_SCRIPT.new()
 		outline_popup.input_listener = _input
@@ -285,10 +283,10 @@ func _unhandled_key_input(event: InputEvent) -> void:
 				btn.button_pressed = flag
 				index += 1
 			
-			update_outline()
-			
 			outline_popup.queue_free()
 			outline_popup = null
+			
+			update_outline()
 		)
 		
 		var window_rect: Rect2
@@ -307,6 +305,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		outline_popup.popup_exclusive_on_parent(script_editor, Rect2i(position, size))
 		
 		filter_txt.grab_focus()
+		
+		update_outline()
 		
 ## Schedules an update on the frame
 func schedule_update():
@@ -491,8 +491,6 @@ func update_outline_cache():
 			outline_cache.exports.append(property)
 		elif (usage == PROPERTY_USAGE_SCRIPT_VARIABLE):
 			outline_cache.properties.append(property)
-		else:
-			continue
 	
 	# Static variables are separated for whatever reason
 	for dict in script.get_property_list():
@@ -504,8 +502,6 @@ func update_outline_cache():
 			
 		if (usage == PROPERTY_USAGE_SCRIPT_VARIABLE):
 			outline_cache.properties.append(property)
-		else:
-			continue
 		
 	# Signals
 	for dict in script.get_script_signal_list():
@@ -588,7 +584,8 @@ func add_to_outline_ext(items: Array[String], icon_callable: Callable, type: Str
 				"modifier": modifier
 			}
 			outline.set_item_metadata(outline.item_count - 1, dict)
-			outline.set_item_tooltip_enabled(outline.item_count - 1, false)
+			# Only activate the tooltip when we do not show the outline in the popup.
+			outline.set_item_tooltip_enabled(outline.item_count - 1, outline_popup == null)
 			outline.move_item(outline.item_count - 1, move_index)
 			
 			move_index += 1
