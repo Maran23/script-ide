@@ -70,7 +70,7 @@ func _enter_tree() -> void:
 	var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
 	scripts_tab_container = find_or_null(script_editor.find_children("*", "TabContainer", true, false))
 	if (scripts_tab_container != null):
-		scripts_tab_bar = get_tab_bar_of(scripts_tab_container)
+		scripts_tab_bar = scripts_tab_container.get_tab_bar()
 		tab_state.save(scripts_tab_container, scripts_tab_bar)
 		
 		scripts_tab_container.tabs_visible = true
@@ -636,11 +636,6 @@ func sync_tab_with_script_list():
 	if (selected_tab >= scripts_item_list.item_count):
 		selected_tab = scripts_tab_bar.current_tab
 	
-	# Sync with script item list.
-	if (selected_tab != -1 && !scripts_item_list.is_selected(selected_tab)):
-		scripts_item_list.select(selected_tab)
-		scripts_item_list.item_selected.emit(selected_tab)
-	
 	var path: String = get_res_path(selected_tab)
 	var is_gd_script: bool = path != '' && path.ends_with(".gd")
 	filter_box.visible = is_gd_script
@@ -668,13 +663,6 @@ static func find_or_null(arr: Array[Node], index: int = 0) -> Node:
 		return null
 	
 	return arr[index]
-
-static func get_tab_bar_of(src: Node) -> TabBar:
-	for child in src.get_children(true):
-		if child is TabBar:
-			return child
-	
-	return null
 	
 class OutlineCache:
 	var classes: Array[String] = []
