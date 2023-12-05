@@ -636,15 +636,16 @@ func sync_tab_with_script_list():
 	if (selected_tab >= scripts_item_list.item_count):
 		selected_tab = scripts_tab_bar.current_tab
 	
-	# Sync with script item list.
-	if (selected_tab != -1 && !scripts_item_list.is_selected(selected_tab)):
-		scripts_item_list.select(selected_tab)
-		scripts_item_list.item_selected.emit(selected_tab)
-	
+	# Hide filter and outline for non .gd scripts.
 	var path: String = get_res_path(selected_tab)
 	var is_gd_script: bool = path != '' && path.ends_with(".gd")
 	filter_box.visible = is_gd_script
 	outline.visible = is_gd_script
+	
+	# Sync with script item list.
+	if (selected_tab != -1 && scripts_item_list.item_count > 0 && !scripts_item_list.is_selected(selected_tab)):
+		scripts_item_list.select(selected_tab)
+		scripts_item_list.item_selected.emit(selected_tab)
 
 func on_tab_rmb(tab_idx: int):
 	simulate_item_clicked(tab_idx, MOUSE_BUTTON_RIGHT)
