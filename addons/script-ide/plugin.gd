@@ -312,12 +312,15 @@ func _unhandled_key_input(event: InputEvent) -> void:
 func schedule_update():
 	set_process(true)
 	
+func get_current_script() -> Script:
+	var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
+	return script_editor.get_current_script()
+	
 func scroll_to_index(selected_idx: int):
 	if (outline_popup != null):
 		outline_popup.hide.call_deferred()
 	
-	var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
-	var script: Script = script_editor.get_current_script()
+	var script: Script = get_current_script()
 	if (!script):
 		return
 	
@@ -444,7 +447,7 @@ func update_keywords(script: Script):
 		
 		keywords.clear()
 		keywords["_static_init"] = 0
-		register_virtual_methods(script.get_instance_base_type())
+		register_virtual_methods(new_script_type)
 		
 func update_editor():
 	if (sync_script_list):
@@ -458,13 +461,16 @@ func update_editor():
 func update_outline_cache():
 	outline_cache = null
 	
-	var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
-	var script: Script = script_editor.get_current_script()
-	if (script == null):
+	var script: Script = get_current_script()
+	if (!script):
 		return
 		
 	update_keywords(script)
-		
+	
+	# Check if built-in script. In this case we need to duplicate it.
+	if (script.get_path().contains(".tscn::GDScript")):
+		script = script.duplicate()
+	
 	outline_cache = OutlineCache.new()
 	
 	# Functions
@@ -637,10 +643,9 @@ func sync_tab_with_script_list():
 		selected_tab = scripts_tab_bar.current_tab
 	
 	# Hide filter and outline for non .gd scripts.
-	var path: String = get_res_path(selected_tab)
-	var is_gd_script: bool = path != '' && path.ends_with(".gd")
-	filter_box.visible = is_gd_script
-	outline.visible = is_gd_script
+	var is_script: bool = get_current_script() != null
+	filter_box.visible = is_script
+	outline.visible = is_script
 	
 	# Sync with script item list.
 	if (selected_tab != -1 && scripts_item_list.item_count > 0 && !scripts_item_list.is_selected(selected_tab)):
