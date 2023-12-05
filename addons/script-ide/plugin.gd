@@ -473,7 +473,18 @@ func update_outline_cache():
 	
 	outline_cache = OutlineCache.new()
 	
-	# Functions
+	# Collect all script members.
+	for_each_script_member(script, func(array: Array[String], item: String): array.append(item))
+	
+	# Remove script members that only exist in the base script (which includes the base of the base etc.).
+	# Note: The method that only collects script members without including the base script(s)
+	# is not exposed to GDScript.
+	var base_script: Script = script.get_base_script()
+	if (base_script != null):
+		for_each_script_member(base_script, func(array: Array[String], item: String): array.erase(item))
+	
+func for_each_script_member(script: Script, consumer: Callable):
+	# Functions / Methods
 	for dict in script.get_script_method_list():
 		var func_name: String = dict["name"]
 		
@@ -481,11 +492,11 @@ func update_outline_cache():
 			continue
 
 		if (keywords.has(func_name)):
-			outline_cache.engine_funcs.append(func_name)
+			consumer.call(outline_cache.engine_funcs, func_name)
 		else:
-			outline_cache.funcs.append(func_name)
+			consumer.call(outline_cache.funcs, func_name)
 	
-	# Properties / Exports
+	# Properties / Exported variables
 	for dict in script.get_script_property_list():
 		var property: String = dict["name"]
 		if HIDE_PRIVATE_MEMBERS && property.begins_with("_"):
@@ -494,11 +505,11 @@ func update_outline_cache():
 		var usage: int = dict["usage"]
 
 		if (usage == PROPERTY_USAGE_SCRIPT_VARIABLE | PROPERTY_USAGE_STORAGE | PROPERTY_USAGE_EDITOR):
-			outline_cache.exports.append(property)
+			consumer.call(outline_cache.exports, property)
 		elif (usage == PROPERTY_USAGE_SCRIPT_VARIABLE):
-			outline_cache.properties.append(property)
+			consumer.call(outline_cache.properties, property)
 	
-	# Static variables are separated for whatever reason
+	# Static variables (are separated for whatever reason)
 	for dict in script.get_property_list():
 		var property: String = dict["name"]
 		if HIDE_PRIVATE_MEMBERS && property.begins_with("_"):
@@ -507,25 +518,25 @@ func update_outline_cache():
 		var usage: int = dict["usage"]
 			
 		if (usage == PROPERTY_USAGE_SCRIPT_VARIABLE):
-			outline_cache.properties.append(property)
+			consumer.call(outline_cache.properties, property)
 		
 	# Signals
 	for dict in script.get_script_signal_list():
 		var signal_name: String = dict["name"]
 		
-		outline_cache.signals.append(signal_name)
+		consumer.call(outline_cache.signals, signal_name)
 	
-	# Constants/Classes
+	# Constants / Classes
 	for name_key in script.get_script_constant_map():
 		if HIDE_PRIVATE_MEMBERS && name_key.begins_with("_"):
 			continue
 		
 		var object: Variant = script.get_script_constant_map().get(name_key)
 		if (object is GDScript && object.get_instance_base_type() == "RefCounted"):
-			outline_cache.classes.append(name_key)
+			consumer.call(outline_cache.classes, name_key)
 		else:
-			outline_cache.constants.append(name_key)
-			
+			consumer.call(outline_cache.constants, name_key)
+	
 func get_icon(func_name: String) -> Texture2D:
 	var icon: Texture2D = func_icon
 	if (func_name.begins_with("get")):
