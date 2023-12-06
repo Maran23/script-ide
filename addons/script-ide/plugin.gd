@@ -11,11 +11,7 @@ const OUTLINE_POSITION_RIGHT: bool = true
 ## Hide private methods and constants. All methods/constants starting with '_' are considered as private-
 const HIDE_PRIVATE_MEMBERS: bool = false
 
-const POPUP_SCRIPT: GDScript = preload("res://addons/script-ide/Popup.gd")
-
-var keywords: Dictionary = {} # Basically used as Set, since Godot has none. [String, int = 0]
-
-# Outline icons
+#region Outline icons
 const keyword_icon: Texture2D = preload("res://addons/script-ide/icon/keyword.svg")
 const func_icon: Texture2D = preload("res://addons/script-ide/icon/func.svg")
 const func_get_icon: Texture2D = preload("res://addons/script-ide/icon/func_get.svg")
@@ -25,8 +21,11 @@ const export_icon: Texture2D = preload("res://addons/script-ide/icon/export.svg"
 const signal_icon: Texture2D = preload("res://addons/script-ide/icon/signal.svg")
 const constant_icon: Texture2D = preload("res://addons/script-ide/icon/constant.svg")
 const class_icon: Texture2D = preload("res://addons/script-ide/icon/class.svg")
+#endregion
 
-# Existing controls we modify
+const POPUP_SCRIPT: GDScript = preload("res://addons/script-ide/Popup.gd")
+
+#region Existing controls we modify
 var outline_container: Node
 var outline_parent: Node
 var scripts_tab_container: TabContainer
@@ -36,8 +35,9 @@ var split_container: HSplitContainer
 var old_outline: ItemList
 var filter_txt: LineEdit
 var sort_btn: Button
+#endregion
 
-# Own controls we add
+#region Own controls we add
 var outline: ItemList
 var outline_popup: PopupPanel
 var filter_box: HBoxContainer
@@ -49,7 +49,9 @@ var property_btn: Button
 var export_btn: Button
 var func_btn: Button
 var engine_func_btn: Button
+#endregion
 
+var keywords: Dictionary = {} # Basically used as Set, since Godot has none. [String, int = 0]
 var outline_cache: OutlineCache
 var tab_state: TabContainerState = TabContainerState.new()
 
@@ -60,6 +62,7 @@ var selected_tab: int = -1
 var last_tab_hovered: int = -1
 var sync_script_list: bool
 
+#region Enter / Exit -> Plugin setup
 ## Change the Godot script UI and transform into an IDE like UI
 func _enter_tree() -> void:
 	# Update on filesystem changed (e.g. save operation).
@@ -194,12 +197,14 @@ func _exit_tree() -> void:
 		
 	if (outline_popup != null):
 		outline_popup.hide()
+#endregion
 		
 ## Lazy pattern to update the editor only once per frame
 func _process(delta: float) -> void:
 	update_editor()
 	set_process(false)
 	
+#region Input handling -> Popup
 ## Add navigation to the Outline
 func _input(event: InputEvent) -> void:
 	if (!filter_txt.has_focus()):
@@ -307,10 +312,21 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		filter_txt.grab_focus()
 		
 		update_outline()
+#endregion
 		
 ## Schedules an update on the frame
 func schedule_update():
 	set_process(true)
+	
+## Updates all parts of the editor needed to be synchronized with the file system.
+func update_editor():
+	if (sync_script_list):
+		sync_tab_with_script_list()
+		sync_script_list = false
+	
+	update_tabs()
+	update_outline_cache()
+	update_outline()
 	
 func get_current_script() -> Script:
 	var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
@@ -399,11 +415,6 @@ func create_filter_btn(icon: Texture2D, title: String) -> Button:
 	
 	return btn
 
-func register_virtual_methods(clazz: String):
-	for method in ClassDB.class_get_method_list(clazz):
-		if method.flags & METHOD_FLAG_VIRTUAL > 0:
-			keywords[method.name] = 0
-
 func on_tab_changed(idx: int):
 	selected_tab = idx;
 	
@@ -436,7 +447,8 @@ func update_tabs():
 	for index in scripts_tab_container.get_tab_count():
 		scripts_tab_container.set_tab_title(index, scripts_item_list.get_item_text(index))
 		scripts_tab_container.set_tab_icon(index, scripts_item_list.get_item_icon(index))
-	
+
+#region Outline (cache) update
 func update_keywords(script: Script):
 	if (script == null):
 		return
@@ -449,14 +461,10 @@ func update_keywords(script: Script):
 		keywords["_static_init"] = 0
 		register_virtual_methods(new_script_type)
 		
-func update_editor():
-	if (sync_script_list):
-		sync_tab_with_script_list()
-		sync_script_list = false
-	
-	update_tabs()
-	update_outline_cache()
-	update_outline()
+func register_virtual_methods(clazz: String):
+	for method in ClassDB.class_get_method_list(clazz):
+		if method.flags & METHOD_FLAG_VIRTUAL > 0:
+			keywords[method.name] = 0
 
 func update_outline_cache():
 	outline_cache = null
@@ -537,15 +545,6 @@ func for_each_script_member(script: Script, consumer: Callable):
 		else:
 			consumer.call(outline_cache.constants, name_key)
 	
-func get_icon(func_name: String) -> Texture2D:
-	var icon: Texture2D = func_icon
-	if (func_name.begins_with("get")):
-		icon = func_get_icon
-	elif (func_name.begins_with("set")):
-		icon = func_set_icon
-			
-	return icon
-	
 func update_outline():
 	outline.clear()
 	
@@ -607,9 +606,37 @@ func add_to_outline_ext(items: Array[String], icon_callable: Callable, type: Str
 			
 			move_index += 1
 			
-func is_sorted() -> bool:
-	return get_editor_interface().get_editor_settings().get_setting("text_editor/script_list/sort_members_outline_alphabetically")
+func get_icon(func_name: String) -> Texture2D:
+	var icon: Texture2D = func_icon
+	if (func_name.begins_with("get")):
+		icon = func_get_icon
+	elif (func_name.begins_with("set")):
+		icon = func_set_icon
+			
+	return icon
+#endregion
 	
+func sync_tab_with_script_list():
+	# For some reason the selected tab is wrong. Looks like a Godot bug.
+	if (selected_tab >= scripts_item_list.item_count):
+		selected_tab = scripts_tab_bar.current_tab
+	
+	# Hide filter and outline for non .gd scripts.
+	var is_script: bool = get_current_script() != null
+	filter_box.visible = is_script
+	outline.visible = is_script
+	
+	# Sync with script item list.
+	if (selected_tab != -1 && scripts_item_list.item_count > 0 && !scripts_item_list.is_selected(selected_tab)):
+		scripts_item_list.select(selected_tab)
+		scripts_item_list.item_selected.emit(selected_tab)
+
+func trigger_script_editor_update_script_names():
+	var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
+	# for now it is the only way to trigger script_editor._update_script_names
+	script_editor.notification(Control.NOTIFICATION_THEME_CHANGED)
+
+#region Tab Handling
 func on_tab_bar_mouse_exited():
 	last_tab_hovered = -1
 
@@ -627,6 +654,16 @@ func on_tab_bar_gui_input(event: InputEvent):
 		if event.is_pressed() and event.button_index == MOUSE_BUTTON_MIDDLE:
 			simulate_item_clicked(last_tab_hovered, MOUSE_BUTTON_MIDDLE)
 
+func on_active_tab_rearranged(idx_to: int):
+	var control: Control = scripts_tab_container.get_tab_control(selected_tab)
+	if (!control):
+		return
+		
+	scripts_tab_container.move_child(control, idx_to)
+	scripts_tab_container.current_tab = scripts_tab_container.current_tab
+	selected_tab = scripts_tab_container.current_tab
+	trigger_script_editor_update_script_names()
+	
 func get_res_path(idx: int) -> String:
 	var tab_control: Control = scripts_tab_container.get_tab_control(idx)
 	if (tab_control == null):
@@ -638,31 +675,6 @@ func get_res_path(idx: int) -> String:
 	
 	return path_var
 
-func on_active_tab_rearranged(idx_to: int):
-	var control: Control = scripts_tab_container.get_tab_control(selected_tab)
-	if (!control):
-		return
-		
-	scripts_tab_container.move_child(control, idx_to)
-	scripts_tab_container.current_tab = scripts_tab_container.current_tab
-	selected_tab = scripts_tab_container.current_tab
-	trigger_script_editor_update_script_names()
-	
-func sync_tab_with_script_list():
-	# For some reason the selected tab is wrong. Looks like a Godot bug.
-	if (selected_tab >= scripts_item_list.item_count):
-		selected_tab = scripts_tab_bar.current_tab
-	
-	# Hide filter and outline for non .gd scripts.
-	var is_script: bool = get_current_script() != null
-	filter_box.visible = is_script
-	outline.visible = is_script
-	
-	# Sync with script item list.
-	if (selected_tab != -1 && scripts_item_list.item_count > 0 && !scripts_item_list.is_selected(selected_tab)):
-		scripts_item_list.select(selected_tab)
-		scripts_item_list.item_selected.emit(selected_tab)
-
 func on_tab_rmb(tab_idx: int):
 	simulate_item_clicked(tab_idx, MOUSE_BUTTON_RIGHT)
 
@@ -671,14 +683,13 @@ func on_tab_close(tab_idx: int):
 
 func simulate_item_clicked(tab_idx: int, mouse_idx: int):
 	scripts_item_list.item_clicked.emit(tab_idx, scripts_item_list.get_local_mouse_position(), mouse_idx)
-
-func trigger_script_editor_update_script_names():
-	var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
-	# for now it is the only way to trigger script_editor._update_script_names
-	script_editor.notification(Control.NOTIFICATION_THEME_CHANGED)
+#endregion
 
 func get_editor_scale() -> float:
 	return get_editor_interface().get_editor_scale()
+	
+func is_sorted() -> bool:
+	return get_editor_interface().get_editor_settings().get_setting("text_editor/script_list/sort_members_outline_alphabetically")
 	
 static func find_or_null(arr: Array[Node], index: int = 0) -> Node:
 	if arr.is_empty():
