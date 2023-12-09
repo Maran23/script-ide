@@ -259,6 +259,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		return
 	
 	if (event.get_keycode_with_modifiers() == OUTLINE_POPUP_TRIGGER || event.get_keycode_with_modifiers() == OUTLINE_POPUP_TRIGGER_ALT):
+		get_viewport().set_input_as_handled()
+		
 		var button_flags: Array[bool] = []
 		for child in filter_box.get_children():
 			var btn: Button = child
