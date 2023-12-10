@@ -1,15 +1,18 @@
 @tool
 extends EditorPlugin
 
-# NOTE: Those variables can be customized to your needs.
+# NOTE: The shortcut can be customized to your needs.
 ## First shortcut to trigger the Outline popup.
 const OUTLINE_POPUP_TRIGGER: Key = KeyModifierMask.KEY_MASK_CTRL + Key.KEY_O
-## Second shortcut to trigger the Outline popup.
+## Second alternative shortcut to trigger the Outline popup.
 const OUTLINE_POPUP_TRIGGER_ALT: Key = KeyModifierMask.KEY_MASK_META + Key.KEY_O
-## Position of the Outline popup. True = Right side, False = Left side.
-const OUTLINE_POSITION_RIGHT: bool = true
-## Hide private methods and constants. All methods/constants starting with '_' are considered as private-
-const HIDE_PRIVATE_MEMBERS: bool = false
+
+## Project setting path
+const SCRIPT_IDE: StringName = &"plugin/script-ide/"
+## Project setting for the outline position
+const OUTLINE_POSITION_RIGHT: StringName = &"outline_position_right"
+## Project setting to control whether private members (annotated with '_' should be hidden or not)
+const HIDE_PRIVATE_MEMBERS: StringName = &"hide_private_members"
 
 #region Outline icons
 const keyword_icon: Texture2D = preload("res://addons/script-ide/icon/keyword.svg")
@@ -24,6 +27,11 @@ const class_icon: Texture2D = preload("res://addons/script-ide/icon/class.svg")
 #endregion
 
 const POPUP_SCRIPT: GDScript = preload("res://addons/script-ide/Popup.gd")
+
+#region Plugin settings
+var is_outline_right: bool = true
+var hide_private_members: bool = false
+#endregion
 
 #region Existing controls we modify
 var outline_container: Node
@@ -65,6 +73,11 @@ var sync_script_list: bool
 #region Enter / Exit -> Plugin setup
 ## Change the Godot script UI and transform into an IDE like UI
 func _enter_tree() -> void:
+	set_initial_setting(OUTLINE_POSITION_RIGHT, is_outline_right)
+	set_initial_setting(HIDE_PRIVATE_MEMBERS, hide_private_members)
+	
+	ProjectSettings.settings_changed.connect(sync_settings)
+	
 	# Update on filesystem changed (e.g. save operation).
 	var file_system: EditorFileSystem = get_editor_interface().get_resource_filesystem()
 	file_system.filesystem_changed.connect(schedule_update)
@@ -102,8 +115,8 @@ func _enter_tree() -> void:
 	if (split_container != null):
 		outline_container = split_container.get_child(0)
 		
-		if (OUTLINE_POSITION_RIGHT):
-			split_container.move_child(outline_container, 1)
+		if (is_outline_right):
+			update_outline_position()
 		
 		old_outline = find_or_null(outline_container.find_children("*", "ItemList", true, false), 1)
 		outline_parent = old_outline.get_parent()
@@ -155,6 +168,8 @@ func _enter_tree() -> void:
 
 ## Restore the old Godot script UI and free everything we created
 func _exit_tree() -> void:
+	ProjectSettings.settings_changed.disconnect(sync_settings)
+	
 	var file_system: EditorFileSystem = get_editor_interface().get_resource_filesystem()
 	file_system.filesystem_changed.disconnect(schedule_update)
 	
@@ -279,7 +294,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
 		outline_popup.popup_hide.connect(func():
 			outline_container.reparent(split_container)
-			if (!OUTLINE_POSITION_RIGHT):
+			if (!is_outline_right):
 				split_container.move_child(outline_container, 0)
 			
 			filter_txt.text = old_text
@@ -393,12 +408,13 @@ func goto_line(index: int):
 func create_filter_btn(icon: Texture2D, title: String) -> Button:
 	var btn: Button = Button.new()
 	btn.toggle_mode = true
-	btn.button_pressed = true
 	btn.icon = icon
 	btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	btn.tooltip_text = title
 	
-	btn.pressed.connect(update_outline)
+	btn.button_pressed = get_setting(title, true)
+	
+	btn.toggled.connect(on_filter_button_pressed.bind(title))
 	
 	btn.add_theme_color_override("icon_pressed_color", Color.WHITE)
 	btn.add_theme_color_override("icon_hover_color", Color.WHITE)
@@ -416,6 +432,55 @@ func create_filter_btn(icon: Texture2D, title: String) -> Button:
 	btn.add_theme_stylebox_override("focus", style_box)
 	
 	return btn
+	
+func on_filter_button_pressed(pressed: bool, title: String):
+	set_internal_setting(title, pressed)
+	
+	update_outline()
+	
+func update_outline_position():
+	if (is_outline_right):
+		split_container.move_child(outline_container, 1)
+	else:
+		split_container.move_child(outline_container, 0)
+	
+func sync_settings():
+	var new_outline_right: bool = get_setting(OUTLINE_POSITION_RIGHT, true)
+	if (new_outline_right != is_outline_right):
+		is_outline_right = new_outline_right
+		
+		update_outline_position()
+		
+	var new_hide_private_members: bool = get_setting(HIDE_PRIVATE_MEMBERS, false)
+	if (new_hide_private_members != hide_private_members):
+		hide_private_members = new_hide_private_members
+		
+		update_outline_cache()
+		update_outline()
+	
+func get_setting(property: StringName, alt: bool) -> bool:
+	var path: StringName = get_setting_path(property)
+	
+	return ProjectSettings.get_setting(path, alt)
+	
+func set_initial_setting(property: StringName, value: bool):
+	var path: StringName = get_setting_path(property)
+	
+	if (!ProjectSettings.has_setting(path)):
+		ProjectSettings.set_setting(path, value)
+		ProjectSettings.set_initial_value(path, value)
+		ProjectSettings.save()
+	
+func set_internal_setting(property: StringName, value: bool):
+	var path: StringName = get_setting_path(property)
+	
+	ProjectSettings.set_setting(path, value)
+	ProjectSettings.set_as_internal(path, true)
+	
+	ProjectSettings.save()
+	
+func get_setting_path(string: String) -> StringName:
+	return SCRIPT_IDE + string.to_lower().replace(" ", "_")
 
 func on_tab_changed(idx: int):
 	selected_tab = idx;
@@ -498,7 +563,7 @@ func for_each_script_member(script: Script, consumer: Callable):
 	for dict in script.get_script_method_list():
 		var func_name: String = dict["name"]
 		
-		if HIDE_PRIVATE_MEMBERS && func_name.begins_with("_"):
+		if hide_private_members && func_name.begins_with("_"):
 			continue
 
 		if (keywords.has(func_name)):
@@ -509,7 +574,7 @@ func for_each_script_member(script: Script, consumer: Callable):
 	# Properties / Exported variables
 	for dict in script.get_script_property_list():
 		var property: String = dict["name"]
-		if HIDE_PRIVATE_MEMBERS && property.begins_with("_"):
+		if hide_private_members && property.begins_with("_"):
 			continue
 		
 		var usage: int = dict["usage"]
@@ -522,7 +587,7 @@ func for_each_script_member(script: Script, consumer: Callable):
 	# Static variables (are separated for whatever reason)
 	for dict in script.get_property_list():
 		var property: String = dict["name"]
-		if HIDE_PRIVATE_MEMBERS && property.begins_with("_"):
+		if hide_private_members && property.begins_with("_"):
 			continue
 			
 		var usage: int = dict["usage"]
@@ -538,7 +603,7 @@ func for_each_script_member(script: Script, consumer: Callable):
 	
 	# Constants / Classes
 	for name_key in script.get_script_constant_map():
-		if HIDE_PRIVATE_MEMBERS && name_key.begins_with("_"):
+		if hide_private_members && name_key.begins_with("_"):
 			continue
 		
 		var object: Variant = script.get_script_constant_map().get(name_key)
