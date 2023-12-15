@@ -1,18 +1,14 @@
 @tool
 extends EditorPlugin
 
-# NOTE: The shortcut can be customized to your needs.
-## First shortcut to trigger the Outline popup.
-const OUTLINE_POPUP_TRIGGER: Key = KeyModifierMask.KEY_MASK_CTRL + Key.KEY_O
-## Second alternative shortcut to trigger the Outline popup.
-const OUTLINE_POPUP_TRIGGER_ALT: Key = KeyModifierMask.KEY_MASK_META + Key.KEY_O
-
 ## Editor setting path
-const SCRIPT_IDE: StringName = &"plugin/script-ide/"
+const SCRIPT_IDE: StringName = &"plugin/script_ide/"
 ## Editor setting for the outline position
 const OUTLINE_POSITION_RIGHT: StringName = SCRIPT_IDE + &"outline_position_right"
 ## Editor setting to control whether private members (annotated with '_' should be hidden or not)
 const HIDE_PRIVATE_MEMBERS: StringName = SCRIPT_IDE + &"hide_private_members"
+## Editor setting for the 'Open Outline Popup' shortcut
+const OPEN_OUTLINE_POPUP: StringName = SCRIPT_IDE + &"open_outline_popup"
 
 #region Outline icons
 const keyword_icon: Texture2D = preload("res://addons/script-ide/icon/keyword.svg")
@@ -31,6 +27,7 @@ const POPUP_SCRIPT: GDScript = preload("res://addons/script-ide/Popup.gd")
 #region Editor settings
 var is_outline_right: bool = true
 var hide_private_members: bool = false
+var open_outline_popup: Shortcut
 #endregion
 
 var suppress_settings_sync: bool = false
@@ -63,7 +60,7 @@ var engine_func_btn: Button
 
 var keywords: Dictionary = {} # Basically used as Set, since Godot has none. [String, int = 0]
 var outline_cache: OutlineCache
-var tab_state: TabContainerState = TabContainerState.new()
+var tab_state: TabStateCache
 
 var old_script_editor_base: ScriptEditorBase
 var old_script_type: StringName
@@ -78,6 +75,25 @@ func _enter_tree() -> void:
 	is_outline_right = get_setting(OUTLINE_POSITION_RIGHT, is_outline_right)
 	hide_private_members = get_setting(HIDE_PRIVATE_MEMBERS, hide_private_members)
 	
+	var editor_settings: EditorSettings = get_editor_settings()
+	if (!editor_settings.has_setting(OPEN_OUTLINE_POPUP)):
+		var shortcut: Shortcut = Shortcut.new()
+		var event: InputEventKey = InputEventKey.new()
+		event.device = -1
+		event.ctrl_pressed = true
+		event.keycode = KEY_O
+		
+		var event2: InputEventKey = InputEventKey.new()
+		event2.device = -1
+		event2.meta_pressed = true
+		event2.keycode = KEY_O
+		
+		shortcut.events = [ event, event2 ]
+		editor_settings.set_setting(OPEN_OUTLINE_POPUP, shortcut)
+		editor_settings.set_initial_value(OPEN_OUTLINE_POPUP, shortcut, false)
+	
+	open_outline_popup = editor_settings.get_setting(OPEN_OUTLINE_POPUP)
+	
 	# Update on filesystem changed (e.g. save operation).
 	var file_system: EditorFileSystem = get_editor_interface().get_resource_filesystem()
 	file_system.filesystem_changed.connect(schedule_update)
@@ -87,6 +103,8 @@ func _enter_tree() -> void:
 	scripts_tab_container = find_or_null(script_editor.find_children("*", "TabContainer", true, false))
 	if (scripts_tab_container != null):
 		scripts_tab_bar = get_tab_bar_of(scripts_tab_container)
+		
+		tab_state = TabStateCache.new()
 		tab_state.save(scripts_tab_container, scripts_tab_bar)
 		
 		scripts_tab_container.tabs_visible = true
@@ -94,8 +112,8 @@ func _enter_tree() -> void:
 
 		if (scripts_tab_bar != null):
 			scripts_tab_bar.tab_close_display_policy = TabBar.CLOSE_BUTTON_SHOW_ACTIVE_ONLY
-			scripts_tab_bar.select_with_rmb = true
 			scripts_tab_bar.drag_to_rearrange_enabled = true
+			scripts_tab_bar.select_with_rmb = true
 			scripts_tab_bar.tab_close_pressed.connect(on_tab_close)
 			scripts_tab_bar.tab_rmb_clicked.connect(on_tab_rmb)
 			scripts_tab_bar.tab_hovered.connect(on_tab_hovered)
@@ -129,7 +147,7 @@ func _enter_tree() -> void:
 		
 		outline.item_selected.connect(scroll_to_index)
 		
-		# Add a filter box for all kind of script objects
+		# Add a filter box for all kind of members
 		filter_box = HBoxContainer.new()
 		
 		engine_func_btn = create_filter_btn(keyword_icon, "Engine callbacks")
@@ -196,7 +214,7 @@ func _exit_tree() -> void:
 	if (scripts_tab_container != null):
 		tab_state.restore(scripts_tab_container, scripts_tab_bar)
 		
-		if (scripts_tab_bar):
+		if (scripts_tab_bar != null):
 			scripts_tab_bar.mouse_exited.disconnect(on_tab_bar_mouse_exited)
 			scripts_tab_bar.gui_input.disconnect(on_tab_bar_gui_input)
 			scripts_tab_bar.tab_close_pressed.disconnect(on_tab_close)
@@ -274,7 +292,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if !(event is InputEventKey):
 		return
 	
-	if (event.get_keycode_with_modifiers() == OUTLINE_POPUP_TRIGGER || event.get_keycode_with_modifiers() == OUTLINE_POPUP_TRIGGER_ALT):
+	if (open_outline_popup.matches_event(event)):
 		get_viewport().set_input_as_handled()
 		
 		var button_flags: Array[bool] = []
@@ -456,23 +474,26 @@ func sync_settings():
 		if (!setting.begins_with(SCRIPT_IDE)):
 			continue
 			
-		# Update outline position
 		if (setting == OUTLINE_POSITION_RIGHT):
+			# Update outline position.
 			var new_outline_right: bool = get_setting(OUTLINE_POSITION_RIGHT, is_outline_right)
 			if (new_outline_right != is_outline_right):
 				is_outline_right = new_outline_right
 				
 				update_outline_position()
-		# Update cache to not include private members. Update outline to reflect the cache.
 		elif (setting == HIDE_PRIVATE_MEMBERS):
+			# Update cache and outline to reflect the private members setting.
 			var new_hide_private_members: bool = get_setting(HIDE_PRIVATE_MEMBERS, hide_private_members)
 			if (new_hide_private_members != hide_private_members):
 				hide_private_members = new_hide_private_members
 				
 				update_outline_cache()
 				update_outline()
-		# Update outline as the visibility changed
+		elif (setting == OPEN_OUTLINE_POPUP):
+			# Update show outline popup shortcut.
+			open_outline_popup = get_editor_settings().get_setting(OPEN_OUTLINE_POPUP)
 		else:
+			# Update filter buttons.
 			for btn_node in filter_box.get_children():
 				var btn: Button = btn_node
 				var property: StringName = btn.get_meta("property")
@@ -799,24 +820,27 @@ class OutlineCache:
 	var funcs: Array[String] = []
 	var engine_funcs: Array[String] = []
 
-class TabContainerState:
+class TabStateCache:
 	var tabs_visible: bool
 	var drag_to_rearrange_enabled: bool
+	var tab_bar_drag_to_rearrange_enabled: bool
 	var tab_close_display_policy: TabBar.CloseButtonDisplayPolicy
 	var select_with_rmb: bool
 	
 	func save(tab_container: TabContainer, tab_bar: TabBar):
-		if tab_container != null:
+		if (tab_container != null):
 			tabs_visible = tab_container.tabs_visible
-		if tab_bar != null:
-			drag_to_rearrange_enabled = tab_bar.drag_to_rearrange_enabled
+			drag_to_rearrange_enabled = tab_container.drag_to_rearrange_enabled
+		if (tab_bar != null):
+			tab_bar_drag_to_rearrange_enabled = tab_bar.drag_to_rearrange_enabled
 			tab_close_display_policy = tab_bar.tab_close_display_policy
 			select_with_rmb = tab_bar.select_with_rmb
 	
 	func restore(tab_container: TabContainer, tab_bar: TabBar):
-		if tab_container != null:
+		if (tab_container != null):
 			tab_container.tabs_visible = tabs_visible
-		if tab_bar != null:
+			tab_container.drag_to_rearrange_enabled = drag_to_rearrange_enabled
+		if (tab_bar != null):
 			tab_bar.drag_to_rearrange_enabled = drag_to_rearrange_enabled
 			tab_bar.tab_close_display_policy = tab_close_display_policy
 			tab_bar.select_with_rmb = select_with_rmb
