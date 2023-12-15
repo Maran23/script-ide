@@ -7,12 +7,12 @@ const OUTLINE_POPUP_TRIGGER: Key = KeyModifierMask.KEY_MASK_CTRL + Key.KEY_O
 ## Second alternative shortcut to trigger the Outline popup.
 const OUTLINE_POPUP_TRIGGER_ALT: Key = KeyModifierMask.KEY_MASK_META + Key.KEY_O
 
-## Project setting path
+## Editor setting path
 const SCRIPT_IDE: StringName = &"plugin/script-ide/"
-## Project setting for the outline position
-const OUTLINE_POSITION_RIGHT: StringName = &"outline_position_right"
-## Project setting to control whether private members (annotated with '_' should be hidden or not)
-const HIDE_PRIVATE_MEMBERS: StringName = &"hide_private_members"
+## Editor setting for the outline position
+const OUTLINE_POSITION_RIGHT: StringName = SCRIPT_IDE + &"outline_position_right"
+## Editor setting to control whether private members (annotated with '_' should be hidden or not)
+const HIDE_PRIVATE_MEMBERS: StringName = SCRIPT_IDE + &"hide_private_members"
 
 #region Outline icons
 const keyword_icon: Texture2D = preload("res://addons/script-ide/icon/keyword.svg")
@@ -28,10 +28,12 @@ const class_icon: Texture2D = preload("res://addons/script-ide/icon/class.svg")
 
 const POPUP_SCRIPT: GDScript = preload("res://addons/script-ide/Popup.gd")
 
-#region Plugin settings
+#region Editor settings
 var is_outline_right: bool = true
 var hide_private_members: bool = false
 #endregion
+
+var suppress_settings_sync: bool = false
 
 #region Existing controls we modify
 var outline_container: Node
@@ -73,10 +75,8 @@ var sync_script_list: bool
 #region Enter / Exit -> Plugin setup
 ## Change the Godot script UI and transform into an IDE like UI
 func _enter_tree() -> void:
-	set_initial_setting(OUTLINE_POSITION_RIGHT, is_outline_right)
-	set_initial_setting(HIDE_PRIVATE_MEMBERS, hide_private_members)
-	
-	ProjectSettings.settings_changed.connect(sync_settings)
+	is_outline_right = get_setting(OUTLINE_POSITION_RIGHT, is_outline_right)
+	hide_private_members = get_setting(HIDE_PRIVATE_MEMBERS, hide_private_members)
 	
 	# Update on filesystem changed (e.g. save operation).
 	var file_system: EditorFileSystem = get_editor_interface().get_resource_filesystem()
@@ -164,12 +164,11 @@ func _enter_tree() -> void:
 		sort_btn = find_or_null(outline_container.find_children("*", "Button", true, false))
 		sort_btn.pressed.connect(update_outline)
 			
+	get_editor_settings().settings_changed.connect(sync_settings)
 	on_tab_changed(scripts_tab_bar.current_tab)
 
 ## Restore the old Godot script UI and free everything we created
 func _exit_tree() -> void:
-	ProjectSettings.settings_changed.disconnect(sync_settings)
-	
 	var file_system: EditorFileSystem = get_editor_interface().get_resource_filesystem()
 	file_system.filesystem_changed.disconnect(schedule_update)
 	
@@ -212,6 +211,8 @@ func _exit_tree() -> void:
 		
 	if (outline_popup != null):
 		outline_popup.hide()
+		
+	get_editor_settings().settings_changed.disconnect(sync_settings)
 #endregion
 		
 ## Lazy pattern to update the editor only once per frame
@@ -412,9 +413,11 @@ func create_filter_btn(icon: Texture2D, title: String) -> Button:
 	btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	btn.tooltip_text = title
 	
-	btn.button_pressed = get_setting(title, true)
+	var property: StringName = as_setting(title)
+	btn.set_meta("property", property)
+	btn.button_pressed = get_setting(property, true)
 	
-	btn.toggled.connect(on_filter_button_pressed.bind(title))
+	btn.toggled.connect(on_filter_button_pressed.bind(btn))
 	
 	btn.add_theme_color_override("icon_pressed_color", Color.WHITE)
 	btn.add_theme_color_override("icon_hover_color", Color.WHITE)
@@ -433,8 +436,8 @@ func create_filter_btn(icon: Texture2D, title: String) -> Button:
 	
 	return btn
 	
-func on_filter_button_pressed(pressed: bool, title: String):
-	set_internal_setting(title, pressed)
+func on_filter_button_pressed(pressed: bool, btn: Button):
+	set_setting(btn.get_meta("property"), pressed)
 	
 	update_outline()
 	
@@ -445,42 +448,55 @@ func update_outline_position():
 		split_container.move_child(outline_container, 0)
 	
 func sync_settings():
-	var new_outline_right: bool = get_setting(OUTLINE_POSITION_RIGHT, true)
-	if (new_outline_right != is_outline_right):
-		is_outline_right = new_outline_right
+	if (suppress_settings_sync):
+		return
 		
-		update_outline_position()
+	var changed_settings: PackedStringArray = get_editor_settings().get_changed_settings()
+	for setting in changed_settings:
+		if (!setting.begins_with(SCRIPT_IDE)):
+			continue
+			
+		# Update outline position
+		if (setting == OUTLINE_POSITION_RIGHT):
+			var new_outline_right: bool = get_setting(OUTLINE_POSITION_RIGHT, is_outline_right)
+			if (new_outline_right != is_outline_right):
+				is_outline_right = new_outline_right
+				
+				update_outline_position()
+		# Update cache to not include private members. Update outline to reflect the cache.
+		elif (setting == HIDE_PRIVATE_MEMBERS):
+			var new_hide_private_members: bool = get_setting(HIDE_PRIVATE_MEMBERS, hide_private_members)
+			if (new_hide_private_members != hide_private_members):
+				hide_private_members = new_hide_private_members
+				
+				update_outline_cache()
+				update_outline()
+		# Update outline as the visibility changed
+		else:
+			for btn_node in filter_box.get_children():
+				var btn: Button = btn_node
+				var property: StringName = btn.get_meta("property")
+				
+				btn.button_pressed = get_setting(property, btn.button_pressed)
 		
-	var new_hide_private_members: bool = get_setting(HIDE_PRIVATE_MEMBERS, false)
-	if (new_hide_private_members != hide_private_members):
-		hide_private_members = new_hide_private_members
-		
-		update_outline_cache()
-		update_outline()
+func as_setting(property: String) -> StringName:
+	return SCRIPT_IDE + property.to_lower().replace(" ", "_")
 	
 func get_setting(property: StringName, alt: bool) -> bool:
-	var path: StringName = get_setting_path(property)
+	var editor_settings: EditorSettings = get_editor_settings()
+	if (editor_settings.has_setting(property)):
+		return editor_settings.get_setting(property)
+	else:
+		editor_settings.set_setting(property, alt)
+		editor_settings.set_initial_value(property, alt, false)
+		return alt
 	
-	return ProjectSettings.get_setting(path, alt)
+func set_setting(property: StringName, value: bool):
+	var editor_settings: EditorSettings = get_editor_settings()
 	
-func set_initial_setting(property: StringName, value: bool):
-	var path: StringName = get_setting_path(property)
-	
-	if (!ProjectSettings.has_setting(path)):
-		ProjectSettings.set_setting(path, value)
-		ProjectSettings.set_initial_value(path, value)
-		ProjectSettings.save()
-	
-func set_internal_setting(property: StringName, value: bool):
-	var path: StringName = get_setting_path(property)
-	
-	ProjectSettings.set_setting(path, value)
-	ProjectSettings.set_as_internal(path, true)
-	
-	ProjectSettings.save()
-	
-func get_setting_path(string: String) -> StringName:
-	return SCRIPT_IDE + string.to_lower().replace(" ", "_")
+	suppress_settings_sync = true
+	editor_settings.set_setting(property, value)
+	suppress_settings_sync = false
 
 func on_tab_changed(idx: int):
 	selected_tab = idx;
@@ -563,12 +579,12 @@ func for_each_script_member(script: Script, consumer: Callable):
 	for dict in script.get_script_method_list():
 		var func_name: String = dict["name"]
 		
-		if hide_private_members && func_name.begins_with("_"):
-			continue
-
 		if (keywords.has(func_name)):
 			consumer.call(outline_cache.engine_funcs, func_name)
 		else:
+			if hide_private_members && func_name.begins_with("_"):
+				continue
+			
 			consumer.call(outline_cache.funcs, func_name)
 	
 	# Properties / Exported variables
@@ -756,7 +772,10 @@ func get_editor_scale() -> float:
 	return get_editor_interface().get_editor_scale()
 	
 func is_sorted() -> bool:
-	return get_editor_interface().get_editor_settings().get_setting("text_editor/script_list/sort_members_outline_alphabetically")
+	return get_editor_settings().get_setting("text_editor/script_list/sort_members_outline_alphabetically")
+	
+func get_editor_settings() -> EditorSettings:
+	return get_editor_interface().get_editor_settings()
 	
 static func find_or_null(arr: Array[Node], index: int = 0) -> Node:
 	if arr.is_empty():
