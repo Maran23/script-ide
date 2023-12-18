@@ -1,6 +1,8 @@
 # Script IDE
-Fixed the scale annoying bug
-add a orignal script list show option
+## What's Change in this fork?
+- outline pos fixed
+- add new event for default shortcut with ctrl+`
+- add filter script list hide option to enable/disable that
 
 ### original doc
 Transforms the Script UI into an IDE like UI. Tabs are used for navigating between scripts. The default Outline got an overhaul and now shows all members of the script (not just methods) with unique icons for faster navigation.
