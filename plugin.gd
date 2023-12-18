@@ -486,12 +486,12 @@ func update_outline_position(setup = false, remove = false):
 		split_container.move_child(outline_container, 0)
 
 func update_filter_scripts_list_cache():
-	if (scripts_item_list != null) and hide_filter_scripts_list:
+	if (scripts_item_list != null) and not hide_filter_scripts_list:
 		if scripts_item_list.item_count > 0 and not scripts_item_list.get_parent().visible:
 			scripts_item_list.get_parent().visible = true
-		elif scripts_item_list.get_parent().visible:
+		elif scripts_item_list.item_count == 0 and scripts_item_list.get_parent().visible:
 			scripts_item_list.get_parent().visible = false
-	elif (scripts_item_list != null) and not hide_filter_scripts_list:
+	elif (scripts_item_list != null) and hide_filter_scripts_list:
 		if scripts_item_list.get_parent().visible:
 			scripts_item_list.get_parent().visible = false
 
