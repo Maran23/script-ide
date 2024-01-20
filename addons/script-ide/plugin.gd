@@ -196,6 +196,12 @@ func _exit_tree() -> void:
 	if (split_container != null):
 		if (split_container != outline_container.get_parent()):
 			split_container.add_child(outline_container)
+			
+		# Try to restore the previous split offset.
+		if (is_outline_right):
+			var split_offset: float = split_container.get_child(1).size.x
+			split_container.split_offset = split_offset
+			
 		split_container.move_child(outline_container, 0)
 		
 		filter_txt.text_changed.disconnect(update_outline)
@@ -461,6 +467,9 @@ func on_filter_button_pressed(pressed: bool, btn: Button):
 	
 func update_outline_position():
 	if (is_outline_right):
+		# Try to restore the previous split offset.
+		var split_offset: float = split_container.get_child(1).size.x
+		split_container.split_offset = split_offset
 		split_container.move_child(outline_container, 1)
 	else:
 		split_container.move_child(outline_container, 0)
