@@ -605,6 +605,11 @@ func for_each_script_member(script: Script, consumer: Callable):
 		else:
 			if hide_private_members && func_name.begins_with("_"):
 				continue
+				
+			# Inline getter/setter will normally be shown as '@...getter', '@...setter'.
+			# Since we already show the variable itself, we will skip those.
+			if (func_name.begins_with("@")):
+				continue
 			
 			consumer.call(outline_cache.funcs, func_name)
 	
