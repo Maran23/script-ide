@@ -630,10 +630,11 @@ func for_each_script_member(script: Script, consumer: Callable):
 		
 		var usage: int = dict["usage"]
 
-		if (usage == PROPERTY_USAGE_SCRIPT_VARIABLE | PROPERTY_USAGE_STORAGE | PROPERTY_USAGE_EDITOR):
-			consumer.call(outline_cache.exports, property)
-		elif (usage == PROPERTY_USAGE_SCRIPT_VARIABLE):
-			consumer.call(outline_cache.properties, property)
+		if (usage & PROPERTY_USAGE_SCRIPT_VARIABLE):
+			if (usage & PROPERTY_USAGE_STORAGE && usage & PROPERTY_USAGE_EDITOR):
+				consumer.call(outline_cache.exports, property)
+			else:
+				consumer.call(outline_cache.properties, property)
 	
 	# Static variables (are separated for whatever reason)
 	for dict in script.get_property_list():
@@ -643,7 +644,7 @@ func for_each_script_member(script: Script, consumer: Callable):
 			
 		var usage: int = dict["usage"]
 			
-		if (usage == PROPERTY_USAGE_SCRIPT_VARIABLE):
+		if (usage & PROPERTY_USAGE_SCRIPT_VARIABLE):
 			consumer.call(outline_cache.properties, property)
 		
 	# Signals
