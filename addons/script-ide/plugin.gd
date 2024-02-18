@@ -106,7 +106,7 @@ func _enter_tree() -> void:
 	var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
 	scripts_tab_container = find_or_null(script_editor.find_children("*", "TabContainer", true, false))
 	if (scripts_tab_container != null):
-		scripts_tab_bar = get_tab_bar_of(scripts_tab_container)
+		scripts_tab_bar = scripts_tab_container.get_tab_bar()
 
 		tab_state = TabStateCache.new()
 		tab_state.save(scripts_tab_container, scripts_tab_bar)
@@ -127,7 +127,7 @@ func _enter_tree() -> void:
 
 			scripts_tab_bar.tab_changed.connect(on_tab_changed)
 
-	# Make script item list invisible
+	# Change script item list visibility
 	scripts_item_list = find_or_null(script_editor.find_children("*", "ItemList", true, false))
 	if (scripts_item_list != null):
 		update_script_list_visibility()
@@ -187,6 +187,7 @@ func _enter_tree() -> void:
 		sort_btn.pressed.connect(update_outline)
 
 	get_editor_settings().settings_changed.connect(sync_settings)
+
 	on_tab_changed(scripts_tab_bar.current_tab)
 
 ## Restore the old Godot script UI and free everything we created
@@ -832,13 +833,6 @@ static func find_or_null(arr: Array[Node], index: int = 0) -> Node:
 		return null
 
 	return arr[index]
-
-static func get_tab_bar_of(src: Node) -> TabBar:
-	for child in src.get_children(true):
-		if child is TabBar:
-			return child
-
-	return null
 
 class OutlineCache:
 	var classes: Array[String] = []
