@@ -7,6 +7,8 @@ const SCRIPT_IDE: StringName = &"plugin/script_ide/"
 const OUTLINE_POSITION_RIGHT: StringName = SCRIPT_IDE + &"outline_position_right"
 ## Editor setting to control whether private members (annotated with '_' should be hidden or not)
 const HIDE_PRIVATE_MEMBERS: StringName = SCRIPT_IDE + &"hide_private_members"
+## Editor setting to control whether the script list should be visible or not
+const SCRIPT_LIST_VISIBLE: StringName = SCRIPT_IDE + &"script_list_visible"
 ## Editor setting for the 'Open Outline Popup' shortcut
 const OPEN_OUTLINE_POPUP: StringName = SCRIPT_IDE + &"open_outline_popup"
 
@@ -26,6 +28,7 @@ const POPUP_SCRIPT: GDScript = preload("res://addons/script-ide/Popup.gd")
 
 #region Editor settings
 var is_outline_right: bool = true
+var is_script_list_visible: bool = false
 var hide_private_members: bool = false
 var open_outline_popup: Shortcut
 #endregion
@@ -74,6 +77,7 @@ var sync_script_list: bool
 func _enter_tree() -> void:
 	is_outline_right = get_setting(OUTLINE_POSITION_RIGHT, is_outline_right)
 	hide_private_members = get_setting(HIDE_PRIVATE_MEMBERS, hide_private_members)
+	is_script_list_visible = get_setting(SCRIPT_LIST_VISIBLE, is_script_list_visible)
 
 	var editor_settings: EditorSettings = get_editor_settings()
 	if (!editor_settings.has_setting(OPEN_OUTLINE_POPUP)):
@@ -126,7 +130,7 @@ func _enter_tree() -> void:
 	# Make script item list invisible
 	scripts_item_list = find_or_null(script_editor.find_children("*", "ItemList", true, false))
 	if (scripts_item_list != null):
-		scripts_item_list.get_parent().visible = false
+		update_script_list_visibility()
 
 	# Remove existing outline and add own outline
 	split_container = find_or_null(script_editor.find_children("*", "HSplitContainer", true, false))
@@ -474,6 +478,9 @@ func update_outline_position():
 	else:
 		split_container.move_child(outline_container, 0)
 
+func update_script_list_visibility():
+	scripts_item_list.get_parent().visible = is_script_list_visible
+
 func sync_settings():
 	if (suppress_settings_sync):
 		return
@@ -501,6 +508,13 @@ func sync_settings():
 		elif (setting == OPEN_OUTLINE_POPUP):
 			# Update show outline popup shortcut.
 			open_outline_popup = get_editor_settings().get_setting(OPEN_OUTLINE_POPUP)
+		elif (setting == SCRIPT_LIST_VISIBLE):
+			# Update the script list visibility
+			var new_script_list_visible: bool = get_setting(SCRIPT_LIST_VISIBLE, is_script_list_visible)
+			if (new_script_list_visible != is_script_list_visible):
+				is_script_list_visible = new_script_list_visible
+
+				update_script_list_visibility()
 		else:
 			# Update filter buttons.
 			for btn_node in filter_box.get_children():
