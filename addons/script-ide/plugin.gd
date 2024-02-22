@@ -319,6 +319,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		outline_popup = POPUP_SCRIPT.new()
 		outline_popup.input_listener = _input
 
+		var outline_initially_closed: bool = not outline_container.is_visible_in_tree()
+		outline_container.show()
 		outline_container.reparent(outline_popup)
 
 		var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
@@ -326,6 +328,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			outline_container.reparent(split_container)
 			if (!is_outline_right):
 				split_container.move_child(outline_container, 0)
+			if outline_initially_closed:
+				outline_container.hide()
 
 			filter_txt.text = old_text
 
