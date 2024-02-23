@@ -36,7 +36,7 @@ var open_outline_popup: Shortcut
 var suppress_settings_sync: bool = false
 
 #region Existing controls we modify
-var outline_container: Node
+var outline_container: Node2D
 var outline_parent: Node
 var scripts_tab_container: TabContainer
 var scripts_tab_bar: TabBar
@@ -319,17 +319,20 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		outline_popup = POPUP_SCRIPT.new()
 		outline_popup.input_listener = _input
 
-		var outline_initially_closed: bool = not outline_container.is_visible_in_tree()
-		outline_container.show()
+		var outline_initially_closed: bool = !outline_container.visible
+		if (outline_initially_closed):
+			outline_container.visible = true
+
 		outline_container.reparent(outline_popup)
 
 		var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
 		outline_popup.popup_hide.connect(func():
+			if outline_initially_closed:
+				outline_container.visible = false
+
 			outline_container.reparent(split_container)
 			if (!is_outline_right):
 				split_container.move_child(outline_container, 0)
-			if outline_initially_closed:
-				outline_container.hide()
 
 			filter_txt.text = old_text
 
