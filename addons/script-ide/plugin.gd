@@ -36,7 +36,7 @@ var open_outline_popup: Shortcut
 var suppress_settings_sync: bool = false
 
 #region Existing controls we modify
-var outline_container: Node2D
+var outline_container: Control
 var outline_parent: Node
 var scripts_tab_container: TabContainer
 var scripts_tab_bar: TabBar
