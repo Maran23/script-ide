@@ -772,6 +772,8 @@ func sync_tab_with_script_list():
 		scripts_item_list.select(selected_tab)
 		scripts_item_list.item_selected.emit(selected_tab)
 
+		scripts_item_list.ensure_current_is_visible()
+
 func trigger_script_editor_update_script_names():
 	var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
 	# for now it is the only way to trigger script_editor._update_script_names
