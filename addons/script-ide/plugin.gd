@@ -465,9 +465,9 @@ func create_filter_btn(icon: Texture2D, title: String) -> Button:
 
 	var style_box: StyleBoxFlat = StyleBoxFlat.new()
 	style_box.draw_center = false
-	style_box.border_color = Color(0.41, 0.61, 0.91)
+	style_box.border_color = get_editor_accent_color()
 	style_box.set_border_width_all(1 * get_editor_scale())
-	style_box.set_corner_radius_all(3 * get_editor_scale())
+	style_box.set_corner_radius_all(get_editor_corner_radius() * get_editor_scale())
 	btn.add_theme_stylebox_override("focus", style_box)
 
 	return btn
@@ -830,6 +830,12 @@ func simulate_item_clicked(tab_idx: int, mouse_idx: int):
 
 func get_editor_scale() -> float:
 	return get_editor_interface().get_editor_scale()
+
+func get_editor_corner_radius() -> int:
+	return get_editor_interface().get_editor_settings().get_setting("interface/theme/corner_radius")
+
+func get_editor_accent_color() -> Color:
+	return get_editor_interface().get_editor_settings().get_setting("interface/theme/accent_color")
 
 func is_sorted() -> bool:
 	return get_editor_settings().get_setting("text_editor/script_list/sort_members_outline_alphabetically")
