@@ -681,7 +681,8 @@ func for_each_script_member(script: Script, consumer: Callable):
 			continue
 
 		var object: Variant = script.get_script_constant_map().get(name_key)
-		if (object is GDScript && object.get_instance_base_type() == "RefCounted"):
+		# Inner classes have no source code, while a const of type GDScript has.
+		if (object is GDScript && !object.has_source_code()):
 			consumer.call(outline_cache.classes, name_key)
 		else:
 			consumer.call(outline_cache.constants, name_key)
