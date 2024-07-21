@@ -24,6 +24,11 @@ const constant_icon: Texture2D = preload("res://addons/script-ide/icon/constant.
 const class_icon: Texture2D = preload("res://addons/script-ide/icon/class.svg")
 #endregion
 
+const GETTER: StringName = &"get"
+const SETTER: StringName = &"set"
+const UNDERSCORE: StringName = &"_"
+const INLINE: StringName = &"@"
+
 const POPUP_SCRIPT: GDScript = preload("res://addons/script-ide/Popup.gd")
 
 #region Editor settings
@@ -255,7 +260,7 @@ func _input(event: InputEvent) -> void:
 	if (!filter_txt.has_focus()):
 		return
 
-	if (event.is_action_pressed("ui_text_submit")):
+	if (event.is_action_pressed(&"ui_text_submit")):
 		var items: PackedInt32Array = outline.get_selected_items()
 
 		if (items.is_empty()):
@@ -264,7 +269,7 @@ func _input(event: InputEvent) -> void:
 		var index: int = items[0]
 		scroll_to_index(index)
 
-	if (event.is_action_pressed("ui_down", true)):
+	if (event.is_action_pressed(&"ui_down", true)):
 		var items: PackedInt32Array = outline.get_selected_items()
 
 		var index: int
@@ -281,7 +286,7 @@ func _input(event: InputEvent) -> void:
 		outline.select(index)
 		outline.ensure_current_is_visible()
 		get_viewport().set_input_as_handled()
-	elif (event.is_action_pressed("ui_up", true)):
+	elif (event.is_action_pressed(&"ui_up", true)):
 		var items: PackedInt32Array = outline.get_selected_items()
 
 		var index: int
@@ -307,7 +312,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 		var button_flags: Array[bool] = []
-		for child in filter_box.get_children():
+		for child: Node in filter_box.get_children():
 			var btn: Button = child
 			button_flags.append(btn.button_pressed)
 
@@ -337,7 +342,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			filter_txt.text = old_text
 
 			var index: int = 0
-			for flag in button_flags:
+			for flag: bool in button_flags:
 				var btn: Button = filter_box.get_child(index)
 				btn.button_pressed = flag
 				index += 1
@@ -407,7 +412,7 @@ func scroll_to_index(selected_idx: int):
 	var lines: PackedStringArray = source_code.split("\n")
 
 	var index: int = 0
-	for line in lines:
+	for line: String in lines:
 		# Easy case, like 'var abc'
 		if (line.begins_with(type_with_text)):
 			goto_line(index)
@@ -450,30 +455,30 @@ func create_filter_btn(icon: Texture2D, title: String) -> Button:
 	btn.tooltip_text = title
 
 	var property: StringName = as_setting(title)
-	btn.set_meta("property", property)
+	btn.set_meta(&"property", property)
 	btn.button_pressed = get_setting(property, true)
 
 	btn.toggled.connect(on_filter_button_pressed.bind(btn))
 
-	btn.add_theme_color_override("icon_pressed_color", Color.WHITE)
-	btn.add_theme_color_override("icon_hover_color", Color.WHITE)
-	btn.add_theme_color_override("icon_focus_color", Color.WHITE)
+	btn.add_theme_color_override(&"icon_pressed_color", Color.WHITE)
+	btn.add_theme_color_override(&"icon_hover_color", Color.WHITE)
+	btn.add_theme_color_override(&"icon_focus_color", Color.WHITE)
 
 	var style_box_empty: StyleBoxEmpty = StyleBoxEmpty.new()
 	style_box_empty.set_content_margin_all(4 * get_editor_scale())
-	btn.add_theme_stylebox_override("normal", style_box_empty)
+	btn.add_theme_stylebox_override(&"normal", style_box_empty)
 
 	var style_box: StyleBoxFlat = StyleBoxFlat.new()
 	style_box.draw_center = false
 	style_box.border_color = get_editor_accent_color()
 	style_box.set_border_width_all(1 * get_editor_scale())
 	style_box.set_corner_radius_all(get_editor_corner_radius() * get_editor_scale())
-	btn.add_theme_stylebox_override("focus", style_box)
+	btn.add_theme_stylebox_override(&"focus", style_box)
 
 	return btn
 
 func on_filter_button_pressed(pressed: bool, btn: Button):
-	set_setting(btn.get_meta("property"), pressed)
+	set_setting(btn.get_meta(&"property"), pressed)
 
 	update_outline()
 
@@ -494,7 +499,7 @@ func sync_settings():
 		return
 
 	var changed_settings: PackedStringArray = get_editor_settings().get_changed_settings()
-	for setting in changed_settings:
+	for setting: String in changed_settings:
 		if (!setting.begins_with(SCRIPT_IDE)):
 			continue
 
@@ -525,9 +530,9 @@ func sync_settings():
 				update_script_list_visibility()
 		else:
 			# Update filter buttons.
-			for btn_node in filter_box.get_children():
+			for btn_node: Node in filter_box.get_children():
 				var btn: Button = btn_node
-				var property: StringName = btn.get_meta("property")
+				var property: StringName = btn.get_meta(&"property")
 
 				btn.button_pressed = get_setting(property, btn.button_pressed)
 
@@ -579,7 +584,7 @@ func update_selected_tab():
 	scripts_tab_container.set_tab_icon(selected_tab, scripts_item_list.get_item_icon(selected_tab))
 
 func update_tabs():
-	for index in scripts_tab_container.get_tab_count():
+	for index: int in scripts_tab_container.get_tab_count():
 		scripts_tab_container.set_tab_title(index, scripts_item_list.get_item_text(index))
 		scripts_tab_container.set_tab_icon(index, scripts_item_list.get_item_icon(index))
 
@@ -597,7 +602,7 @@ func update_keywords(script: Script):
 		register_virtual_methods(new_script_type)
 
 func register_virtual_methods(clazz: String):
-	for method in ClassDB.class_get_method_list(clazz):
+	for method: Dictionary in ClassDB.class_get_method_list(clazz):
 		if method.flags & METHOD_FLAG_VIRTUAL > 0:
 			keywords[method.name] = 0
 
@@ -610,7 +615,7 @@ func update_outline_cache():
 
 	update_keywords(script)
 
-	# Check if built-in script. In this case we need to duplicate it.
+	# Check if built-in script. In this case we need to duplicate it for whatever reason.
 	if (script.get_path().contains(".tscn::GDScript")):
 		script = script.duplicate()
 
@@ -628,26 +633,26 @@ func update_outline_cache():
 
 func for_each_script_member(script: Script, consumer: Callable):
 	# Functions / Methods
-	for dict in script.get_script_method_list():
+	for dict: Dictionary in script.get_script_method_list():
 		var func_name: String = dict["name"]
 
 		if (keywords.has(func_name)):
 			consumer.call(outline_cache.engine_funcs, func_name)
 		else:
-			if hide_private_members && func_name.begins_with("_"):
+			if hide_private_members && func_name.begins_with(UNDERSCORE):
 				continue
 
 			# Inline getter/setter will normally be shown as '@...getter', '@...setter'.
 			# Since we already show the variable itself, we will skip those.
-			if (func_name.begins_with("@")):
+			if (func_name.begins_with(INLINE)):
 				continue
 
 			consumer.call(outline_cache.funcs, func_name)
 
 	# Properties / Exported variables
-	for dict in script.get_script_property_list():
+	for dict: Dictionary in script.get_script_property_list():
 		var property: String = dict["name"]
-		if hide_private_members && property.begins_with("_"):
+		if hide_private_members && property.begins_with(UNDERSCORE):
 			continue
 
 		var usage: int = dict["usage"]
@@ -659,9 +664,9 @@ func for_each_script_member(script: Script, consumer: Callable):
 				consumer.call(outline_cache.properties, property)
 
 	# Static variables (are separated for whatever reason)
-	for dict in script.get_property_list():
+	for dict: Dictionary in script.get_property_list():
 		var property: String = dict["name"]
-		if hide_private_members && property.begins_with("_"):
+		if hide_private_members && property.begins_with(UNDERSCORE):
 			continue
 
 		var usage: int = dict["usage"]
@@ -670,14 +675,14 @@ func for_each_script_member(script: Script, consumer: Callable):
 			consumer.call(outline_cache.properties, property)
 
 	# Signals
-	for dict in script.get_script_signal_list():
+	for dict: Dictionary in script.get_script_signal_list():
 		var signal_name: String = dict["name"]
 
 		consumer.call(outline_cache.signals, signal_name)
 
 	# Constants / Classes
-	for name_key in script.get_script_constant_map():
-		if hide_private_members && name_key.begins_with("_"):
+	for name_key: String in script.get_script_constant_map():
+		if hide_private_members && name_key.begins_with(UNDERSCORE):
 			continue
 
 		var object: Variant = script.get_script_constant_map().get(name_key)
@@ -732,7 +737,7 @@ func add_to_outline_ext(items: Array[String], icon_callable: Callable, type: Str
 		items = items.duplicate()
 		items.sort_custom(func(a, b): return a.naturalnocasecmp_to(b) < 0)
 
-	for item in items:
+	for item: String in items:
 		if (text.is_empty() || text.is_subsequence_ofn(item)):
 			var icon: Texture2D = icon_callable.call(item)
 			outline.add_item(item, icon, true)
@@ -742,17 +747,15 @@ func add_to_outline_ext(items: Array[String], icon_callable: Callable, type: Str
 				"modifier": modifier
 			}
 			outline.set_item_metadata(outline.item_count - 1, dict)
-			# Only activate the tooltip when we do not show the outline in the popup.
-			outline.set_item_tooltip_enabled(outline.item_count - 1, outline_popup == null)
 			outline.move_item(outline.item_count - 1, move_index)
 
 			move_index += 1
 
 func get_icon(func_name: String) -> Texture2D:
 	var icon: Texture2D = func_icon
-	if (func_name.begins_with("get")):
+	if (func_name.begins_with(GETTER)):
 		icon = func_get_icon
-	elif (func_name.begins_with("set")):
+	elif (func_name.begins_with(SETTER)):
 		icon = func_set_icon
 
 	return icon
