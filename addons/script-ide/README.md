@@ -4,6 +4,7 @@ Transforms the Script UI into an IDE like UI. Tabs are used for navigating betwe
 
 Features:
 - Scripts are now shown as Tabs inside a TabContainer (No Script List by default, but can be toggled on again)
+- Scripts can also be shown in a Popup that can be shown when clicking the three dots button on the top right of the TabContainer
 - The Outline is on the right side (can be changed to be on the left side again)
 - The Outline got an overhaul and shows more than just the methods of the script. It includes the following members with a unique icon:
 	- Classes (Red Square)
@@ -30,5 +31,7 @@ All settings can be changed in the `Editor Settings` under `Plugin` -> `Script I
 ![Example of the outline](https://github.com/godotengine/godot/assets/66004280/30d04924-ba53-415d-b796-92b2fc086ff9)
 
 ![Example of the outline popup](https://github.com/godotengine/godot/assets/66004280/cad0e00e-dbb6-4d3d-980b-c36da6af2cb8)
+
+![Example of the scripts popup](https://github.com/user-attachments/assets/72a4c97d-ee3d-48e7-aa65-8fe917568262)
 
 ![Example of the editor settings](https://github.com/godotengine/godot/assets/66004280/9cec7454-1a38-428b-97cc-886d0ce415bb)
