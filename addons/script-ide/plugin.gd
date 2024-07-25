@@ -42,10 +42,12 @@ var suppress_settings_sync: bool = false
 
 #region Existing controls we modify
 var outline_container: Control
-var outline_parent: Node
+var outline_parent: Control
 var scripts_tab_container: TabContainer
 var scripts_tab_bar: TabBar
 var scripts_item_list: ItemList
+var panel_container: VSplitContainer
+
 var split_container: HSplitContainer
 var old_outline: ItemList
 var filter_txt: LineEdit
@@ -56,6 +58,8 @@ var sort_btn: Button
 var outline: ItemList
 var outline_popup: PopupPanel
 var filter_box: HBoxContainer
+
+var scripts_popup: PopupPanel
 
 var class_btn: Button
 var constant_btn: Button
@@ -107,14 +111,23 @@ func _enter_tree() -> void:
 	var file_system: EditorFileSystem = get_editor_interface().get_resource_filesystem()
 	file_system.filesystem_changed.connect(schedule_update)
 
-	# Make tab container visible
 	var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
+
+	# Change script item list visibility
+	scripts_item_list = find_or_null(script_editor.find_children("*", "ItemList", true, false))
+	if (scripts_item_list != null):
+		update_script_list_visibility()
+
+	# Make tab container visible
 	scripts_tab_container = find_or_null(script_editor.find_children("*", "TabContainer", true, false))
 	if (scripts_tab_container != null):
 		scripts_tab_bar = scripts_tab_container.get_tab_bar()
 
 		tab_state = TabStateCache.new()
 		tab_state.save(scripts_tab_container, scripts_tab_bar)
+
+		if (scripts_item_list != null):
+			create_set_scripts_popup()
 
 		scripts_tab_container.tabs_visible = true
 		scripts_tab_container.drag_to_rearrange_enabled = true
@@ -131,11 +144,6 @@ func _enter_tree() -> void:
 			scripts_tab_bar.gui_input.connect(on_tab_bar_gui_input)
 
 			scripts_tab_bar.tab_changed.connect(on_tab_changed)
-
-	# Change script item list visibility
-	scripts_item_list = find_or_null(script_editor.find_children("*", "ItemList", true, false))
-	if (scripts_item_list != null):
-		update_script_list_visibility()
 
 	# Remove existing outline and add own outline
 	split_container = find_or_null(script_editor.find_children("*", "HSplitContainer", true, false))
@@ -195,6 +203,29 @@ func _enter_tree() -> void:
 
 	on_tab_changed(scripts_tab_bar.current_tab)
 
+func create_set_scripts_popup():
+	panel_container = scripts_item_list.get_parent().get_parent()
+
+	scripts_popup = PopupPanel.new()
+
+	scripts_popup.about_to_popup.connect(show_scripts_popup)
+	scripts_popup.popup_hide.connect(hide_scripts_popup)
+
+	add_child(scripts_popup)
+
+	scripts_tab_container.set_popup(scripts_popup)
+
+func show_scripts_popup():
+	scripts_popup.size.y = panel_container.size.y - scripts_tab_bar.size.y
+	scripts_item_list.get_parent().reparent(scripts_popup)
+	scripts_item_list.get_parent().visible = true
+
+func hide_scripts_popup():
+	update_script_list_visibility()
+
+	scripts_item_list.get_parent().reparent(panel_container)
+	panel_container.move_child(scripts_item_list.get_parent(), 0)
+
 ## Restore the old Godot script UI and free everything we created
 func _exit_tree() -> void:
 	var file_system: EditorFileSystem = get_editor_interface().get_resource_filesystem()
@@ -230,6 +261,9 @@ func _exit_tree() -> void:
 	if (scripts_tab_container != null):
 		tab_state.restore(scripts_tab_container, scripts_tab_bar)
 
+		scripts_tab_container.set_popup(null)
+		scripts_popup.free()
+
 		if (scripts_tab_bar != null):
 			scripts_tab_bar.mouse_exited.disconnect(on_tab_bar_mouse_exited)
 			scripts_tab_bar.gui_input.disconnect(on_tab_bar_gui_input)
@@ -244,7 +278,7 @@ func _exit_tree() -> void:
 		scripts_item_list.get_parent().visible = true
 
 	if (outline_popup != null):
-		outline_popup.hide()
+		outline_popup.free()
 
 	get_editor_settings().settings_changed.disconnect(sync_settings)
 #endregion
