@@ -25,7 +25,7 @@ All settings can be changed in the `Editor Settings` under `Plugin` -> `Script I
 - `Open Outline Popup` = Shortcut to control how the Outline Popup should be triggered (default=CTRL+O or META+O)
 - `Outline Position Right` = Flag to control whether the outline should be on the right or on the left side of the script editor (default=true)
 - `Hide Private Members` = Flag to control whether private members (methods/variables/constants starting with '_') should be hidden in the Outline or not (default=false)
-- `Script List Visible` = Flag to control whether the script list should still be visible or not (above the outline)
+- `Script List Visible` = Flag to control whether the script list should still be visible or not (above the outline) (default=false)
 - All outline visibility settings
 
 ![Example of the outline](https://github.com/godotengine/godot/assets/66004280/30d04924-ba53-415d-b796-92b2fc086ff9)
