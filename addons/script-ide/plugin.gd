@@ -1,3 +1,7 @@
+## Registered plugin class for script-ide.
+## This plugin mainly 'modifies' the outline code that is inside 'script_editor_plugin.cpp'.
+## The internals of the C++ code are therefore important in order to make this plugin work
+## without interfering with the Godot Engine.
 @tool
 extends EditorPlugin
 
@@ -45,6 +49,7 @@ var outline_container: Control
 var outline_parent: Control
 var scripts_tab_container: TabContainer
 var scripts_tab_bar: TabBar
+var script_filter_txt: LineEdit
 var scripts_item_list: ItemList
 var panel_container: VSplitContainer
 
@@ -117,6 +122,8 @@ func _enter_tree() -> void:
 	scripts_item_list = find_or_null(script_editor.find_children("*", "ItemList", true, false))
 	if (scripts_item_list != null):
 		update_script_list_visibility()
+
+		script_filter_txt = find_or_null(scripts_item_list.get_parent().find_children("*", "LineEdit", true, false))
 
 	# Make tab container visible
 	scripts_tab_container = find_or_null(script_editor.find_children("*", "TabContainer", true, false))
@@ -221,6 +228,8 @@ func show_scripts_popup():
 	scripts_item_list.get_parent().visible = true
 
 func hide_scripts_popup():
+	script_filter_txt.text = ""
+
 	update_script_list_visibility()
 
 	scripts_item_list.get_parent().reparent(panel_container)
@@ -413,6 +422,8 @@ func schedule_update():
 
 ## Updates all parts of the editor needed to be synchronized with the file system.
 func update_editor():
+	update_script_text_filter()
+
 	if (sync_script_list):
 		sync_tab_with_script_list()
 		sync_script_list = false
@@ -420,6 +431,13 @@ func update_editor():
 	update_tabs()
 	update_outline_cache()
 	update_outline()
+
+## Removes the script filter text and emits the signal so that the Tabs stay
+## and we do not break anything there.
+func update_script_text_filter():
+	if (script_filter_txt.text != ""):
+		script_filter_txt.text = ""
+		script_filter_txt.text_changed.emit("")
 
 func get_current_script() -> Script:
 	var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
@@ -435,11 +453,11 @@ func scroll_to_index(selected_idx: int):
 
 	var text: String = outline.get_item_text(selected_idx)
 	var metadata: Dictionary = outline.get_item_metadata(selected_idx)
-	var modifier: String = metadata["modifier"]
-	var type: String = metadata["type"]
+	var modifier: StringName = metadata[&"modifier"]
+	var type: StringName = metadata[&"type"]
 
 	var type_with_text: String = type + " " + text
-	if (type == "func"):
+	if (type == &"func"):
 		type_with_text = type_with_text + "("
 
 	var source_code: String = script.get_source_code()
@@ -453,17 +471,17 @@ func scroll_to_index(selected_idx: int):
 			return
 
 		# We have an modifier, e.g. 'static'
-		if (modifier != "" && line.begins_with(modifier)):
+		if (modifier != &"" && line.begins_with(modifier)):
 			if (line.begins_with(modifier + " " + type_with_text)):
 				goto_line(index)
 				return
 			# Special case: An 'enum' is treated different.
-			elif (modifier == "enum" && line.contains("enum " + text)):
+			elif (modifier == &"enum" && line.contains("enum " + text)):
 				goto_line(index)
 				return
 
 		# Hard case, probably something like '@onready var abc'
-		if (type == "var" && line.contains(type_with_text)):
+		if (type == &"var" && line.contains(type_with_text)):
 			goto_line(index)
 			return
 
@@ -668,7 +686,7 @@ func update_outline_cache():
 func for_each_script_member(script: Script, consumer: Callable):
 	# Functions / Methods
 	for dict: Dictionary in script.get_script_method_list():
-		var func_name: String = dict["name"]
+		var func_name: String = dict[&"name"]
 
 		if (keywords.has(func_name)):
 			consumer.call(outline_cache.engine_funcs, func_name)
@@ -685,11 +703,11 @@ func for_each_script_member(script: Script, consumer: Callable):
 
 	# Properties / Exported variables
 	for dict: Dictionary in script.get_script_property_list():
-		var property: String = dict["name"]
+		var property: String = dict[&"name"]
 		if hide_private_members && property.begins_with(UNDERSCORE):
 			continue
 
-		var usage: int = dict["usage"]
+		var usage: int = dict[&"usage"]
 
 		if (usage & PROPERTY_USAGE_SCRIPT_VARIABLE):
 			if (usage & PROPERTY_USAGE_STORAGE && usage & PROPERTY_USAGE_EDITOR):
@@ -699,11 +717,11 @@ func for_each_script_member(script: Script, consumer: Callable):
 
 	# Static variables (are separated for whatever reason)
 	for dict: Dictionary in script.get_property_list():
-		var property: String = dict["name"]
+		var property: String = dict[&"name"]
 		if hide_private_members && property.begins_with(UNDERSCORE):
 			continue
 
-		var usage: int = dict["usage"]
+		var usage: int = dict[&"usage"]
 
 		if (usage & PROPERTY_USAGE_SCRIPT_VARIABLE):
 			consumer.call(outline_cache.properties, property)
@@ -734,36 +752,36 @@ func update_outline():
 
 	# Classes
 	if (class_btn.button_pressed):
-		add_to_outline(outline_cache.classes, class_icon, "class")
+		add_to_outline(outline_cache.classes, class_icon, &"class")
 
 	# Constants
 	if (constant_btn.button_pressed):
-		add_to_outline(outline_cache.constants, constant_icon, "const", "enum")
+		add_to_outline(outline_cache.constants, constant_icon, &"const", &"enum")
 
 	# Properties
 	if (property_btn.button_pressed):
-		add_to_outline(outline_cache.properties, property_icon, "var")
+		add_to_outline(outline_cache.properties, property_icon, &"var")
 
 	# Exports
 	if (export_btn.button_pressed):
-		add_to_outline(outline_cache.exports, export_icon, "var", "@export")
+		add_to_outline(outline_cache.exports, export_icon, &"var", &"@export")
 
 	# Signals
 	if (signal_btn.button_pressed):
-		add_to_outline(outline_cache.signals, signal_icon, "signal")
+		add_to_outline(outline_cache.signals, signal_icon, &"signal")
 
 	# Functions
 	if (func_btn.button_pressed):
-		add_to_outline_ext(outline_cache.funcs, get_icon, "func", "static")
+		add_to_outline_ext(outline_cache.funcs, get_icon, &"func", &"static")
 
 	# Engine functions
 	if (engine_func_btn.button_pressed):
-		add_to_outline(outline_cache.engine_funcs, keyword_icon, "func")
+		add_to_outline(outline_cache.engine_funcs, keyword_icon, &"func")
 
-func add_to_outline(items: Array[String], icon: Texture2D, type: String, modifier: String = ""):
+func add_to_outline(items: Array[String], icon: Texture2D, type: String, modifier: StringName = &""):
 	add_to_outline_ext(items, func(str: String): return icon, type, modifier)
 
-func add_to_outline_ext(items: Array[String], icon_callable: Callable, type: String, modifier: String = ""):
+func add_to_outline_ext(items: Array[String], icon_callable: Callable, type: String, modifier: StringName = &""):
 	var text: String = filter_txt.get_text()
 	var move_index: int = 0
 
@@ -777,8 +795,8 @@ func add_to_outline_ext(items: Array[String], icon_callable: Callable, type: Str
 			outline.add_item(item, icon, true)
 
 			var dict: Dictionary = {
-				"type": type,
-				"modifier": modifier
+				&"type": type,
+				&"modifier": modifier
 			}
 			outline.set_item_metadata(outline.item_count - 1, dict)
 			outline.move_item(outline.item_count - 1, move_index)
@@ -812,11 +830,6 @@ func sync_tab_with_script_list():
 
 		scripts_item_list.ensure_current_is_visible()
 
-func trigger_script_editor_update_script_names():
-	var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
-	# for now it is the only way to trigger script_editor._update_script_names
-	script_editor.notification(Control.NOTIFICATION_THEME_CHANGED)
-
 #region Tab Handling
 func on_tab_bar_mouse_exited():
 	last_tab_hovered = -1
@@ -833,6 +846,7 @@ func on_tab_bar_gui_input(event: InputEvent):
 
 	if event is InputEventMouseButton:
 		if event.is_pressed() and event.button_index == MOUSE_BUTTON_MIDDLE:
+			update_script_text_filter()
 			simulate_item_clicked(last_tab_hovered, MOUSE_BUTTON_MIDDLE)
 
 func on_active_tab_rearranged(idx_to: int):
@@ -843,14 +857,13 @@ func on_active_tab_rearranged(idx_to: int):
 	scripts_tab_container.move_child(control, idx_to)
 	scripts_tab_container.current_tab = scripts_tab_container.current_tab
 	selected_tab = scripts_tab_container.current_tab
-	trigger_script_editor_update_script_names()
 
 func get_res_path(idx: int) -> String:
 	var tab_control: Control = scripts_tab_container.get_tab_control(idx)
 	if (tab_control == null):
 		return ''
 
-	var path_var: Variant = tab_control.get("metadata/_edit_res_path")
+	var path_var: Variant = tab_control.get(&"metadata/_edit_res_path")
 	if (path_var == null):
 		return ''
 
@@ -860,9 +873,12 @@ func on_tab_rmb(tab_idx: int):
 	simulate_item_clicked(tab_idx, MOUSE_BUTTON_RIGHT)
 
 func on_tab_close(tab_idx: int):
+	update_script_text_filter()
 	simulate_item_clicked(tab_idx, MOUSE_BUTTON_MIDDLE)
 
 func simulate_item_clicked(tab_idx: int, mouse_idx: int):
+	script_filter_txt.text = ""
+
 	scripts_item_list.item_clicked.emit(tab_idx, scripts_item_list.get_local_mouse_position(), mouse_idx)
 #endregion
 
@@ -887,6 +903,7 @@ static func find_or_null(arr: Array[Node], index: int = 0) -> Node:
 
 	return arr[index]
 
+## Cache for everything inside the outline.
 class OutlineCache:
 	var classes: Array[String] = []
 	var constants: Array[String] = []
@@ -896,6 +913,8 @@ class OutlineCache:
 	var funcs: Array[String] = []
 	var engine_funcs: Array[String] = []
 
+## Contains everything we modify on the Tab Control. Used to save and restore the behaviour
+## to keep the Godot Engine in a clean state when the plugin is disabled.
 class TabStateCache:
 	var tabs_visible: bool
 	var drag_to_rearrange_enabled: bool
