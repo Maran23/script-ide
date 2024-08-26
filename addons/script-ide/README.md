@@ -32,6 +32,6 @@ All settings can be changed in the `Editor Settings` under `Plugin` -> `Script I
 
 ![Example of the outline popup](https://github.com/godotengine/godot/assets/66004280/cad0e00e-dbb6-4d3d-980b-c36da6af2cb8)
 
-![Example of the scripts popup](https://github.com/user-attachments/assets/72a4c97d-ee3d-48e7-aa65-8fe917568262)
+![Example of the script list popup](https://github.com/user-attachments/assets/72a4c97d-ee3d-48e7-aa65-8fe917568262)
 
 ![Example of the editor settings](https://github.com/godotengine/godot/assets/66004280/9cec7454-1a38-428b-97cc-886d0ce415bb)
