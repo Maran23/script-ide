@@ -55,7 +55,7 @@ var panel_container: VSplitContainer
 
 var split_container: HSplitContainer
 var old_outline: ItemList
-var filter_txt: LineEdit
+var outline_filter_txt: LineEdit
 var sort_btn: Button
 #endregion
 
@@ -199,8 +199,8 @@ func _enter_tree() -> void:
 		outline.get_parent().move_child(filter_box, outline.get_index())
 
 		# Callback when the filter changed
-		filter_txt = find_or_null(outline_container.find_children("*", "LineEdit", true, false), 1)
-		filter_txt.text_changed.connect(update_outline.unbind(1))
+		outline_filter_txt = find_or_null(outline_container.find_children("*", "LineEdit", true, false), 1)
+		outline_filter_txt.text_changed.connect(update_outline.unbind(1))
 
 		# Callback when the sorting changed
 		sort_btn = find_or_null(outline_container.find_children("*", "Button", true, false))
@@ -226,6 +226,8 @@ func show_scripts_popup():
 	scripts_popup.size.y = panel_container.size.y - scripts_tab_bar.size.y
 	scripts_item_list.get_parent().reparent(scripts_popup)
 	scripts_item_list.get_parent().visible = true
+
+	script_filter_txt.grab_focus()
 
 func hide_scripts_popup():
 	script_filter_txt.text = ""
@@ -254,7 +256,7 @@ func _exit_tree() -> void:
 
 		split_container.move_child(outline_container, 0)
 
-		filter_txt.text_changed.disconnect(update_outline)
+		outline_filter_txt.text_changed.disconnect(update_outline)
 		sort_btn.pressed.disconnect(update_outline)
 
 		outline.item_selected.disconnect(scroll_to_index)
@@ -262,7 +264,7 @@ func _exit_tree() -> void:
 		outline_parent.remove_child(filter_box)
 		outline_parent.remove_child(outline)
 		outline_parent.add_child(old_outline)
-		outline_parent.move_child(old_outline, 1)
+		outline_parent.move_child(old_outline, 2)
 
 		filter_box.free()
 		outline.free()
@@ -298,53 +300,41 @@ func _process(delta: float) -> void:
 	set_process(false)
 
 #region Input handling -> Popup
-## Add navigation to the Outline
+## Add navigation to the Outline when the filter textfield is selected
 func _input(event: InputEvent) -> void:
-	if (!filter_txt.has_focus()):
+	if (!outline_filter_txt.has_focus()):
 		return
 
 	if (event.is_action_pressed(&"ui_text_submit")):
-		var items: PackedInt32Array = outline.get_selected_items()
-
-		if (items.is_empty()):
+		var index: int = get_outline_index()
+		if (index == -1):
 			return
 
-		var index: int = items[0]
 		scroll_to_index(index)
-
 	if (event.is_action_pressed(&"ui_down", true)):
-		var items: PackedInt32Array = outline.get_selected_items()
-
-		var index: int
-		if (items.is_empty()):
-			index = -1
-		else:
-			index = items[0]
-
+		var index: int = get_outline_index()
 		if (index == outline.item_count - 1):
 			return
 
-		index += 1
-
-		outline.select(index)
-		outline.ensure_current_is_visible()
-		get_viewport().set_input_as_handled()
+		navigate_outline(index, 1)
 	elif (event.is_action_pressed(&"ui_up", true)):
-		var items: PackedInt32Array = outline.get_selected_items()
-
-		var index: int
-		if (items.is_empty()):
-			index = outline.item_count
-		else:
-			index = items[0]
-
-		if (index == 0):
+		var index: int = get_outline_index()
+		if (index <= 0):
 			return
 
-		index -= 1
-		outline.select(index)
-		outline.ensure_current_is_visible()
-		get_viewport().set_input_as_handled()
+		navigate_outline(index, -1)
+	elif (event.is_action_pressed(&"ui_page_down", true)):
+		var index: int = get_outline_index()
+		if (index == outline.item_count - 1):
+			return
+
+		navigate_outline(index, 5)
+	elif (event.is_action_pressed(&"ui_page_up", true)):
+		var index: int = get_outline_index()
+		if (index <= 0):
+			return
+
+		navigate_outline(index, -5)
 
 ## Triggers the Outline popup
 func _unhandled_key_input(event: InputEvent) -> void:
@@ -361,8 +351,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 
 			btn.button_pressed = true
 
-		var old_text: String = filter_txt.text
-		filter_txt.text = ""
+		var old_text: String = outline_filter_txt.text
+		outline_filter_txt.text = ""
 
 		outline_popup = POPUP_SCRIPT.new()
 		outline_popup.input_listener = _input
@@ -382,7 +372,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			if (!is_outline_right):
 				split_container.move_child(outline_container, 0)
 
-			filter_txt.text = old_text
+			outline_filter_txt.text = old_text
 
 			var index: int = 0
 			for flag: bool in button_flags:
@@ -411,7 +401,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 
 		outline_popup.popup_exclusive_on_parent(script_editor, Rect2i(position, size))
 
-		filter_txt.grab_focus()
+		outline_filter_txt.grab_focus()
 
 		update_outline()
 #endregion
@@ -431,6 +421,22 @@ func update_editor():
 	update_tabs()
 	update_outline_cache()
 	update_outline()
+
+func get_outline_index() -> int:
+	var items: PackedInt32Array = outline.get_selected_items()
+
+	if (items.is_empty()):
+		return -1
+
+	var index: int = items[0]
+	return index
+
+func navigate_outline(index: int, amount: int):
+	index = clamp(index + amount, 0, outline.item_count - 1)
+
+	outline.select(index)
+	outline.ensure_current_is_visible()
+	outline.accept_event()
 
 ## Removes the script filter text and emits the signal so that the Tabs stay
 ## and we do not break anything there.
@@ -782,7 +788,7 @@ func add_to_outline(items: Array[String], icon: Texture2D, type: String, modifie
 	add_to_outline_ext(items, func(str: String): return icon, type, modifier)
 
 func add_to_outline_ext(items: Array[String], icon_callable: Callable, type: String, modifier: StringName = &""):
-	var text: String = filter_txt.get_text()
+	var text: String = outline_filter_txt.get_text()
 	var move_index: int = 0
 
 	if (is_sorted()):
