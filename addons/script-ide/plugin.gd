@@ -15,6 +15,8 @@ const HIDE_PRIVATE_MEMBERS: StringName = SCRIPT_IDE + &"hide_private_members"
 const SCRIPT_LIST_VISIBLE: StringName = SCRIPT_IDE + &"script_list_visible"
 ## Editor setting for the 'Open Outline Popup' shortcut
 const OPEN_OUTLINE_POPUP: StringName = SCRIPT_IDE + &"open_outline_popup"
+## Editor setting for the 'Open Scripts Popup' shortcut
+const OPEN_SCRIPTS_POPUP: StringName = SCRIPT_IDE + &"open_scripts_popup"
 
 #region Outline icons
 const keyword_icon: Texture2D = preload("res://addons/script-ide/icon/keyword.svg")
@@ -39,7 +41,8 @@ const POPUP_SCRIPT: GDScript = preload("res://addons/script-ide/Popup.gd")
 var is_outline_right: bool = true
 var is_script_list_visible: bool = false
 var hide_private_members: bool = false
-var open_outline_popup: Shortcut
+var open_outline_popup_shc: Shortcut
+var open_scripts_popup_shc: Shortcut
 #endregion
 
 var suppress_settings_sync: bool = false
@@ -110,7 +113,24 @@ func _enter_tree() -> void:
 		editor_settings.set_setting(OPEN_OUTLINE_POPUP, shortcut)
 		editor_settings.set_initial_value(OPEN_OUTLINE_POPUP, shortcut, false)
 
-	open_outline_popup = editor_settings.get_setting(OPEN_OUTLINE_POPUP)
+	if (!editor_settings.has_setting(OPEN_SCRIPTS_POPUP)):
+		var shortcut: Shortcut = Shortcut.new()
+		var event: InputEventKey = InputEventKey.new()
+		event.device = -1
+		event.ctrl_pressed = true
+		event.keycode = KEY_U
+
+		var event2: InputEventKey = InputEventKey.new()
+		event2.device = -1
+		event2.meta_pressed = true
+		event2.keycode = KEY_U
+
+		shortcut.events = [ event, event2 ]
+		editor_settings.set_setting(OPEN_SCRIPTS_POPUP, shortcut)
+		editor_settings.set_initial_value(OPEN_SCRIPTS_POPUP, shortcut, false)
+
+	open_outline_popup_shc = editor_settings.get_setting(OPEN_OUTLINE_POPUP)
+	open_scripts_popup_shc = editor_settings.get_setting(OPEN_SCRIPTS_POPUP)
 
 	# Update on filesystem changed (e.g. save operation).
 	var file_system: EditorFileSystem = get_editor_interface().get_resource_filesystem()
@@ -169,7 +189,7 @@ func _enter_tree() -> void:
 		outline.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		outline_parent.add_child(outline)
 
-		outline.item_selected.connect(scroll_to_index)
+		outline.item_selected.connect(scroll_outline)
 
 		# Add a filter box for all kind of members
 		filter_box = HBoxContainer.new()
@@ -210,33 +230,6 @@ func _enter_tree() -> void:
 
 	on_tab_changed(scripts_tab_bar.current_tab)
 
-func create_set_scripts_popup():
-	panel_container = scripts_item_list.get_parent().get_parent()
-
-	scripts_popup = PopupPanel.new()
-
-	scripts_popup.about_to_popup.connect(show_scripts_popup)
-	scripts_popup.popup_hide.connect(hide_scripts_popup)
-
-	add_child(scripts_popup)
-
-	scripts_tab_container.set_popup(scripts_popup)
-
-func show_scripts_popup():
-	scripts_popup.size.y = panel_container.size.y - scripts_tab_bar.size.y
-	scripts_item_list.get_parent().reparent(scripts_popup)
-	scripts_item_list.get_parent().visible = true
-
-	script_filter_txt.grab_focus()
-
-func hide_scripts_popup():
-	script_filter_txt.text = ""
-
-	update_script_list_visibility()
-
-	scripts_item_list.get_parent().reparent(panel_container)
-	panel_container.move_child(scripts_item_list.get_parent(), 0)
-
 ## Restore the old Godot script UI and free everything we created
 func _exit_tree() -> void:
 	var file_system: EditorFileSystem = get_editor_interface().get_resource_filesystem()
@@ -259,7 +252,7 @@ func _exit_tree() -> void:
 		outline_filter_txt.text_changed.disconnect(update_outline)
 		sort_btn.pressed.disconnect(update_outline)
 
-		outline.item_selected.disconnect(scroll_to_index)
+		outline.item_selected.disconnect(scroll_outline)
 
 		outline_parent.remove_child(filter_box)
 		outline_parent.remove_child(outline)
@@ -272,6 +265,7 @@ func _exit_tree() -> void:
 	if (scripts_tab_container != null):
 		tab_state.restore(scripts_tab_container, scripts_tab_bar)
 
+		scripts_tab_container.pre_popup_pressed.disconnect(prepare_scripts_popup)
 		scripts_tab_container.set_popup(null)
 		scripts_popup.free()
 
@@ -300,110 +294,26 @@ func _process(delta: float) -> void:
 	set_process(false)
 
 #region Input handling -> Popup
-## Add navigation to the Outline when the filter textfield is selected
+## Add navigation to the ItemList when the corresponding filter LineEdit is focused.
 func _input(event: InputEvent) -> void:
-	if (!outline_filter_txt.has_focus()):
-		return
-
-	if (event.is_action_pressed(&"ui_text_submit")):
-		var index: int = get_outline_index()
-		if (index == -1):
-			return
-
-		scroll_to_index(index)
-	if (event.is_action_pressed(&"ui_down", true)):
-		var index: int = get_outline_index()
-		if (index == outline.item_count - 1):
-			return
-
-		navigate_outline(index, 1)
-	elif (event.is_action_pressed(&"ui_up", true)):
-		var index: int = get_outline_index()
-		if (index <= 0):
-			return
-
-		navigate_outline(index, -1)
-	elif (event.is_action_pressed(&"ui_page_down", true)):
-		var index: int = get_outline_index()
-		if (index == outline.item_count - 1):
-			return
-
-		navigate_outline(index, 5)
-	elif (event.is_action_pressed(&"ui_page_up", true)):
-		var index: int = get_outline_index()
-		if (index <= 0):
-			return
-
-		navigate_outline(index, -5)
+	if (outline_filter_txt.has_focus()):
+		navigate_on_list(event, outline, scroll_outline)
+	elif (script_filter_txt.has_focus()):
+		navigate_on_list(event, scripts_item_list, select_script)
 
 ## Triggers the Outline popup
 func _unhandled_key_input(event: InputEvent) -> void:
 	if !(event is InputEventKey):
 		return
 
-	if (open_outline_popup.matches_event(event)):
+	if (open_outline_popup_shc.matches_event(event)):
 		get_viewport().set_input_as_handled()
 
-		var button_flags: Array[bool] = []
-		for child: Node in filter_box.get_children():
-			var btn: Button = child
-			button_flags.append(btn.button_pressed)
+		open_outline_popup()
+	elif (open_scripts_popup_shc.matches_event(event)):
+		get_viewport().set_input_as_handled()
 
-			btn.button_pressed = true
-
-		var old_text: String = outline_filter_txt.text
-		outline_filter_txt.text = ""
-
-		outline_popup = POPUP_SCRIPT.new()
-		outline_popup.input_listener = _input
-
-		var outline_initially_closed: bool = !outline_container.visible
-		if (outline_initially_closed):
-			outline_container.visible = true
-
-		outline_container.reparent(outline_popup)
-
-		var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
-		outline_popup.popup_hide.connect(func():
-			if outline_initially_closed:
-				outline_container.visible = false
-
-			outline_container.reparent(split_container)
-			if (!is_outline_right):
-				split_container.move_child(outline_container, 0)
-
-			outline_filter_txt.text = old_text
-
-			var index: int = 0
-			for flag: bool in button_flags:
-				var btn: Button = filter_box.get_child(index)
-				btn.button_pressed = flag
-				index += 1
-
-			outline_popup.queue_free()
-			outline_popup = null
-
-			update_outline()
-		)
-
-		var window_rect: Rect2
-		if (script_editor.get_parent().get_parent() is Window):
-			# Popup mode
-			var window: Window = script_editor.get_parent().get_parent()
-			window_rect = window.get_visible_rect()
-		else:
-			window_rect = get_editor_interface().get_base_control().get_rect()
-
-		var size: Vector2i = Vector2i(400, 550)
-		var x: int = window_rect.size.x / 2 - size.x / 2
-		var y: int = window_rect.size.y / 2 - size.y / 2
-		var position: Vector2i = Vector2i(x, y)
-
-		outline_popup.popup_exclusive_on_parent(script_editor, Rect2i(position, size))
-
-		outline_filter_txt.grab_focus()
-
-		update_outline()
+		open_scripts_popup()
 #endregion
 
 ## Schedules an update on the frame
@@ -422,21 +332,163 @@ func update_editor():
 	update_outline_cache()
 	update_outline()
 
-func get_outline_index() -> int:
-	var items: PackedInt32Array = outline.get_selected_items()
+func create_set_scripts_popup():
+	panel_container = scripts_item_list.get_parent().get_parent()
+
+	scripts_popup = POPUP_SCRIPT.new()
+	scripts_popup.input_listener = _input
+
+	scripts_tab_container.pre_popup_pressed.connect(prepare_scripts_popup)
+
+	scripts_popup.popup_hide.connect(hide_scripts_popup)
+
+	var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
+	script_editor.add_child(scripts_popup)
+
+	scripts_tab_container.set_popup(scripts_popup)
+
+func prepare_scripts_popup():
+	scripts_popup.size.x = outline.size.x
+	scripts_popup.size.y = panel_container.size.y - scripts_tab_bar.size.y
+
+	scripts_item_list.get_parent().reparent(scripts_popup)
+	scripts_item_list.get_parent().visible = true
+
+	script_filter_txt.grab_focus()
+
+func hide_scripts_popup():
+	script_filter_txt.text = ""
+
+	update_script_list_visibility()
+
+	scripts_item_list.get_parent().reparent(panel_container)
+	panel_container.move_child(scripts_item_list.get_parent(), 0)
+
+func navigate_on_list(event: InputEvent, list: ItemList, submit: Callable):
+	if (event.is_action_pressed(&"ui_text_submit")):
+		var index: int = get_list_index(list)
+		if (index == -1):
+			return
+
+		submit.call(index)
+	elif (event.is_action_pressed(&"ui_down", true)):
+		var index: int = get_list_index(list)
+		if (index == outline.item_count - 1):
+			return
+
+		navigate_list(list, index, 1)
+	elif (event.is_action_pressed(&"ui_up", true)):
+		var index: int = get_list_index(list)
+		if (index <= 0):
+			return
+
+		navigate_list(list, index, -1)
+	elif (event.is_action_pressed(&"ui_page_down", true)):
+		var index: int = get_list_index(list)
+		if (index == outline.item_count - 1):
+			return
+
+		navigate_list(list, index, 5)
+	elif (event.is_action_pressed(&"ui_page_up", true)):
+		var index: int = get_list_index(list)
+		if (index <= 0):
+			return
+
+		navigate_list(list, index, -5)
+
+func get_center_editor_rect() -> Rect2i:
+	var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
+
+	var size: Vector2i = Vector2i(400, 500)
+	var x: int
+	var y: int
+
+	if (script_editor.get_parent().get_parent() is Window):
+		# Floating editor.
+		var window: Window = script_editor.get_parent().get_parent()
+		var window_rect: Rect2 = window.get_visible_rect()
+
+		x = window_rect.size.x / 2 - size.x / 2
+		y = window_rect.size.y / 2 - size.y / 2
+	else:
+		x = script_editor.global_position.x + script_editor.size.x / 2 - size.x / 2
+		y = script_editor.global_position.y + script_editor.size.y / 2 - size.y / 2
+
+	return Rect2i(Vector2i(x, y), size)
+
+func open_outline_popup():
+	var button_flags: Array[bool] = []
+	for child: Node in filter_box.get_children():
+		var btn: Button = child
+		button_flags.append(btn.button_pressed)
+
+		btn.button_pressed = true
+
+	var old_text: String = outline_filter_txt.text
+	outline_filter_txt.text = ""
+
+	if (outline_popup == null):
+		outline_popup = POPUP_SCRIPT.new()
+		outline_popup.input_listener = _input
+
+	var outline_initially_closed: bool = !outline_container.visible
+	if (outline_initially_closed):
+		outline_container.visible = true
+
+	outline_container.reparent(outline_popup)
+
+	outline_popup.popup_hide.connect(on_outline_popup_hidden.bind(outline_initially_closed, old_text, button_flags))
+
+	outline_popup.get_parent().remove_child(outline_popup)
+	outline_popup.popup_exclusive_on_parent(get_editor_interface().get_script_editor(), get_center_editor_rect())
+
+	outline_filter_txt.grab_focus()
+
+	update_outline()
+
+func on_outline_popup_hidden(outline_initially_closed: bool, old_text: String, button_flags: Array[bool]):
+	outline_popup.popup_hide.disconnect(on_outline_popup_hidden)
+
+	if outline_initially_closed:
+		outline_container.visible = false
+
+	outline_container.reparent(split_container)
+	if (!is_outline_right):
+		split_container.move_child(outline_container, 0)
+
+	outline_filter_txt.text = old_text
+
+	var index: int = 0
+	for flag: bool in button_flags:
+		var btn: Button = filter_box.get_child(index)
+		btn.button_pressed = flag
+		index += 1
+
+	update_outline()
+
+func open_scripts_popup():
+	scripts_item_list.get_parent().reparent(scripts_popup)
+	scripts_item_list.get_parent().visible = true
+
+	scripts_popup.get_parent().remove_child(scripts_popup)
+	scripts_popup.popup_exclusive_on_parent(get_editor_interface().get_script_editor(), get_center_editor_rect())
+
+	script_filter_txt.grab_focus()
+
+func get_list_index(list: ItemList) -> int:
+	var items: PackedInt32Array = list.get_selected_items()
 
 	if (items.is_empty()):
 		return -1
 
-	var index: int = items[0]
-	return index
+	return items[0]
 
-func navigate_outline(index: int, amount: int):
-	index = clamp(index + amount, 0, outline.item_count - 1)
+func navigate_list(list: ItemList, index: int, amount: int):
+	index = clamp(index + amount, 0, list.item_count - 1)
 
-	outline.select(index)
-	outline.ensure_current_is_visible()
-	outline.accept_event()
+	list.select(index)
+	list.ensure_current_is_visible()
+	list.accept_event()
 
 ## Removes the script filter text and emits the signal so that the Tabs stay
 ## and we do not break anything there.
@@ -449,8 +501,14 @@ func get_current_script() -> Script:
 	var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
 	return script_editor.get_current_script()
 
-func scroll_to_index(selected_idx: int):
-	if (outline_popup != null):
+func select_script(selected_idx: int):
+	if (scripts_popup != null && scripts_popup.visible):
+		scripts_popup.hide.call_deferred()
+
+	scripts_item_list.item_selected.emit(selected_idx)
+
+func scroll_outline(selected_idx: int):
+	if (outline_popup != null && outline_popup.visible):
 		outline_popup.hide.call_deferred()
 
 	var script: Script = get_current_script()
@@ -577,8 +635,11 @@ func sync_settings():
 				update_outline_cache()
 				update_outline()
 		elif (setting == OPEN_OUTLINE_POPUP):
-			# Update show outline popup shortcut.
-			open_outline_popup = get_editor_settings().get_setting(OPEN_OUTLINE_POPUP)
+			# Update outline popup shortcut.
+			open_outline_popup_shc = get_editor_settings().get_setting(OPEN_OUTLINE_POPUP)
+		elif (setting == OPEN_OUTLINE_POPUP):
+			# Update scripts popup shortcut.
+			open_scripts_popup_shc = get_editor_settings().get_setting(OPEN_SCRIPTS_POPUP)
 		elif (setting == SCRIPT_LIST_VISIBLE):
 			# Update the script list visibility
 			var new_script_list_visible: bool = get_setting(SCRIPT_LIST_VISIBLE, is_script_list_visible)
