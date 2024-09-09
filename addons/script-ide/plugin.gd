@@ -439,7 +439,8 @@ func open_outline_popup():
 
 	outline_popup.popup_hide.connect(on_outline_popup_hidden.bind(outline_initially_closed, old_text, button_flags))
 
-	outline_popup.get_parent().remove_child(outline_popup)
+	if (outline_popup.get_parent() != null):
+		outline_popup.get_parent().remove_child(outline_popup)
 	outline_popup.popup_exclusive_on_parent(get_editor_interface().get_script_editor(), get_center_editor_rect())
 
 	outline_filter_txt.grab_focus()
@@ -470,7 +471,8 @@ func open_scripts_popup():
 	scripts_item_list.get_parent().reparent(scripts_popup)
 	scripts_item_list.get_parent().visible = true
 
-	scripts_popup.get_parent().remove_child(scripts_popup)
+	if (scripts_popup.get_parent() != null):
+		scripts_popup.get_parent().remove_child(scripts_popup)
 	scripts_popup.popup_exclusive_on_parent(get_editor_interface().get_script_editor(), get_center_editor_rect())
 
 	script_filter_txt.grab_focus()
