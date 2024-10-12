@@ -23,8 +23,6 @@ const SETTER: StringName = &"set"
 const UNDERSCORE: StringName = &"_"
 const INLINE: StringName = &"@"
 
-const POPUP_SCRIPT: GDScript = preload("res://addons/script-ide/Popup.gd")
-
 #region Outline icons
 var keyword_icon: ImageTexture
 var func_icon: ImageTexture
@@ -154,6 +152,7 @@ func _enter_tree() -> void:
 		update_script_list_visibility()
 
 		script_filter_txt = find_or_null(scripts_item_list.get_parent().find_children("*", "LineEdit", true, false))
+		script_filter_txt.gui_input.connect(navigate_on_list.bind(scripts_item_list, select_script))
 
 	# Make tab container visible
 	scripts_tab_container = find_or_null(script_editor.find_children("*", "TabContainer", true, false))
@@ -230,6 +229,7 @@ func _enter_tree() -> void:
 
 		# Callback when the filter changed
 		outline_filter_txt = find_or_null(outline_container.find_children("*", "LineEdit", true, false), 1)
+		outline_filter_txt.gui_input.connect(navigate_on_list.bind(outline, scroll_outline))
 		outline_filter_txt.text_changed.connect(update_outline.unbind(1))
 
 		# Callback when the sorting changed
@@ -259,6 +259,7 @@ func _exit_tree() -> void:
 
 		split_container.move_child(outline_container, 0)
 
+		outline_filter_txt.gui_input.disconnect(navigate_on_list)
 		outline_filter_txt.text_changed.disconnect(update_outline)
 		sort_btn.pressed.disconnect(update_outline)
 
@@ -292,6 +293,9 @@ func _exit_tree() -> void:
 	if (scripts_item_list != null):
 		scripts_item_list.get_parent().visible = true
 
+		if (script_filter_txt != null):
+			script_filter_txt.gui_input.disconnect(navigate_on_list)
+
 	if (outline_popup != null):
 		outline_popup.free()
 
@@ -304,18 +308,9 @@ func _process(delta: float) -> void:
 	set_process(false)
 
 #region Input handling -> Popup
-## Add navigation to the ItemList when the corresponding filter LineEdit is focused.
-func _input(event: InputEvent) -> void:
-	if (outline_filter_txt.has_focus()):
-		navigate_on_list(event, outline, scroll_outline)
-	elif (script_filter_txt.has_focus()):
-		navigate_on_list(event, scripts_item_list, select_script)
 
 ## Triggers the Outline popup
 func _unhandled_key_input(event: InputEvent) -> void:
-	if !(event is InputEventKey):
-		return
-
 	if (open_outline_popup_shc.matches_event(event)):
 		get_viewport().set_input_as_handled()
 
@@ -345,16 +340,13 @@ func update_editor():
 func create_set_scripts_popup():
 	panel_container = scripts_item_list.get_parent().get_parent()
 
-	scripts_popup = POPUP_SCRIPT.new()
-	scripts_popup.input_listener = _input
-
-	scripts_tab_container.pre_popup_pressed.connect(prepare_scripts_popup)
-
+	scripts_popup = PopupPanel.new()
 	scripts_popup.popup_hide.connect(hide_scripts_popup)
 
 	var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
 	script_editor.add_child(scripts_popup)
 
+	scripts_tab_container.pre_popup_pressed.connect(prepare_scripts_popup)
 	scripts_tab_container.set_popup(scripts_popup)
 
 func prepare_scripts_popup():
@@ -438,8 +430,7 @@ func open_outline_popup():
 	outline_filter_txt.text = ""
 
 	if (outline_popup == null):
-		outline_popup = POPUP_SCRIPT.new()
-		outline_popup.input_listener = _input
+		outline_popup = PopupPanel.new()
 
 	var outline_initially_closed: bool = !outline_container.visible
 	if (outline_initially_closed):
