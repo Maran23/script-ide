@@ -18,24 +18,24 @@ const OPEN_OUTLINE_POPUP: StringName = SCRIPT_IDE + &"open_outline_popup"
 ## Editor setting for the 'Open Scripts Popup' shortcut
 const OPEN_SCRIPTS_POPUP: StringName = SCRIPT_IDE + &"open_scripts_popup"
 
-#region Outline icons
-const keyword_icon: Texture2D = preload("res://addons/script-ide/icon/keyword.svg")
-const func_icon: Texture2D = preload("res://addons/script-ide/icon/func.svg")
-const func_get_icon: Texture2D = preload("res://addons/script-ide/icon/func_get.svg")
-const func_set_icon: Texture2D = preload("res://addons/script-ide/icon/func_set.svg")
-const property_icon: Texture2D = preload("res://addons/script-ide/icon/property.svg")
-const export_icon: Texture2D = preload("res://addons/script-ide/icon/export.svg")
-const signal_icon: Texture2D = preload("res://addons/script-ide/icon/signal.svg")
-const constant_icon: Texture2D = preload("res://addons/script-ide/icon/constant.svg")
-const class_icon: Texture2D = preload("res://addons/script-ide/icon/class.svg")
-#endregion
-
 const GETTER: StringName = &"get"
 const SETTER: StringName = &"set"
 const UNDERSCORE: StringName = &"_"
 const INLINE: StringName = &"@"
 
 const POPUP_SCRIPT: GDScript = preload("res://addons/script-ide/Popup.gd")
+
+#region Outline icons
+var keyword_icon: ImageTexture
+var func_icon: ImageTexture
+var func_get_icon: ImageTexture
+var func_set_icon: ImageTexture
+var property_icon: ImageTexture
+var export_icon: ImageTexture
+var signal_icon: ImageTexture
+var constant_icon: ImageTexture
+var class_icon: ImageTexture
+#endregion
 
 #region Editor settings
 var is_outline_right: bool = true
@@ -92,6 +92,16 @@ var sync_script_list: bool
 #region Enter / Exit -> Plugin setup
 ## Change the Godot script UI and transform into an IDE like UI
 func _enter_tree() -> void:
+	keyword_icon = create_editor_texture("res://addons/script-ide/icon/keyword.svg")
+	func_icon = create_editor_texture("res://addons/script-ide/icon/func.svg")
+	func_get_icon = create_editor_texture("res://addons/script-ide/icon/func_get.svg")
+	func_set_icon = create_editor_texture("res://addons/script-ide/icon/func_set.svg")
+	property_icon = create_editor_texture("res://addons/script-ide/icon/property.svg")
+	export_icon = create_editor_texture("res://addons/script-ide/icon/export.svg")
+	signal_icon = create_editor_texture("res://addons/script-ide/icon/signal.svg")
+	constant_icon = create_editor_texture("res://addons/script-ide/icon/constant.svg")
+	class_icon = create_editor_texture("res://addons/script-ide/icon/class.svg")
+
 	is_outline_right = get_setting(OUTLINE_POSITION_RIGHT, is_outline_right)
 	hide_private_members = get_setting(HIDE_PRIVATE_MEMBERS, hide_private_members)
 	is_script_list_visible = get_setting(SCRIPT_LIST_VISIBLE, is_script_list_visible)
@@ -565,7 +575,7 @@ func goto_line(index: int):
 	code_edit.set_v_scroll(index)
 	code_edit.set_h_scroll(0)
 
-func create_filter_btn(icon: Texture2D, title: String) -> Button:
+func create_filter_btn(icon: ImageTexture, title: String) -> Button:
 	var btn: Button = Button.new()
 	btn.toggle_mode = true
 	btn.icon = icon
@@ -611,6 +621,12 @@ func update_outline_position():
 
 func update_script_list_visibility():
 	scripts_item_list.get_parent().visible = is_script_list_visible
+
+func create_editor_texture(image_path: String) -> ImageTexture:
+	var image: Image = load(image_path)
+	image.adjust_bcs(1.0, 1.0, get_editor_icon_saturation())
+
+	return ImageTexture.create_from_image(image)
 
 func sync_settings():
 	if (suppress_settings_sync):
@@ -847,7 +863,7 @@ func update_outline():
 	if (engine_func_btn.button_pressed):
 		add_to_outline(outline_cache.engine_funcs, keyword_icon, &"func")
 
-func add_to_outline(items: Array[String], icon: Texture2D, type: String, modifier: StringName = &""):
+func add_to_outline(items: Array[String], icon: ImageTexture, type: String, modifier: StringName = &""):
 	add_to_outline_ext(items, func(str: String): return icon, type, modifier)
 
 func add_to_outline_ext(items: Array[String], icon_callable: Callable, type: String, modifier: StringName = &""):
@@ -860,7 +876,7 @@ func add_to_outline_ext(items: Array[String], icon_callable: Callable, type: Str
 
 	for item: String in items:
 		if (text.is_empty() || text.is_subsequence_ofn(item)):
-			var icon: Texture2D = icon_callable.call(item)
+			var icon: ImageTexture = icon_callable.call(item)
 			outline.add_item(item, icon, true)
 
 			var dict: Dictionary = {
@@ -872,8 +888,8 @@ func add_to_outline_ext(items: Array[String], icon_callable: Callable, type: Str
 
 			move_index += 1
 
-func get_icon(func_name: String) -> Texture2D:
-	var icon: Texture2D = func_icon
+func get_icon(func_name: String) -> ImageTexture:
+	var icon: ImageTexture = func_icon
 	if (func_name.begins_with(GETTER)):
 		icon = func_get_icon
 	elif (func_name.begins_with(SETTER)):
@@ -959,6 +975,9 @@ func get_editor_corner_radius() -> int:
 
 func get_editor_accent_color() -> Color:
 	return get_editor_interface().get_editor_settings().get_setting("interface/theme/accent_color")
+
+func get_editor_icon_saturation() -> float:
+	return get_editor_interface().get_editor_settings().get_setting("interface/theme/icon_saturation")
 
 func is_sorted() -> bool:
 	return get_editor_settings().get_setting("text_editor/script_list/sort_members_outline_alphabetically")
