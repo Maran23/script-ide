@@ -578,6 +578,7 @@ func create_filter_btn(icon: ImageTexture, title: String) -> Button:
 	btn.button_pressed = get_setting(property, true)
 
 	btn.toggled.connect(on_filter_button_pressed.bind(btn))
+	btn.gui_input.connect(on_right_click.bind(btn))
 
 	btn.add_theme_color_override(&"icon_pressed_color", Color.WHITE)
 	btn.add_theme_color_override(&"icon_hover_color", Color.WHITE)
@@ -595,6 +596,31 @@ func create_filter_btn(icon: ImageTexture, title: String) -> Button:
 	btn.add_theme_stylebox_override(&"focus", style_box)
 
 	return btn
+
+func on_right_click(event: InputEvent, btn: Button):
+	if !(event is InputEventMouseButton):
+		return
+
+	var mouse_event: InputEventMouseButton = event
+
+	if (!mouse_event.is_pressed() || mouse_event.button_index != MOUSE_BUTTON_RIGHT):
+		return
+
+	btn.grab_focus()
+	btn.button_pressed = true
+
+	var pressed_state: bool = false
+	for child: Node in filter_box.get_children():
+		var other_btn: Button = child
+
+		if (btn != other_btn):
+			pressed_state = pressed_state || other_btn.button_pressed
+
+	for child: Node in filter_box.get_children():
+		var other_btn: Button = child
+
+		if (btn != other_btn):
+			other_btn.button_pressed = !pressed_state
 
 func on_filter_button_pressed(pressed: bool, btn: Button):
 	set_setting(btn.get_meta(&"property"), pressed)
