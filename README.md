@@ -1,7 +1,7 @@
 # Script IDE
 
-Transforms the Script UI into an IDE like UI. Tabs are used for navigating between scripts. 
-The default Outline got an overhaul and now shows all members of the script (not just methods) with unique icons for faster navigation. 
+Transforms the Script UI into an IDE like UI. Tabs are used for navigating between scripts.
+The default Outline got an overhaul and now shows all members of the script (not just methods) with unique icons for faster navigation.
 Enhanced keyboard navigation for Scripts and Outline.
 
 Features:
@@ -14,11 +14,12 @@ Features:
 	- (Static) Variables (Red)
 	- Engine callback functions (Blue)
 	- (Static) Functions (Green)
-- All the different members of the script can be hidden or made visible again. This allows fine control what should be visible (e.g. only signals, (Godot) functions, ...)
+- All the different members of the script can be hidden or made visible again by the outline filter. This allows fine control what should be visible (e.g. only signals, (Godot) functions, ...)
+- A `Right Click` enables only the clicked filter, another `Right Click` will enable all filters again
 - The Outline can be opened in a Popup with a defined shortcut for quick navigation between methods
 - You can navigate through the Outline with the `ARROW` keys (or `PAGE_UP/PAGE_DOWN`) and scroll to the selected item by pressing `ENTER`
 - Scripts can be opened in a Popup with a defined shortcut or when clicking the three dots on the top right of the TabContainer for quick navigation between scripts
-- The plugin is written with performance in mind, everything is very fast and works without any lags or stuttering.
+- The plugin is written with performance in mind, everything is very fast and works without any lags or stuttering
 
 Customization:
 - The Outline is on the right side (can be changed to be on the left side again)
