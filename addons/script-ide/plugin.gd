@@ -1,7 +1,7 @@
 ## Registered plugin class for script-ide.
 ## This plugin mainly 'modifies' the outline code that is inside 'script_editor_plugin.cpp'.
 ## The internals of the C++ code are therefore important in order to make this plugin work
-## without interfering with the Godot Engine.
+## without interfering with the Engine.
 @tool
 extends EditorPlugin
 
@@ -43,8 +43,6 @@ var open_outline_popup_shc: Shortcut
 var open_scripts_popup_shc: Shortcut
 #endregion
 
-var suppress_settings_sync: bool = false
-
 #region Existing controls we modify
 var outline_container: Control
 var outline_parent: Control
@@ -85,20 +83,21 @@ var old_script_type: StringName
 
 var selected_tab: int = -1
 var last_tab_hovered: int = -1
-var sync_script_list: bool
+var sync_script_list: bool = false
+var suppress_settings_sync: bool = false
 
 #region Enter / Exit -> Plugin setup
 ## Change the Godot script UI and transform into an IDE like UI
 func _enter_tree() -> void:
-	keyword_icon = create_editor_texture("res://addons/script-ide/icon/keyword.svg")
-	func_icon = create_editor_texture("res://addons/script-ide/icon/func.svg")
-	func_get_icon = create_editor_texture("res://addons/script-ide/icon/func_get.svg")
-	func_set_icon = create_editor_texture("res://addons/script-ide/icon/func_set.svg")
-	property_icon = create_editor_texture("res://addons/script-ide/icon/property.svg")
-	export_icon = create_editor_texture("res://addons/script-ide/icon/export.svg")
-	signal_icon = create_editor_texture("res://addons/script-ide/icon/signal.svg")
-	constant_icon = create_editor_texture("res://addons/script-ide/icon/constant.svg")
-	class_icon = create_editor_texture("res://addons/script-ide/icon/class.svg")
+	keyword_icon = create_editor_texture(load("res://addons/script-ide/icon/keyword.svg"))
+	func_icon = create_editor_texture(load("res://addons/script-ide/icon/func.svg"))
+	func_get_icon = create_editor_texture(load("res://addons/script-ide/icon/func_get.svg"))
+	func_set_icon = create_editor_texture(load("res://addons/script-ide/icon/func_set.svg"))
+	property_icon = create_editor_texture(load("res://addons/script-ide/icon/property.svg"))
+	export_icon = create_editor_texture(load("res://addons/script-ide/icon/export.svg"))
+	signal_icon = create_editor_texture(load("res://addons/script-ide/icon/signal.svg"))
+	constant_icon = create_editor_texture(load("res://addons/script-ide/icon/constant.svg"))
+	class_icon = create_editor_texture(load("res://addons/script-ide/icon/class.svg"))
 
 	is_outline_right = get_setting(OUTLINE_POSITION_RIGHT, is_outline_right)
 	hide_private_members = get_setting(HIDE_PRIVATE_MEMBERS, hide_private_members)
@@ -141,10 +140,10 @@ func _enter_tree() -> void:
 	open_scripts_popup_shc = editor_settings.get_setting(OPEN_SCRIPTS_POPUP)
 
 	# Update on filesystem changed (e.g. save operation).
-	var file_system: EditorFileSystem = get_editor_interface().get_resource_filesystem()
+	var file_system: EditorFileSystem = EditorInterface.get_resource_filesystem()
 	file_system.filesystem_changed.connect(schedule_update)
 
-	var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
+	var script_editor: ScriptEditor = EditorInterface.get_script_editor()
 
 	# Change script item list visibility
 	scripts_item_list = find_or_null(script_editor.find_children("*", "ItemList", true, false))
@@ -167,6 +166,7 @@ func _enter_tree() -> void:
 
 		scripts_tab_container.tabs_visible = true
 		scripts_tab_container.drag_to_rearrange_enabled = true
+		scripts_tab_container.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 
 		if (scripts_tab_bar != null):
 			scripts_tab_bar.tab_close_display_policy = TabBar.CLOSE_BUTTON_SHOW_ACTIVE_ONLY
@@ -242,7 +242,7 @@ func _enter_tree() -> void:
 
 ## Restore the old Godot script UI and free everything we created
 func _exit_tree() -> void:
-	var file_system: EditorFileSystem = get_editor_interface().get_resource_filesystem()
+	var file_system: EditorFileSystem = EditorInterface.get_resource_filesystem()
 	file_system.filesystem_changed.disconnect(schedule_update)
 
 	if (old_script_editor_base != null):
@@ -307,10 +307,7 @@ func _process(delta: float) -> void:
 	update_editor()
 	set_process(false)
 
-#region Input handling -> Popup
-
-## Triggers the Outline popup
-func _unhandled_key_input(event: InputEvent) -> void:
+func _shortcut_input(event: InputEvent) -> void:
 	if (open_outline_popup_shc.matches_event(event)):
 		get_viewport().set_input_as_handled()
 
@@ -319,13 +316,12 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 		open_scripts_popup()
-#endregion
 
-## Schedules an update on the frame
+## Schedules an update on the next frame
 func schedule_update():
 	set_process(true)
 
-## Updates all parts of the editor needed to be synchronized with the file system.
+## Updates all parts of the editor that are needed to be synchronized with the file system change.
 func update_editor():
 	update_script_text_filter()
 
@@ -343,7 +339,7 @@ func create_set_scripts_popup():
 	scripts_popup = PopupPanel.new()
 	scripts_popup.popup_hide.connect(hide_scripts_popup)
 
-	var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
+	var script_editor: ScriptEditor = EditorInterface.get_script_editor()
 	script_editor.add_child(scripts_popup)
 
 	scripts_tab_container.pre_popup_pressed.connect(prepare_scripts_popup)
@@ -399,7 +395,7 @@ func navigate_on_list(event: InputEvent, list: ItemList, submit: Callable):
 		navigate_list(list, index, -5)
 
 func get_center_editor_rect() -> Rect2i:
-	var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
+	var script_editor: ScriptEditor = EditorInterface.get_script_editor()
 
 	var size: Vector2i = Vector2i(400, 500)
 	var x: int
@@ -442,7 +438,7 @@ func open_outline_popup():
 
 	if (outline_popup.get_parent() != null):
 		outline_popup.get_parent().remove_child(outline_popup)
-	outline_popup.popup_exclusive_on_parent(get_editor_interface().get_script_editor(), get_center_editor_rect())
+	outline_popup.popup_exclusive_on_parent(EditorInterface.get_script_editor(), get_center_editor_rect())
 
 	outline_filter_txt.grab_focus()
 
@@ -474,7 +470,7 @@ func open_scripts_popup():
 
 	if (scripts_popup.get_parent() != null):
 		scripts_popup.get_parent().remove_child(scripts_popup)
-	scripts_popup.popup_exclusive_on_parent(get_editor_interface().get_script_editor(), get_center_editor_rect())
+	scripts_popup.popup_exclusive_on_parent(EditorInterface.get_script_editor(), get_center_editor_rect())
 
 	script_filter_txt.grab_focus()
 
@@ -501,7 +497,7 @@ func update_script_text_filter():
 		script_filter_txt.text_changed.emit("")
 
 func get_current_script() -> Script:
-	var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
+	var script_editor: ScriptEditor = EditorInterface.get_script_editor()
 	return script_editor.get_current_script()
 
 func select_script(selected_idx: int):
@@ -557,7 +553,7 @@ func scroll_outline(selected_idx: int):
 	push_error(type_with_text + " or " + modifier + " not found in source code")
 
 func goto_line(index: int):
-	var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
+	var script_editor: ScriptEditor = EditorInterface.get_script_editor()
 	script_editor.goto_line(index)
 
 	var code_edit: CodeEdit = script_editor.get_current_editor().get_base_editor()
@@ -639,8 +635,7 @@ func update_outline_position():
 func update_script_list_visibility():
 	scripts_item_list.get_parent().visible = is_script_list_visible
 
-func create_editor_texture(image_path: String) -> ImageTexture:
-	var image: Image = load(image_path)
+func create_editor_texture(image: Image) -> ImageTexture:
 	image.adjust_bcs(1.0, 1.0, get_editor_icon_saturation())
 
 	return ImageTexture.create_from_image(image)
@@ -716,7 +711,7 @@ func on_tab_changed(idx: int):
 		old_script_editor_base.edited_script_changed.disconnect(update_selected_tab)
 		old_script_editor_base = null
 
-	var script_editor: ScriptEditor = get_editor_interface().get_script_editor()
+	var script_editor: ScriptEditor = EditorInterface.get_script_editor()
 	var script_editor_base: ScriptEditorBase = script_editor.get_current_editor()
 
 	if (script_editor_base != null):
@@ -985,22 +980,22 @@ func simulate_item_clicked(tab_idx: int, mouse_idx: int):
 #endregion
 
 func get_editor_scale() -> float:
-	return get_editor_interface().get_editor_scale()
+	return EditorInterface.get_editor_scale()
 
 func get_editor_corner_radius() -> int:
-	return get_editor_interface().get_editor_settings().get_setting("interface/theme/corner_radius")
+	return EditorInterface.get_editor_settings().get_setting("interface/theme/corner_radius")
 
 func get_editor_accent_color() -> Color:
-	return get_editor_interface().get_editor_settings().get_setting("interface/theme/accent_color")
+	return EditorInterface.get_editor_settings().get_setting("interface/theme/accent_color")
 
 func get_editor_icon_saturation() -> float:
-	return get_editor_interface().get_editor_settings().get_setting("interface/theme/icon_saturation")
+	return EditorInterface.get_editor_settings().get_setting("interface/theme/icon_saturation")
 
 func is_sorted() -> bool:
 	return get_editor_settings().get_setting("text_editor/script_list/sort_members_outline_alphabetically")
 
 func get_editor_settings() -> EditorSettings:
-	return get_editor_interface().get_editor_settings()
+	return EditorInterface.get_editor_settings()
 
 static func find_or_null(arr: Array[Node], index: int = 0) -> Node:
 	if arr.is_empty():
@@ -1023,6 +1018,7 @@ class OutlineCache:
 class TabStateCache:
 	var tabs_visible: bool
 	var drag_to_rearrange_enabled: bool
+	var auto_translate_mode_state: Node.AutoTranslateMode
 	var tab_bar_drag_to_rearrange_enabled: bool
 	var tab_close_display_policy: TabBar.CloseButtonDisplayPolicy
 	var select_with_rmb: bool
@@ -1031,6 +1027,7 @@ class TabStateCache:
 		if (tab_container != null):
 			tabs_visible = tab_container.tabs_visible
 			drag_to_rearrange_enabled = tab_container.drag_to_rearrange_enabled
+			auto_translate_mode_state = tab_container.auto_translate_mode
 		if (tab_bar != null):
 			tab_bar_drag_to_rearrange_enabled = tab_bar.drag_to_rearrange_enabled
 			tab_close_display_policy = tab_bar.tab_close_display_policy
@@ -1040,6 +1037,7 @@ class TabStateCache:
 		if (tab_container != null):
 			tab_container.tabs_visible = tabs_visible
 			tab_container.drag_to_rearrange_enabled = drag_to_rearrange_enabled
+			tab_container.auto_translate_mode = auto_translate_mode_state
 		if (tab_bar != null):
 			tab_bar.drag_to_rearrange_enabled = drag_to_rearrange_enabled
 			tab_bar.tab_close_display_policy = tab_close_display_policy
