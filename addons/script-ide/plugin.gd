@@ -371,7 +371,7 @@ func navigate_on_list(event: InputEvent, list: ItemList, submit: Callable):
 		submit.call(index)
 	elif (event.is_action_pressed(&"ui_down", true)):
 		var index: int = get_list_index(list)
-		if (index == outline.item_count - 1):
+		if (index == list.item_count - 1):
 			return
 
 		navigate_list(list, index, 1)
@@ -383,7 +383,7 @@ func navigate_on_list(event: InputEvent, list: ItemList, submit: Callable):
 		navigate_list(list, index, -1)
 	elif (event.is_action_pressed(&"ui_page_down", true)):
 		var index: int = get_list_index(list)
-		if (index == outline.item_count - 1):
+		if (index == list.item_count - 1):
 			return
 
 		navigate_list(list, index, 5)
