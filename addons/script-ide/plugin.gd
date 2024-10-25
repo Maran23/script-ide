@@ -307,6 +307,7 @@ func _process(delta: float) -> void:
 	update_editor()
 	set_process(false)
 
+## Process the user defined shortcuts
 func _shortcut_input(event: InputEvent) -> void:
 	if (open_outline_popup_shc.matches_event(event)):
 		get_viewport().set_input_as_handled()
@@ -393,6 +394,8 @@ func navigate_on_list(event: InputEvent, list: ItemList, submit: Callable):
 			return
 
 		navigate_list(list, index, -5)
+	elif (event is InputEventKey && list.item_count > 0 && !list.is_anything_selected()):
+		list.select(0)
 
 func get_center_editor_rect() -> Rect2i:
 	var script_editor: ScriptEditor = EditorInterface.get_script_editor()
