@@ -143,100 +143,100 @@ func _enter_tree() -> void:
 	var file_system: EditorFileSystem = EditorInterface.get_resource_filesystem()
 	file_system.filesystem_changed.connect(schedule_update)
 
+	# Sync settings changes for this plugin.
+	get_editor_settings().settings_changed.connect(sync_settings)
+
 	var script_editor: ScriptEditor = EditorInterface.get_script_editor()
 
-	# Change script item list visibility
+	# Change script item list visibility (based on settings).
 	scripts_item_list = find_or_null(script_editor.find_children("*", "ItemList", true, false))
-	if (scripts_item_list != null):
-		update_script_list_visibility()
+	update_script_list_visibility()
 
-		script_filter_txt = find_or_null(scripts_item_list.get_parent().find_children("*", "LineEdit", true, false))
-		script_filter_txt.gui_input.connect(navigate_on_list.bind(scripts_item_list, select_script))
+	# Add script filter navigation.
+	script_filter_txt = find_or_null(scripts_item_list.get_parent().find_children("*", "LineEdit", true, false))
+	script_filter_txt.gui_input.connect(navigate_on_list.bind(scripts_item_list, select_script))
 
-	# Make tab container visible
+	# Make tab container visible.
 	scripts_tab_container = find_or_null(script_editor.find_children("*", "TabContainer", true, false))
-	if (scripts_tab_container != null):
-		scripts_tab_bar = scripts_tab_container.get_tab_bar()
+	scripts_tab_bar = scripts_tab_container.get_tab_bar()
 
-		tab_state = TabStateCache.new()
-		tab_state.save(scripts_tab_container, scripts_tab_bar)
+	# Save old tab state to restore later.
+	tab_state = TabStateCache.new()
+	tab_state.save(scripts_tab_container, scripts_tab_bar)
 
-		if (scripts_item_list != null):
-			create_set_scripts_popup()
+	# Create and set script popup.
+	create_set_scripts_popup()
 
-		scripts_tab_container.tabs_visible = true
-		scripts_tab_container.drag_to_rearrange_enabled = true
-		scripts_tab_container.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	# Configure tab container and bar.
+	scripts_tab_container.tabs_visible = true
+	scripts_tab_container.drag_to_rearrange_enabled = true
+	scripts_tab_container.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 
-		if (scripts_tab_bar != null):
-			scripts_tab_bar.tab_close_display_policy = TabBar.CLOSE_BUTTON_SHOW_ACTIVE_ONLY
-			scripts_tab_bar.drag_to_rearrange_enabled = true
-			scripts_tab_bar.select_with_rmb = true
-			scripts_tab_bar.tab_close_pressed.connect(on_tab_close)
-			scripts_tab_bar.tab_rmb_clicked.connect(on_tab_rmb)
-			scripts_tab_bar.tab_hovered.connect(on_tab_hovered)
-			scripts_tab_bar.mouse_exited.connect(on_tab_bar_mouse_exited)
-			scripts_tab_bar.active_tab_rearranged.connect(on_active_tab_rearranged)
-			scripts_tab_bar.gui_input.connect(on_tab_bar_gui_input)
+	scripts_tab_bar.tab_close_display_policy = TabBar.CLOSE_BUTTON_SHOW_ACTIVE_ONLY
+	scripts_tab_bar.drag_to_rearrange_enabled = true
+	scripts_tab_bar.select_with_rmb = true
+	scripts_tab_bar.tab_close_pressed.connect(on_tab_close)
+	scripts_tab_bar.tab_rmb_clicked.connect(on_tab_rmb)
+	scripts_tab_bar.tab_hovered.connect(on_tab_hovered)
+	scripts_tab_bar.mouse_exited.connect(on_tab_bar_mouse_exited)
+	scripts_tab_bar.active_tab_rearranged.connect(on_active_tab_rearranged)
+	scripts_tab_bar.gui_input.connect(on_tab_bar_gui_input)
 
-			scripts_tab_bar.tab_changed.connect(on_tab_changed)
+	scripts_tab_bar.tab_changed.connect(on_tab_changed)
 
-	# Remove existing outline and add own outline
+	# Remove existing outline and add own outline.
 	split_container = find_or_null(script_editor.find_children("*", "HSplitContainer", true, false))
-	if (split_container != null):
-		outline_container = split_container.get_child(0)
+	outline_container = split_container.get_child(0)
 
-		if (is_outline_right):
-			update_outline_position()
+	if (is_outline_right):
+		update_outline_position()
 
-		old_outline = find_or_null(outline_container.find_children("*", "ItemList", true, false), 1)
-		outline_parent = old_outline.get_parent()
-		outline_parent.remove_child(old_outline)
+	old_outline = find_or_null(outline_container.find_children("*", "ItemList", true, false), 1)
+	outline_parent = old_outline.get_parent()
+	outline_parent.remove_child(old_outline)
 
-		outline = ItemList.new()
-		outline.allow_reselect = true
-		outline.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		outline_parent.add_child(outline)
+	outline = ItemList.new()
+	outline.allow_reselect = true
+	outline.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	outline_parent.add_child(outline)
 
-		outline.item_selected.connect(scroll_outline)
+	outline.item_selected.connect(scroll_outline)
 
-		# Add a filter box for all kind of members
-		filter_box = HBoxContainer.new()
+	# Add a filter box for all kind of members
+	filter_box = HBoxContainer.new()
 
-		engine_func_btn = create_filter_btn(keyword_icon, "Engine callbacks")
-		filter_box.add_child(engine_func_btn)
+	engine_func_btn = create_filter_btn(keyword_icon, "Engine callbacks")
+	filter_box.add_child(engine_func_btn)
 
-		func_btn = create_filter_btn(func_icon, "Functions")
-		filter_box.add_child(func_btn)
+	func_btn = create_filter_btn(func_icon, "Functions")
+	filter_box.add_child(func_btn)
 
-		signal_btn = create_filter_btn(signal_icon, "Signals")
-		filter_box.add_child(signal_btn)
+	signal_btn = create_filter_btn(signal_icon, "Signals")
+	filter_box.add_child(signal_btn)
 
-		export_btn = create_filter_btn(export_icon, "Exported properties")
-		filter_box.add_child(export_btn)
+	export_btn = create_filter_btn(export_icon, "Exported properties")
+	filter_box.add_child(export_btn)
 
-		property_btn = create_filter_btn(property_icon, "Properties")
-		filter_box.add_child(property_btn)
+	property_btn = create_filter_btn(property_icon, "Properties")
+	filter_box.add_child(property_btn)
 
-		class_btn = create_filter_btn(class_icon, "Classes")
-		filter_box.add_child(class_btn)
+	class_btn = create_filter_btn(class_icon, "Classes")
+	filter_box.add_child(class_btn)
 
-		constant_btn = create_filter_btn(constant_icon, "Constants")
-		filter_box.add_child(constant_btn)
+	constant_btn = create_filter_btn(constant_icon, "Constants")
+	filter_box.add_child(constant_btn)
 
-		outline.get_parent().add_child(filter_box)
-		outline.get_parent().move_child(filter_box, outline.get_index())
+	outline.get_parent().add_child(filter_box)
+	outline.get_parent().move_child(filter_box, outline.get_index())
 
-		# Callback when the filter changed
-		outline_filter_txt = find_or_null(outline_container.find_children("*", "LineEdit", true, false), 1)
-		outline_filter_txt.gui_input.connect(navigate_on_list.bind(outline, scroll_outline))
-		outline_filter_txt.text_changed.connect(update_outline.unbind(1))
+	# Add navigation to the filter and text filtering.
+	outline_filter_txt = find_or_null(outline_container.find_children("*", "LineEdit", true, false), 1)
+	outline_filter_txt.gui_input.connect(navigate_on_list.bind(outline, scroll_outline))
+	outline_filter_txt.text_changed.connect(update_outline.unbind(1))
 
-		# Callback when the sorting changed
-		sort_btn = find_or_null(outline_container.find_children("*", "Button", true, false))
-		sort_btn.pressed.connect(update_outline)
-
-	get_editor_settings().settings_changed.connect(sync_settings)
+	# Add callback when the sorting changed.
+	sort_btn = find_or_null(outline_container.find_children("*", "Button", true, false))
+	sort_btn.pressed.connect(update_outline)
 
 	on_tab_changed(scripts_tab_bar.current_tab)
 
@@ -1002,6 +1002,7 @@ func get_editor_settings() -> EditorSettings:
 
 static func find_or_null(arr: Array[Node], index: int = 0) -> Node:
 	if arr.is_empty():
+		push_error("Node not found - Plugin will not work correctly. This might be due to some other plugins or changes in the Engine.")
 		return null
 
 	return arr[index]
