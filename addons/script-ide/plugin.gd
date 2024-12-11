@@ -18,18 +18,6 @@ const OPEN_OUTLINE_POPUP: StringName = SCRIPT_IDE + &"open_outline_popup"
 ## Editor setting for the 'Open Scripts Popup' shortcut
 const OPEN_SCRIPTS_POPUP: StringName = SCRIPT_IDE + &"open_scripts_popup"
 
-#region Preloaded icon resources
-const ICON_KEYWORD: Image = preload("icon/keyword.svg")
-const ICON_FUNC: Image = preload("icon/func.svg")
-const ICON_FUNC_GET: Image = preload("icon/func_get.svg")
-const ICON_FUNC_SET: Image = preload("icon/func_set.svg")
-const ICON_PROPERTY: Image = preload("icon/property.svg")
-const ICON_EXPORT: Image = preload("icon/export.svg")
-const ICON_SIGNAL: Image = preload("icon/signal.svg")
-const ICON_CONSTANT: Image = preload("icon/constant.svg")
-const ICON_CLASS: Image = preload("icon/class.svg")
-#endregion
-
 const GETTER: StringName = &"get"
 const SETTER: StringName = &"set"
 const UNDERSCORE: StringName = &"_"
@@ -101,15 +89,17 @@ var suppress_settings_sync: bool = false
 #region Enter / Exit -> Plugin setup
 ## Change the Godot script UI and transform into an IDE like UI
 func _enter_tree() -> void:
-	keyword_icon = create_editor_texture(ICON_KEYWORD)
-	func_icon = create_editor_texture(ICON_FUNC)
-	func_get_icon = create_editor_texture(ICON_FUNC_GET)
-	func_set_icon = create_editor_texture(ICON_FUNC_SET)
-	property_icon = create_editor_texture(ICON_PROPERTY)
-	export_icon = create_editor_texture(ICON_EXPORT)
-	signal_icon = create_editor_texture(ICON_SIGNAL)
-	constant_icon = create_editor_texture(ICON_CONSTANT)
-	class_icon = create_editor_texture(ICON_CLASS)
+	var script_path: String = get_script().get_path().get_base_dir()
+	
+	keyword_icon = create_editor_texture(load(script_path.path_join("icon/keyword.svg")))
+	func_icon = create_editor_texture(load(script_path.path_join("icon/func.svg")))
+	func_get_icon = create_editor_texture(load(script_path.path_join("icon/func_get.svg")))
+	func_set_icon = create_editor_texture(load(script_path.path_join("icon/func_set.svg")))
+	property_icon = create_editor_texture(load(script_path.path_join("icon/property.svg")))
+	export_icon = create_editor_texture(load(script_path.path_join("icon/export.svg")))
+	signal_icon = create_editor_texture(load(script_path.path_join("icon/signal.svg")))
+	constant_icon = create_editor_texture(load(script_path.path_join("icon/constant.svg")))
+	class_icon = create_editor_texture(load(script_path.path_join("icon/class.svg")))
 
 	is_outline_right = get_setting(OUTLINE_POSITION_RIGHT, is_outline_right)
 	hide_private_members = get_setting(HIDE_PRIVATE_MEMBERS, hide_private_members)
