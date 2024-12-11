@@ -89,15 +89,17 @@ var suppress_settings_sync: bool = false
 #region Enter / Exit -> Plugin setup
 ## Change the Godot script UI and transform into an IDE like UI
 func _enter_tree() -> void:
-	keyword_icon = create_editor_texture(load("res://addons/script-ide/icon/keyword.svg"))
-	func_icon = create_editor_texture(load("res://addons/script-ide/icon/func.svg"))
-	func_get_icon = create_editor_texture(load("res://addons/script-ide/icon/func_get.svg"))
-	func_set_icon = create_editor_texture(load("res://addons/script-ide/icon/func_set.svg"))
-	property_icon = create_editor_texture(load("res://addons/script-ide/icon/property.svg"))
-	export_icon = create_editor_texture(load("res://addons/script-ide/icon/export.svg"))
-	signal_icon = create_editor_texture(load("res://addons/script-ide/icon/signal.svg"))
-	constant_icon = create_editor_texture(load("res://addons/script-ide/icon/constant.svg"))
-	class_icon = create_editor_texture(load("res://addons/script-ide/icon/class.svg"))
+	var script_path: String = get_script().get_path().get_base_dir()
+	
+	keyword_icon = create_editor_texture(load(script_path.path_join("icon/keyword.svg")))
+	func_icon = create_editor_texture(load(script_path.path_join("icon/func.svg")))
+	func_get_icon = create_editor_texture(load(script_path.path_join("icon/func_get.svg")))
+	func_set_icon = create_editor_texture(load(script_path.path_join("icon/func_set.svg")))
+	property_icon = create_editor_texture(load(script_path.path_join("icon/property.svg")))
+	export_icon = create_editor_texture(load(script_path.path_join("icon/export.svg")))
+	signal_icon = create_editor_texture(load(script_path.path_join("icon/signal.svg")))
+	constant_icon = create_editor_texture(load(script_path.path_join("icon/constant.svg")))
+	class_icon = create_editor_texture(load(script_path.path_join("icon/class.svg")))
 
 	is_outline_right = get_setting(OUTLINE_POSITION_RIGHT, is_outline_right)
 	hide_private_members = get_setting(HIDE_PRIVATE_MEMBERS, hide_private_members)
