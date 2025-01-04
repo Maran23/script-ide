@@ -11,14 +11,17 @@ const SCRIPT_IDE: StringName = &"plugin/script_ide/"
 const OUTLINE_POSITION_RIGHT: StringName = SCRIPT_IDE + &"outline_position_right"
 ## Editor setting to control whether private members (annotated with '_' should be hidden or not)
 const HIDE_PRIVATE_MEMBERS: StringName = SCRIPT_IDE + &"hide_private_members"
-## Editor setting to control whether we want to auto navigate to the script in the filesystem when selected
-const AUTO_NAVIGATE_IN_FS: StringName = SCRIPT_IDE + &"auto_navigate_in_fs"
+## Editor setting to control whether we want to auto navigate to the script
+## in the filesystem (dock) when selected
+const AUTO_NAVIGATE_IN_FS: StringName = SCRIPT_IDE + &"auto_navigate_in_filesystem_dock"
 ## Editor setting to control whether the script list should be visible or not
 const SCRIPT_LIST_VISIBLE: StringName = SCRIPT_IDE + &"script_list_visible"
 ## Editor setting for the 'Open Outline Popup' shortcut
 const OPEN_OUTLINE_POPUP: StringName = SCRIPT_IDE + &"open_outline_popup"
 ## Editor setting for the 'Open Scripts Popup' shortcut
 const OPEN_SCRIPTS_POPUP: StringName = SCRIPT_IDE + &"open_scripts_popup"
+## Editor setting for the 'Open Scripts Popup' shortcut
+const OPEN_QUICK_SEARCH_POPUP: StringName = SCRIPT_IDE + &"open_quick_search_popup"
 
 const GETTER: StringName = &"get"
 const SETTER: StringName = &"set"
@@ -46,6 +49,7 @@ var hide_private_members: bool = false
 var is_auto_navigate_in_fs: bool = true
 var open_outline_popup_shc: Shortcut
 var open_scripts_popup_shc: Shortcut
+var open_quick_search_popup_shc: Shortcut
 #endregion
 
 #region Existing controls we modify
@@ -69,6 +73,7 @@ var outline_popup: PopupPanel
 var filter_box: HBoxContainer
 
 var scripts_popup: PopupPanel
+var quick_open_popup: PopupPanel
 
 var class_btn: Button
 var constant_btn: Button
@@ -91,11 +96,14 @@ var last_tab_hovered: int = -1
 var sync_script_list: bool = false
 var suppress_settings_sync: bool = false
 
+const SHORTCUT_INTERVAL: int = 400
+var last_shortcut_time: int = -SHORTCUT_INTERVAL
+
 #region Enter / Exit -> Plugin setup
 ## Change the Godot script UI and transform into an IDE like UI
 func _enter_tree() -> void:
 	var script_path: String = get_script().get_path().get_base_dir()
-	
+
 	keyword_icon = create_editor_texture(load(script_path.path_join("icon/keyword.svg")))
 	func_icon = create_editor_texture(load(script_path.path_join("icon/func.svg")))
 	func_get_icon = create_editor_texture(load(script_path.path_join("icon/func_get.svg")))
@@ -144,8 +152,19 @@ func _enter_tree() -> void:
 		editor_settings.set_setting(OPEN_SCRIPTS_POPUP, shortcut)
 		editor_settings.set_initial_value(OPEN_SCRIPTS_POPUP, shortcut, false)
 
+	if (!editor_settings.has_setting(OPEN_QUICK_SEARCH_POPUP)):
+		var shortcut: Shortcut = Shortcut.new()
+		var event: InputEventKey = InputEventKey.new()
+		event.device = -1
+		event.keycode = KEY_SHIFT
+
+		shortcut.events = [ event ]
+		editor_settings.set_setting(OPEN_QUICK_SEARCH_POPUP, shortcut)
+		editor_settings.set_initial_value(OPEN_QUICK_SEARCH_POPUP, shortcut, false)
+
 	open_outline_popup_shc = editor_settings.get_setting(OPEN_OUTLINE_POPUP)
 	open_scripts_popup_shc = editor_settings.get_setting(OPEN_SCRIPTS_POPUP)
+	open_quick_search_popup_shc = editor_settings.get_setting(OPEN_QUICK_SEARCH_POPUP)
 
 	# Update on filesystem changed (e.g. save operation).
 	var file_system: EditorFileSystem = EditorInterface.get_resource_filesystem()
@@ -307,6 +326,9 @@ func _exit_tree() -> void:
 	if (outline_popup != null):
 		outline_popup.free()
 
+	if (quick_open_popup != null):
+		quick_open_popup.free()
+
 	get_editor_settings().settings_changed.disconnect(sync_settings)
 #endregion
 
@@ -317,13 +339,20 @@ func _process(delta: float) -> void:
 
 ## Process the user defined shortcuts
 func _shortcut_input(event: InputEvent) -> void:
+	if (open_quick_search_popup_shc.matches_event(event) && event.is_released()):
+		var old_time: int = last_shortcut_time
+		last_shortcut_time = Time.get_ticks_msec()
+
+		if (last_shortcut_time - old_time <= SHORTCUT_INTERVAL):
+			get_viewport().set_input_as_handled()
+			open_quick_search()
+			return
+
 	if (open_outline_popup_shc.matches_event(event)):
 		get_viewport().set_input_as_handled()
-
 		open_outline_popup()
 	elif (open_scripts_popup_shc.matches_event(event)):
 		get_viewport().set_input_as_handled()
-
 		open_scripts_popup()
 
 ## Schedules an update on the next frame
@@ -341,6 +370,15 @@ func update_editor():
 	update_tabs()
 	update_outline_cache()
 	update_outline()
+
+func open_quick_search():
+	if (quick_open_popup == null):
+		var script_path: String = get_script().get_path().get_base_dir()
+		quick_open_popup = load(script_path.path_join("quickopen/quick_open_panel.tscn")).instantiate()
+
+	if (quick_open_popup.get_parent() != null):
+		quick_open_popup.get_parent().remove_child(quick_open_popup)
+	quick_open_popup.popup_exclusive_on_parent(EditorInterface.get_script_editor(), get_center_editor_rect())
 
 func create_set_scripts_popup():
 	panel_container = scripts_item_list.get_parent().get_parent()
