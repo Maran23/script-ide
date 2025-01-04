@@ -432,7 +432,7 @@ func open_outline_popup():
 		var btn: Button = child
 		button_flags.append(btn.button_pressed)
 
-		btn.button_pressed = true
+		btn.set_pressed_no_signal(true)
 
 	var old_text: String = outline_filter_txt.text
 	outline_filter_txt.text = ""
@@ -471,7 +471,7 @@ func on_outline_popup_hidden(outline_initially_closed: bool, old_text: String, b
 	var index: int = 0
 	for flag: bool in button_flags:
 		var btn: Button = filter_box.get_child(index)
-		btn.button_pressed = flag
+		btn.set_pressed_no_signal(flag)
 		index += 1
 
 	update_outline()
