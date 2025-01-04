@@ -25,6 +25,8 @@ const SETTER: StringName = &"set"
 const UNDERSCORE: StringName = &"_"
 const INLINE: StringName = &"@"
 
+const BUILT_IN_SCRIPT: StringName = &"::GDScript"
+
 #region Outline icons
 var keyword_icon: ImageTexture
 var func_icon: ImageTexture
@@ -346,6 +348,7 @@ func create_set_scripts_popup():
 	scripts_popup = PopupPanel.new()
 	scripts_popup.popup_hide.connect(hide_scripts_popup)
 
+	# Need to be inside the tree, so it can be shown as popup for the tab container.
 	var script_editor: ScriptEditor = EditorInterface.get_script_editor()
 	script_editor.add_child(scripts_popup)
 
@@ -734,7 +737,12 @@ func on_tab_changed(idx: int):
 	schedule_update()
 
 	if (is_auto_navigate_in_fs && script_editor.get_current_script() != null):
-		var file: String = script_editor.get_current_script().resource_path
+		var file: String = script_editor.get_current_script().get_path()
+
+		if (file.contains(BUILT_IN_SCRIPT)):
+			# We navigate to the scene in case of a built-in script.
+			file = file.get_slice(BUILT_IN_SCRIPT, 0)
+
 		EditorInterface.get_file_system_dock().navigate_to_path(file)
 
 func update_selected_tab():
@@ -780,7 +788,7 @@ func update_outline_cache():
 	update_keywords(script)
 
 	# Check if built-in script. In this case we need to duplicate it for whatever reason.
-	if (script.get_path().contains(".tscn::GDScript")):
+	if (script.get_path().contains(BUILT_IN_SCRIPT)):
 		script = script.duplicate()
 
 	outline_cache = OutlineCache.new()
