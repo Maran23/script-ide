@@ -1,0 +1,102 @@
+[gd_scene load_steps=3 format=3 uid="uid://d2pttchmj3n7q"]
+
+[ext_resource type="Script" path="res://addons/script-ide/quickopen/quick_open_panel.gd" id="1_3tl1s"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_8s5oe"]
+resource_local_to_scene = false
+
+[node name="QuickOpenPanel" type="PopupPanel"]
+script = ExtResource("1_3tl1s")
+
+[node name="PanelContainer" type="PanelContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="MarginContainer" type="MarginContainer" parent="PanelContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_right = 5
+theme_override_constants/margin_bottom = 5
+
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="HBoxContainer" type="HBoxContainer" parent="PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="HBoxContainer" type="HBoxContainer" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="AllBtn" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+tooltip_text = "All files"
+toggle_mode = true
+button_group = SubResource("ButtonGroup_8s5oe")
+text = "All"
+
+[node name="SceneBtn" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+tooltip_text = "Scene files"
+toggle_mode = true
+button_group = SubResource("ButtonGroup_8s5oe")
+text = "Scene"
+
+[node name="GdScriptBtn" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+tooltip_text = "GDScript files"
+toggle_mode = true
+button_group = SubResource("ButtonGroup_8s5oe")
+text = "GDScript"
+
+[node name="ResourceBtn" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+tooltip_text = "Resource files"
+toggle_mode = true
+button_group = SubResource("ButtonGroup_8s5oe")
+text = "Resource"
+
+[node name="OtherBtn" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+tooltip_text = "Other files"
+toggle_mode = true
+button_group = SubResource("ButtonGroup_8s5oe")
+text = "Other"
+
+[node name="SearchOptionBtn" type="OptionButton" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+selected = 0
+item_count = 2
+popup/item_0/text = "Project"
+popup/item_1/text = "Project+Addons"
+popup/item_1/id = 1
+
+[node name="FilterTxt" type="LineEdit" parent="PanelContainer/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+placeholder_text = "Filter files"
+
+[node name="FilesList" type="ItemList" parent="PanelContainer/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
