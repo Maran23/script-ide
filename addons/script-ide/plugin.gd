@@ -11,6 +11,8 @@ const SCRIPT_IDE: StringName = &"plugin/script_ide/"
 const OUTLINE_POSITION_RIGHT: StringName = SCRIPT_IDE + &"outline_position_right"
 ## Editor setting to control whether private members (annotated with '_' should be hidden or not)
 const HIDE_PRIVATE_MEMBERS: StringName = SCRIPT_IDE + &"hide_private_members"
+## Editor setting to control whether we want to auto navigate to the script in the filesystem when selected
+const AUTO_NAVIGATE_IN_FS: StringName = SCRIPT_IDE + &"auto_navigate_in_fs"
 ## Editor setting to control whether the script list should be visible or not
 const SCRIPT_LIST_VISIBLE: StringName = SCRIPT_IDE + &"script_list_visible"
 ## Editor setting for the 'Open Outline Popup' shortcut
@@ -39,6 +41,7 @@ var class_icon: ImageTexture
 var is_outline_right: bool = true
 var is_script_list_visible: bool = false
 var hide_private_members: bool = false
+var is_auto_navigate_in_fs: bool = true
 var open_outline_popup_shc: Shortcut
 var open_scripts_popup_shc: Shortcut
 #endregion
@@ -104,6 +107,7 @@ func _enter_tree() -> void:
 	is_outline_right = get_setting(OUTLINE_POSITION_RIGHT, is_outline_right)
 	hide_private_members = get_setting(HIDE_PRIVATE_MEMBERS, hide_private_members)
 	is_script_list_visible = get_setting(SCRIPT_LIST_VISIBLE, is_script_list_visible)
+	is_auto_navigate_in_fs = get_setting(AUTO_NAVIGATE_IN_FS, is_auto_navigate_in_fs)
 
 	var editor_settings: EditorSettings = get_editor_settings()
 	if (!editor_settings.has_setting(OPEN_OUTLINE_POPUP)):
@@ -586,7 +590,6 @@ func create_filter_btn(icon: ImageTexture, title: String) -> Button:
 	btn.add_theme_color_override(&"icon_focus_color", Color.WHITE)
 
 	var style_box_empty: StyleBoxEmpty = StyleBoxEmpty.new()
-	style_box_empty.set_content_margin_all(4 * get_editor_scale())
 	btn.add_theme_stylebox_override(&"normal", style_box_empty)
 
 	var style_box: StyleBoxFlat = StyleBoxFlat.new()
@@ -669,12 +672,6 @@ func sync_settings():
 
 				update_outline_cache()
 				update_outline()
-		elif (setting == OPEN_OUTLINE_POPUP):
-			# Update outline popup shortcut.
-			open_outline_popup_shc = get_editor_settings().get_setting(OPEN_OUTLINE_POPUP)
-		elif (setting == OPEN_OUTLINE_POPUP):
-			# Update scripts popup shortcut.
-			open_scripts_popup_shc = get_editor_settings().get_setting(OPEN_SCRIPTS_POPUP)
 		elif (setting == SCRIPT_LIST_VISIBLE):
 			# Update the script list visibility
 			var new_script_list_visible: bool = get_setting(SCRIPT_LIST_VISIBLE, is_script_list_visible)
@@ -682,6 +679,15 @@ func sync_settings():
 				is_script_list_visible = new_script_list_visible
 
 				update_script_list_visibility()
+		elif (setting == AUTO_NAVIGATE_IN_FS):
+			# Update the variable
+			is_auto_navigate_in_fs = get_setting(AUTO_NAVIGATE_IN_FS, is_auto_navigate_in_fs)
+		elif (setting == OPEN_OUTLINE_POPUP):
+			# Update outline popup shortcut.
+			open_outline_popup_shc = get_editor_settings().get_setting(OPEN_OUTLINE_POPUP)
+		elif (setting == OPEN_SCRIPTS_POPUP):
+			# Update scripts popup shortcut.
+			open_scripts_popup_shc = get_editor_settings().get_setting(OPEN_SCRIPTS_POPUP)
 		else:
 			# Update filter buttons.
 			for btn_node: Node in filter_box.get_children():
@@ -726,6 +732,10 @@ func on_tab_changed(idx: int):
 
 	sync_script_list = true
 	schedule_update()
+
+	if (is_auto_navigate_in_fs && script_editor.get_current_script() != null):
+		var file: String = script_editor.get_current_script().resource_path
+		EditorInterface.get_file_system_dock().navigate_to_path(file)
 
 func update_selected_tab():
 	if (selected_tab == -1):
