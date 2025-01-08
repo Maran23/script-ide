@@ -19,6 +19,8 @@ Features:
 - The Outline can be opened in a Popup with a defined shortcut for quick navigation between methods
 - You can navigate through the Outline with the `ARROW` keys (or `PAGE_UP/PAGE_DOWN`) and scroll to the selected item by pressing `ENTER`
 - Scripts can be opened in a Popup with a defined shortcut or when clicking the three dots on the top right of the TabContainer for quick navigation between scripts
+- The currently edited script is automatically selected in the Filesystem Dock
+- Files can be quickly searched by the Quick Search Popup with `Shift`+`Shift`
 - The plugin is written with performance in mind, everything is very fast and works without any lags or stuttering
 
 Customization:
@@ -33,6 +35,8 @@ All settings can be changed in the `Editor Settings` under `Plugin` -> `Script I
 - `Hide Private Members` = Flag to control whether private members (methods/variables/constants starting with '_') should be hidden in the Outline or not (default=false)
 - `Open Script Popup` = Shortcut to control how the Script Popup should be triggered (default=CTRL+U or META+U)
 - `Script List Visible` = Flag to control whether the script list should still be visible or not (above the outline) (default=false)
+- `Auto Navigate in FileSystem Dock` = Flag to control whether the script that is currently edited should be automatically selected in the Filesystem Dock (default=true)
+- `Open Quick Search Popup` = Shortcut to control how the Quick Search Popup should be triggered (default=Shift+Shift)
 - All outline visibility settings
 
 ![Example of the Outline](https://github.com/user-attachments/assets/1729cb2b-01ae-4365-b77a-45edcb94b978)
@@ -42,5 +46,7 @@ All settings can be changed in the `Editor Settings` under `Plugin` -> `Script I
 ![Example of the TabContainer Script ItemList Popup](https://github.com/user-attachments/assets/484d498c-bd1c-4c77-a693-ac31a8500fbe)
 
 ![Example of the Script ItemList Popup](https://github.com/user-attachments/assets/bb976604-6049-4ce1-a28e-377fc62899f6)
+
+![Example of the Quick Search Popup](https://github.com/user-attachments/assets/01141f05-e07c-4059-8d6f-e4c7490cbd40)
 
 ![Example of the plugin editor settings](https://github.com/user-attachments/assets/0450e423-bc49-4076-862b-c95a62190df1)
