@@ -36,9 +36,19 @@ func _ready() -> void:
 	var file_system: EditorFileSystem = EditorInterface.get_resource_filesystem()
 	file_system.filesystem_changed.connect(schedule_rebuild)
 
+	filter_txt.gui_input.connect(navigate_on_list.bind(files_list, open_file))
+
 func open_file(index: int):
+	hide()
+
 	var file: String = files_list.get_item_metadata(index)
-	EditorInterface.edit_resource(load(file))
+
+	if (ResourceLoader.exists(file)):
+		var res: Resource = load(file)
+		EditorInterface.edit_resource(res)
+
+		if (res is PackedScene):
+			EditorInterface.open_scene_from_path(file)
 
 func schedule_rebuild():
 	is_rebuild_cache = true
@@ -65,6 +75,9 @@ func on_show():
 
 	filter_txt.select_all()
 	filter_txt.grab_focus()
+
+	if (files_list.item_count > 0):
+		files_list.select(0)
 
 func rebuild_cache():
 	scenes.clear()
@@ -146,6 +159,55 @@ func fill_files_list_with(files: Array[FileData]):
 
 			files_list.add_item(file_data.file_name, icon)
 			files_list.set_item_metadata(files_list.item_count - 1, file)
+
+func navigate_on_list(event: InputEvent, list: ItemList, submit: Callable):
+	if (event.is_action_pressed(&"ui_text_submit")):
+		var index: int = get_list_index(list)
+		if (index == -1):
+			return
+
+		submit.call(index)
+	elif (event.is_action_pressed(&"ui_down", true)):
+		var index: int = get_list_index(list)
+		if (index == list.item_count - 1):
+			return
+
+		navigate_list(list, index, 1)
+	elif (event.is_action_pressed(&"ui_up", true)):
+		var index: int = get_list_index(list)
+		if (index <= 0):
+			return
+
+		navigate_list(list, index, -1)
+	elif (event.is_action_pressed(&"ui_page_down", true)):
+		var index: int = get_list_index(list)
+		if (index == list.item_count - 1):
+			return
+
+		navigate_list(list, index, 5)
+	elif (event.is_action_pressed(&"ui_page_up", true)):
+		var index: int = get_list_index(list)
+		if (index <= 0):
+			return
+
+		navigate_list(list, index, -5)
+	elif (event is InputEventKey && list.item_count > 0 && !list.is_anything_selected()):
+		list.select(0)
+
+func get_list_index(list: ItemList) -> int:
+	var items: PackedInt32Array = list.get_selected_items()
+
+	if (items.is_empty()):
+		return -1
+
+	return items[0]
+
+func navigate_list(list: ItemList, index: int, amount: int):
+	index = clamp(index + amount, 0, list.item_count - 1)
+
+	list.select(index)
+	list.ensure_current_is_visible()
+	list.accept_event()
 
 class FileData:
 	var file: String

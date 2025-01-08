@@ -444,6 +444,21 @@ func navigate_on_list(event: InputEvent, list: ItemList, submit: Callable):
 	elif (event is InputEventKey && list.item_count > 0 && !list.is_anything_selected()):
 		list.select(0)
 
+func get_list_index(list: ItemList) -> int:
+	var items: PackedInt32Array = list.get_selected_items()
+
+	if (items.is_empty()):
+		return -1
+
+	return items[0]
+
+func navigate_list(list: ItemList, index: int, amount: int):
+	index = clamp(index + amount, 0, list.item_count - 1)
+
+	list.select(index)
+	list.ensure_current_is_visible()
+	list.accept_event()
+
 func get_center_editor_rect() -> Rect2i:
 	var script_editor: ScriptEditor = EditorInterface.get_script_editor()
 
@@ -523,21 +538,6 @@ func open_scripts_popup():
 	scripts_popup.popup_exclusive_on_parent(EditorInterface.get_script_editor(), get_center_editor_rect())
 
 	script_filter_txt.grab_focus()
-
-func get_list_index(list: ItemList) -> int:
-	var items: PackedInt32Array = list.get_selected_items()
-
-	if (items.is_empty()):
-		return -1
-
-	return items[0]
-
-func navigate_list(list: ItemList, index: int, amount: int):
-	index = clamp(index + amount, 0, list.item_count - 1)
-
-	list.select(index)
-	list.ensure_current_is_visible()
-	list.accept_event()
 
 ## Removes the script filter text and emits the signal so that the Tabs stay
 ## and we do not break anything there.
