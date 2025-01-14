@@ -339,21 +339,24 @@ func _process(delta: float) -> void:
 
 ## Process the user defined shortcuts
 func _shortcut_input(event: InputEvent) -> void:
-	if (open_quick_search_popup_shc.matches_event(event) && event.is_released()):
-		var old_time: int = last_shortcut_time
-		last_shortcut_time = Time.get_ticks_msec()
-
-		if (last_shortcut_time - old_time <= SHORTCUT_INTERVAL):
-			get_viewport().set_input_as_handled()
-			open_quick_search()
-			return
-
 	if (open_outline_popup_shc.matches_event(event)):
 		get_viewport().set_input_as_handled()
 		open_outline_popup()
 	elif (open_scripts_popup_shc.matches_event(event)):
 		get_viewport().set_input_as_handled()
 		open_scripts_popup()
+	elif (open_quick_search_popup_shc.matches_event(event) && event.is_released()):
+		var old_time: int = last_shortcut_time
+		last_shortcut_time = Time.get_ticks_msec()
+
+		if ((last_shortcut_time - old_time) < SHORTCUT_INTERVAL):
+			get_viewport().set_input_as_handled()
+			open_quick_search()
+
+func _input(event: InputEvent) -> void:
+	if (event is InputEventKey):
+		if (!open_quick_search_popup_shc.matches_event(event)):
+			last_shortcut_time = -SHORTCUT_INTERVAL
 
 ## Schedules an update on the next frame
 func schedule_update():
