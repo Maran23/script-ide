@@ -1,16 +1,27 @@
 @tool
 extends PopupPanel
 
-@onready var files_list: ItemList = %FilesList
+signal abc
+@export var def: String
 
-@onready var all_btn: Button = %AllBtn
-@onready var scene_btn: Button = %SceneBtn
-@onready var gd_script_btn: Button = %GdScriptBtn
-@onready var resource_btn: Button = %ResourceBtn
-@onready var other_btn: Button = %OtherBtn
+#region Settings and Shortcuts
+## Editor setting path
+const SCRIPT_IDE: StringName = &"plugin/script_ide/"
+## Editor setting for the 'Tab cycle forward' shortcut
+const TAB_CYCLE_FORWARD: StringName = SCRIPT_IDE + &"tab_cycle_forward"
+## Editor setting for the 'Tab cycle backward' shortcut
+const TAB_CYCLE_BACKWARD: StringName = SCRIPT_IDE + &"tab_cycle_backward"
+#endregion
 
+#region UI
+@onready var filter_bar: TabBar = %FilterBar
 @onready var search_option_btn: OptionButton = %SearchOptionBtn
 @onready var filter_txt: LineEdit = %FilterTxt
+@onready var files_list: ItemList = %FilesList
+#endregion
+
+var tab_cycle_forward_shc: Shortcut
+var tab_cycle_backward_shc: Shortcut
 
 var scenes: Array[FileData]
 var scripts: Array[FileData]
@@ -19,16 +30,17 @@ var others: Array[FileData]
 
 var is_rebuild_cache: bool = true
 
+#region Plugin and Shortcut processing
 func _ready() -> void:
+	var editor_settings: EditorSettings = EditorInterface.get_editor_settings()
+	tab_cycle_forward_shc = editor_settings.get_setting(TAB_CYCLE_FORWARD)
+	tab_cycle_backward_shc = editor_settings.get_setting(TAB_CYCLE_BACKWARD)
+
 	files_list.item_selected.connect(open_file)
 	search_option_btn.item_selected.connect(rebuild_cache_and_ui.unbind(1))
 	filter_txt.text_changed.connect(fill_files_list.unbind(1))
 
-	all_btn.toggled.connect(fill_files_list_if_toggled)
-	scene_btn.toggled.connect(fill_files_list_if_toggled)
-	gd_script_btn.toggled.connect(fill_files_list_if_toggled)
-	resource_btn.toggled.connect(fill_files_list_if_toggled)
-	other_btn.toggled.connect(fill_files_list_if_toggled)
+	filter_bar.tab_changed.connect(change_fill_files_list.unbind(1))
 
 	about_to_popup.connect(on_show)
 
@@ -36,6 +48,26 @@ func _ready() -> void:
 	file_system.filesystem_changed.connect(schedule_rebuild)
 
 	filter_txt.gui_input.connect(navigate_on_list.bind(files_list, open_file))
+
+func _shortcut_input(event: InputEvent) -> void:
+	if (!event.is_pressed() || event.is_echo()):
+		return
+
+	if (tab_cycle_forward_shc.matches_event(event)):
+		get_viewport().set_input_as_handled()
+
+		var new_tab: int = filter_bar.current_tab + 1
+		if (new_tab == filter_bar.get_tab_count()):
+			new_tab = 0
+		filter_bar.current_tab = new_tab
+	elif (tab_cycle_backward_shc.matches_event(event)):
+		get_viewport().set_input_as_handled()
+
+		var new_tab: int = filter_bar.current_tab - 1
+		if (new_tab == -1):
+			new_tab = filter_bar.get_tab_count() - 1
+		filter_bar.current_tab = new_tab
+#endregion
 
 func open_file(index: int):
 	hide()
@@ -59,16 +91,16 @@ func on_show():
 		is_rebuild_cache = true
 
 	var rebuild_ui: bool = false
-	var all_btn_not_pressed: bool = all_btn.button_pressed != true
-	rebuild_ui = is_rebuild_cache || all_btn_not_pressed
+	var all_tab_not_pressed: bool = filter_bar.current_tab != 0
+	rebuild_ui = is_rebuild_cache || all_tab_not_pressed
 
 	if (is_rebuild_cache):
 		rebuild_cache()
 
 	if (rebuild_ui):
-		if (all_btn_not_pressed):
+		if (all_tab_not_pressed):
 			# Triggers the ui update.
-			all_btn.button_pressed = true
+			filter_bar.current_tab = 0
 		else:
 			fill_files_list()
 
@@ -76,6 +108,8 @@ func on_show():
 	focus_and_select_first()
 
 func rebuild_cache():
+	is_rebuild_cache = false
+
 	scenes.clear()
 	scripts.clear()
 	resources.clear()
@@ -86,7 +120,7 @@ func rebuild_cache():
 func rebuild_cache_and_ui():
 	rebuild_cache()
 	fill_files_list()
-	
+
 	focus_and_select_first()
 
 func focus_and_select_first():
@@ -131,27 +165,26 @@ func build_file_cache_dir(dir: EditorFileSystemDirectory):
 			&"gdshader": resources.append(file_data)
 			_: others.append(file_data)
 
-func fill_files_list_if_toggled(is_toggled: bool):
-	if (is_toggled):
-		fill_files_list()
-		
-		focus_and_select_first()
+func change_fill_files_list():
+	fill_files_list()
+
+	focus_and_select_first()
 
 func fill_files_list():
 	files_list.clear()
 
-	if (all_btn.button_pressed):
+	if (filter_bar.current_tab == 0):
 		fill_files_list_with(scenes)
 		fill_files_list_with(scripts)
 		fill_files_list_with(resources)
 		fill_files_list_with(others)
-	elif (scene_btn.button_pressed):
+	elif (filter_bar.current_tab == 1):
 		fill_files_list_with(scenes)
-	elif (gd_script_btn.button_pressed):
+	elif (filter_bar.current_tab == 2):
 		fill_files_list_with(scripts)
-	elif (resource_btn.button_pressed):
+	elif (filter_bar.current_tab == 3):
 		fill_files_list_with(resources)
-	elif (other_btn.button_pressed):
+	elif (filter_bar.current_tab == 4):
 		fill_files_list_with(others)
 
 func fill_files_list_with(files: Array[FileData]):
