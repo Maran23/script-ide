@@ -177,6 +177,8 @@ func _enter_tree() -> void:
 
 	# Change script item list visibility (based on settings).
 	scripts_item_list = find_or_null(script_editor.find_children("*", "ItemList", true, false))
+	scripts_item_list.allow_reselect = true
+	scripts_item_list.item_selected.connect(hide_scripts_popup.unbind(1))
 	update_script_list_visibility()
 
 	# Add script filter navigation.
@@ -318,6 +320,8 @@ func _exit_tree() -> void:
 			scripts_tab_bar.tab_changed.disconnect(on_tab_changed)
 
 	if (scripts_item_list != null):
+		scripts_item_list.allow_reselect = false
+		scripts_item_list.item_selected.disconnect(hide_scripts_popup)
 		scripts_item_list.get_parent().visible = true
 
 		if (script_filter_txt != null):
@@ -383,11 +387,15 @@ func open_quick_search():
 		quick_open_popup.get_parent().remove_child(quick_open_popup)
 	quick_open_popup.popup_exclusive_on_parent(EditorInterface.get_script_editor(), get_center_editor_rect())
 
+func hide_scripts_popup():
+	if (scripts_popup != null && scripts_popup.visible):
+		scripts_popup.hide.call_deferred()
+
 func create_set_scripts_popup():
 	panel_container = scripts_item_list.get_parent().get_parent()
 
 	scripts_popup = PopupPanel.new()
-	scripts_popup.popup_hide.connect(hide_scripts_popup)
+	scripts_popup.popup_hide.connect(restore_scripts_list)
 
 	# Need to be inside the tree, so it can be shown as popup for the tab container.
 	var script_editor: ScriptEditor = EditorInterface.get_script_editor()
@@ -405,7 +413,7 @@ func prepare_scripts_popup():
 
 	script_filter_txt.grab_focus()
 
-func hide_scripts_popup():
+func restore_scripts_list():
 	script_filter_txt.text = ""
 
 	update_script_list_visibility()
@@ -554,8 +562,7 @@ func get_current_script() -> Script:
 	return script_editor.get_current_script()
 
 func select_script(selected_idx: int):
-	if (scripts_popup != null && scripts_popup.visible):
-		scripts_popup.hide.call_deferred()
+	hide_scripts_popup()
 
 	scripts_item_list.item_selected.emit(selected_idx)
 
