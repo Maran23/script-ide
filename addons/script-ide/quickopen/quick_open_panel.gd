@@ -1,9 +1,6 @@
 @tool
 extends PopupPanel
 
-signal abc
-@export var def: String
-
 #region Settings and Shortcuts
 ## Editor setting path
 const SCRIPT_IDE: StringName = &"plugin/script_ide/"
