@@ -74,10 +74,7 @@ func on_show():
 			fill_files_list()
 
 	filter_txt.select_all()
-	filter_txt.grab_focus()
-
-	if (files_list.item_count > 0):
-		files_list.select(0)
+	focus_and_select_first()
 
 func rebuild_cache():
 	scenes.clear()
@@ -90,6 +87,13 @@ func rebuild_cache():
 func rebuild_cache_and_ui():
 	rebuild_cache()
 	fill_files_list()
+	
+	focus_and_select_first()
+
+func focus_and_select_first():
+	filter_txt.grab_focus()
+	if (files_list.item_count > 0):
+		files_list.select(0)
 
 func build_file_cache():
 	var dir: EditorFileSystemDirectory = EditorInterface.get_resource_filesystem().get_filesystem()
@@ -131,6 +135,8 @@ func build_file_cache_dir(dir: EditorFileSystemDirectory):
 func fill_files_list_if_toggled(is_toggled: bool):
 	if (is_toggled):
 		fill_files_list()
+		
+		focus_and_select_first()
 
 func fill_files_list():
 	files_list.clear()
@@ -159,6 +165,7 @@ func fill_files_list_with(files: Array[FileData]):
 
 			files_list.add_item(file_data.file_name, icon)
 			files_list.set_item_metadata(files_list.item_count - 1, file)
+			files_list.set_item_tooltip(files_list.item_count - 1, file)
 
 func navigate_on_list(event: InputEvent, list: ItemList, submit: Callable):
 	if (event.is_action_pressed(&"ui_text_submit")):
