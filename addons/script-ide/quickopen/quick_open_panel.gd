@@ -22,7 +22,6 @@ var is_rebuild_cache: bool = true
 func _ready() -> void:
 	files_list.item_selected.connect(open_file)
 	search_option_btn.item_selected.connect(rebuild_cache_and_ui.unbind(1))
-	filter_txt.right_icon = EditorInterface.get_base_control().get_theme_icon(&"Search", &"EditorIcons")
 	filter_txt.text_changed.connect(fill_files_list.unbind(1))
 
 	all_btn.toggled.connect(fill_files_list_if_toggled)
