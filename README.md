@@ -1,8 +1,10 @@
 # Script IDE
 
-Transforms the Script UI into an IDE like UI. Tabs are used for navigating between scripts.
-The default Outline got an overhaul and now shows all members of the script (not just methods) with unique icons for faster navigation.
-Enhanced keyboard navigation for Scripts and Outline.
+Transforms the Script UI into an IDE like UI. 
+Tabs are used for navigating between scripts. 
+The default Outline got an overhaul and now shows all members of the script (not just methods) with unique icons for faster navigation. 
+Enhanced keyboard navigation for Scripts and Outline. 
+Fast quick search functionality.
 
 Features:
 - Scripts are now shown as Tabs inside a TabContainer
@@ -36,7 +38,9 @@ All settings can be changed in the `Editor Settings` under `Plugin` -> `Script I
 - `Open Script Popup` = Shortcut to control how the Script Popup should be triggered (default=CTRL+U or META+U)
 - `Script List Visible` = Flag to control whether the script list should still be visible or not (above the outline) (default=false)
 - `Auto Navigate in FileSystem Dock` = Flag to control whether the script that is currently edited should be automatically selected in the Filesystem Dock (default=true)
-- `Open Quick Search Popup` = Shortcut to control how the Quick Search Popup should be triggered (default=Shift+Shift)
+- `Open Quick Search Popup` = Shortcut to control how the Quick Search Popup should be triggered (default=Shift+Shift, behavior is hardcoded for now)
+- `Cycle Tab forward` = Shortcut to cycle the script tabs in the forward direction (only works in the 'Script' Editor Tab) (default=CTRL+TAB)
+- `Cycle Tab backward` = Shortcut to cycle the script tabs in the backward direction (only works in the 'Script' Editor Tab) (default=CTRL+SHIFT+TAB)
 - All outline visibility settings
 
 ![Example of the Outline](https://github.com/user-attachments/assets/1729cb2b-01ae-4365-b77a-45edcb94b978)

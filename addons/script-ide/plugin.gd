@@ -5,6 +5,14 @@
 @tool
 extends EditorPlugin
 
+const GETTER: StringName = &"get"
+const SETTER: StringName = &"set"
+const UNDERSCORE: StringName = &"_"
+const INLINE: StringName = &"@"
+
+const BUILT_IN_SCRIPT: StringName = &"::GDScript"
+
+#region Settings and Shortcuts
 ## Editor setting path
 const SCRIPT_IDE: StringName = &"plugin/script_ide/"
 ## Editor setting for the outline position
@@ -16,22 +24,21 @@ const HIDE_PRIVATE_MEMBERS: StringName = SCRIPT_IDE + &"hide_private_members"
 const AUTO_NAVIGATE_IN_FS: StringName = SCRIPT_IDE + &"auto_navigate_in_filesystem_dock"
 ## Editor setting to control whether the script list should be visible or not
 const SCRIPT_LIST_VISIBLE: StringName = SCRIPT_IDE + &"script_list_visible"
+
 ## Editor setting for the 'Open Outline Popup' shortcut
 const OPEN_OUTLINE_POPUP: StringName = SCRIPT_IDE + &"open_outline_popup"
 ## Editor setting for the 'Open Scripts Popup' shortcut
 const OPEN_SCRIPTS_POPUP: StringName = SCRIPT_IDE + &"open_scripts_popup"
 ## Editor setting for the 'Open Scripts Popup' shortcut
 const OPEN_QUICK_SEARCH_POPUP: StringName = SCRIPT_IDE + &"open_quick_search_popup"
-
-const GETTER: StringName = &"get"
-const SETTER: StringName = &"set"
-const UNDERSCORE: StringName = &"_"
-const INLINE: StringName = &"@"
-
-const BUILT_IN_SCRIPT: StringName = &"::GDScript"
+## Editor setting for the 'Tab cycle forward' shortcut
+const TAB_CYCLE_FORWARD: StringName = SCRIPT_IDE + &"tab_cycle_forward"
+## Editor setting for the 'Tab cycle backward' shortcut
+const TAB_CYCLE_BACKWARD: StringName = SCRIPT_IDE + &"tab_cycle_backward"
+#endregion
 
 #region Outline icons
-var keyword_icon: ImageTexture
+var engine_func_icon: ImageTexture
 var func_icon: ImageTexture
 var func_get_icon: ImageTexture
 var func_set_icon: ImageTexture
@@ -47,9 +54,12 @@ var is_outline_right: bool = true
 var is_script_list_visible: bool = false
 var hide_private_members: bool = false
 var is_auto_navigate_in_fs: bool = true
+
 var open_outline_popup_shc: Shortcut
 var open_scripts_popup_shc: Shortcut
 var open_quick_search_popup_shc: Shortcut
+var tab_cycle_forward_shc: Shortcut
+var tab_cycle_backward_shc: Shortcut
 #endregion
 
 #region Existing controls we modify
@@ -99,72 +109,12 @@ var suppress_settings_sync: bool = false
 const SHORTCUT_INTERVAL: int = 400
 var last_shortcut_time: int = -SHORTCUT_INTERVAL
 
-#region Enter / Exit -> Plugin setup
+#region Plugin Enter / Exit setup
 ## Change the Godot script UI and transform into an IDE like UI
 func _enter_tree() -> void:
-	var script_path: String = get_script().get_path().get_base_dir()
-
-	keyword_icon = create_editor_texture(load(script_path.path_join("icon/keyword.svg")))
-	func_icon = create_editor_texture(load(script_path.path_join("icon/func.svg")))
-	func_get_icon = create_editor_texture(load(script_path.path_join("icon/func_get.svg")))
-	func_set_icon = create_editor_texture(load(script_path.path_join("icon/func_set.svg")))
-	property_icon = create_editor_texture(load(script_path.path_join("icon/property.svg")))
-	export_icon = create_editor_texture(load(script_path.path_join("icon/export.svg")))
-	signal_icon = create_editor_texture(load(script_path.path_join("icon/signal.svg")))
-	constant_icon = create_editor_texture(load(script_path.path_join("icon/constant.svg")))
-	class_icon = create_editor_texture(load(script_path.path_join("icon/class.svg")))
-
-	is_outline_right = get_setting(OUTLINE_POSITION_RIGHT, is_outline_right)
-	hide_private_members = get_setting(HIDE_PRIVATE_MEMBERS, hide_private_members)
-	is_script_list_visible = get_setting(SCRIPT_LIST_VISIBLE, is_script_list_visible)
-	is_auto_navigate_in_fs = get_setting(AUTO_NAVIGATE_IN_FS, is_auto_navigate_in_fs)
-
-	var editor_settings: EditorSettings = get_editor_settings()
-	if (!editor_settings.has_setting(OPEN_OUTLINE_POPUP)):
-		var shortcut: Shortcut = Shortcut.new()
-		var event: InputEventKey = InputEventKey.new()
-		event.device = -1
-		event.ctrl_pressed = true
-		event.keycode = KEY_O
-
-		var event2: InputEventKey = InputEventKey.new()
-		event2.device = -1
-		event2.meta_pressed = true
-		event2.keycode = KEY_O
-
-		shortcut.events = [ event, event2 ]
-		editor_settings.set_setting(OPEN_OUTLINE_POPUP, shortcut)
-		editor_settings.set_initial_value(OPEN_OUTLINE_POPUP, shortcut, false)
-
-	if (!editor_settings.has_setting(OPEN_SCRIPTS_POPUP)):
-		var shortcut: Shortcut = Shortcut.new()
-		var event: InputEventKey = InputEventKey.new()
-		event.device = -1
-		event.ctrl_pressed = true
-		event.keycode = KEY_U
-
-		var event2: InputEventKey = InputEventKey.new()
-		event2.device = -1
-		event2.meta_pressed = true
-		event2.keycode = KEY_U
-
-		shortcut.events = [ event, event2 ]
-		editor_settings.set_setting(OPEN_SCRIPTS_POPUP, shortcut)
-		editor_settings.set_initial_value(OPEN_SCRIPTS_POPUP, shortcut, false)
-
-	if (!editor_settings.has_setting(OPEN_QUICK_SEARCH_POPUP)):
-		var shortcut: Shortcut = Shortcut.new()
-		var event: InputEventKey = InputEventKey.new()
-		event.device = -1
-		event.keycode = KEY_SHIFT
-
-		shortcut.events = [ event ]
-		editor_settings.set_setting(OPEN_QUICK_SEARCH_POPUP, shortcut)
-		editor_settings.set_initial_value(OPEN_QUICK_SEARCH_POPUP, shortcut, false)
-
-	open_outline_popup_shc = editor_settings.get_setting(OPEN_OUTLINE_POPUP)
-	open_scripts_popup_shc = editor_settings.get_setting(OPEN_SCRIPTS_POPUP)
-	open_quick_search_popup_shc = editor_settings.get_setting(OPEN_QUICK_SEARCH_POPUP)
+	init_icons()
+	init_settings()
+	init_shortcuts()
 
 	# Update on filesystem changed (e.g. save operation).
 	var file_system: EditorFileSystem = EditorInterface.get_resource_filesystem()
@@ -234,7 +184,7 @@ func _enter_tree() -> void:
 	# Add a filter box for all kind of members
 	filter_box = HBoxContainer.new()
 
-	engine_func_btn = create_filter_btn(keyword_icon, "Engine callbacks")
+	engine_func_btn = create_filter_btn(engine_func_icon, "Engine callbacks")
 	filter_box.add_child(engine_func_btn)
 
 	func_btn = create_filter_btn(func_icon, "Functions")
@@ -336,6 +286,7 @@ func _exit_tree() -> void:
 	get_editor_settings().settings_changed.disconnect(sync_settings)
 #endregion
 
+#region Plugin and Shortcut processing
 ## Lazy pattern to update the editor only once per frame
 func _process(delta: float) -> void:
 	update_editor()
@@ -343,24 +294,143 @@ func _process(delta: float) -> void:
 
 ## Process the user defined shortcuts
 func _shortcut_input(event: InputEvent) -> void:
+	if (!event.is_pressed() || event.is_echo()):
+		return
+
 	if (open_outline_popup_shc.matches_event(event)):
 		get_viewport().set_input_as_handled()
 		open_outline_popup()
 	elif (open_scripts_popup_shc.matches_event(event)):
 		get_viewport().set_input_as_handled()
 		open_scripts_popup()
-	elif (open_quick_search_popup_shc.matches_event(event) && event.is_released()):
+	elif (open_quick_search_popup_shc.matches_event(event)):
 		var old_time: int = last_shortcut_time
 		last_shortcut_time = Time.get_ticks_msec()
 
 		if ((last_shortcut_time - old_time) < SHORTCUT_INTERVAL):
 			get_viewport().set_input_as_handled()
 			open_quick_search()
+	elif (EditorInterface.get_script_editor().is_visible_in_tree()):
+		if (tab_cycle_forward_shc.matches_event(event)):
+			get_viewport().set_input_as_handled()
 
+			var new_tab: int = scripts_tab_container.current_tab + 1
+			if (new_tab == scripts_tab_container.get_tab_count()):
+				new_tab = 0
+			scripts_tab_container.current_tab = new_tab
+		elif (tab_cycle_backward_shc.matches_event(event)):
+			get_viewport().set_input_as_handled()
+
+			var new_tab: int = scripts_tab_container.current_tab - 1
+			if (new_tab == -1):
+				new_tab = scripts_tab_container.get_tab_count() - 1
+			scripts_tab_container.current_tab = new_tab
+
+## May cancels the quick search shortcut timer.
 func _input(event: InputEvent) -> void:
 	if (event is InputEventKey):
 		if (!open_quick_search_popup_shc.matches_event(event)):
 			last_shortcut_time = -SHORTCUT_INTERVAL
+#endregion
+
+#region Icon, Settings, Shortcut initializing
+## Initializes all plugin icons, while respecting the editor settings.
+func init_icons():
+	var script_path: String = get_script().get_path().get_base_dir()
+
+	engine_func_icon = create_editor_texture(load(script_path.path_join("icon/engine_func.svg")))
+	func_icon = create_editor_texture(load(script_path.path_join("icon/func.svg")))
+	func_get_icon = create_editor_texture(load(script_path.path_join("icon/func_get.svg")))
+	func_set_icon = create_editor_texture(load(script_path.path_join("icon/func_set.svg")))
+	property_icon = create_editor_texture(load(script_path.path_join("icon/property.svg")))
+	export_icon = create_editor_texture(load(script_path.path_join("icon/export.svg")))
+	signal_icon = create_editor_texture(load(script_path.path_join("icon/signal.svg")))
+	constant_icon = create_editor_texture(load(script_path.path_join("icon/constant.svg")))
+	class_icon = create_editor_texture(load(script_path.path_join("icon/class.svg")))
+
+## Initializes all settings.
+## Every settings can be changed while this plugin is active, which will override this setting.
+func init_settings():
+	is_outline_right = get_setting(OUTLINE_POSITION_RIGHT, is_outline_right)
+	hide_private_members = get_setting(HIDE_PRIVATE_MEMBERS, hide_private_members)
+	is_script_list_visible = get_setting(SCRIPT_LIST_VISIBLE, is_script_list_visible)
+	is_auto_navigate_in_fs = get_setting(AUTO_NAVIGATE_IN_FS, is_auto_navigate_in_fs)
+
+## Initializes all shortcuts.
+## Every shortcut can be changed while plugin is active, which will override them.
+func init_shortcuts():
+	var editor_settings: EditorSettings = get_editor_settings()
+	if (!editor_settings.has_setting(OPEN_OUTLINE_POPUP)):
+		var shortcut: Shortcut = Shortcut.new()
+		var event: InputEventKey = InputEventKey.new()
+		event.device = -1
+		event.ctrl_pressed = true
+		event.keycode = KEY_O
+
+		var event2: InputEventKey = InputEventKey.new()
+		event2.device = -1
+		event2.meta_pressed = true
+		event2.keycode = KEY_O
+
+		shortcut.events = [ event, event2 ]
+		editor_settings.set_setting(OPEN_OUTLINE_POPUP, shortcut)
+		editor_settings.set_initial_value(OPEN_OUTLINE_POPUP, shortcut, false)
+
+	if (!editor_settings.has_setting(OPEN_SCRIPTS_POPUP)):
+		var shortcut: Shortcut = Shortcut.new()
+		var event: InputEventKey = InputEventKey.new()
+		event.device = -1
+		event.ctrl_pressed = true
+		event.keycode = KEY_U
+
+		var event2: InputEventKey = InputEventKey.new()
+		event2.device = -1
+		event2.meta_pressed = true
+		event2.keycode = KEY_U
+
+		shortcut.events = [ event, event2 ]
+		editor_settings.set_setting(OPEN_SCRIPTS_POPUP, shortcut)
+		editor_settings.set_initial_value(OPEN_SCRIPTS_POPUP, shortcut, false)
+
+	if (!editor_settings.has_setting(OPEN_QUICK_SEARCH_POPUP)):
+		var shortcut: Shortcut = Shortcut.new()
+		var event: InputEventKey = InputEventKey.new()
+		event.device = -1
+		event.keycode = KEY_SHIFT
+
+		shortcut.events = [ event ]
+		editor_settings.set_setting(OPEN_QUICK_SEARCH_POPUP, shortcut)
+		editor_settings.set_initial_value(OPEN_QUICK_SEARCH_POPUP, shortcut, false)
+
+	if (!editor_settings.has_setting(TAB_CYCLE_FORWARD)):
+		var shortcut: Shortcut = Shortcut.new()
+		var event: InputEventKey = InputEventKey.new()
+		event.device = -1
+		event.keycode = KEY_TAB
+		event.ctrl_pressed = true
+
+		shortcut.events = [ event ]
+		editor_settings.set_setting(TAB_CYCLE_FORWARD, shortcut)
+		editor_settings.set_initial_value(TAB_CYCLE_FORWARD, shortcut, false)
+
+	if (!editor_settings.has_setting(TAB_CYCLE_BACKWARD)):
+		var shortcut: Shortcut = Shortcut.new()
+		var event: InputEventKey = InputEventKey.new()
+		event.device = -1
+		event.keycode = KEY_TAB
+		event.shift_pressed = true
+		event.ctrl_pressed = true
+
+		shortcut.events = [ event ]
+		editor_settings.set_setting(TAB_CYCLE_BACKWARD, shortcut)
+		editor_settings.set_initial_value(TAB_CYCLE_BACKWARD, shortcut, false)
+
+	open_outline_popup_shc = editor_settings.get_setting(OPEN_OUTLINE_POPUP)
+	open_scripts_popup_shc = editor_settings.get_setting(OPEN_SCRIPTS_POPUP)
+	open_quick_search_popup_shc = editor_settings.get_setting(OPEN_QUICK_SEARCH_POPUP)
+	tab_cycle_forward_shc = editor_settings.get_setting(TAB_CYCLE_FORWARD)
+	tab_cycle_backward_shc = editor_settings.get_setting(TAB_CYCLE_BACKWARD)
+#endregion
 
 ## Schedules an update on the next frame
 func schedule_update():
@@ -705,18 +775,28 @@ func sync_settings():
 
 	var changed_settings: PackedStringArray = get_editor_settings().get_changed_settings()
 	for setting: String in changed_settings:
+		if (setting == "interface/theme/icon_saturation"):
+			init_icons()
+			engine_func_btn.icon = engine_func_icon
+			func_btn.icon = func_icon
+			signal_btn.icon = signal_icon
+			export_btn.icon = export_icon
+			property_btn.icon = property_icon
+			class_btn.icon = class_icon
+			constant_btn.icon = constant_icon
+			update_outline()
+			continue
+
 		if (!setting.begins_with(SCRIPT_IDE)):
 			continue
 
 		if (setting == OUTLINE_POSITION_RIGHT):
-			# Update outline position.
 			var new_outline_right: bool = get_setting(OUTLINE_POSITION_RIGHT, is_outline_right)
 			if (new_outline_right != is_outline_right):
 				is_outline_right = new_outline_right
 
 				update_outline_position()
 		elif (setting == HIDE_PRIVATE_MEMBERS):
-			# Update cache and outline to reflect the private members setting.
 			var new_hide_private_members: bool = get_setting(HIDE_PRIVATE_MEMBERS, hide_private_members)
 			if (new_hide_private_members != hide_private_members):
 				hide_private_members = new_hide_private_members
@@ -724,21 +804,21 @@ func sync_settings():
 				update_outline_cache()
 				update_outline()
 		elif (setting == SCRIPT_LIST_VISIBLE):
-			# Update the script list visibility
 			var new_script_list_visible: bool = get_setting(SCRIPT_LIST_VISIBLE, is_script_list_visible)
 			if (new_script_list_visible != is_script_list_visible):
 				is_script_list_visible = new_script_list_visible
 
 				update_script_list_visibility()
 		elif (setting == AUTO_NAVIGATE_IN_FS):
-			# Update the variable
 			is_auto_navigate_in_fs = get_setting(AUTO_NAVIGATE_IN_FS, is_auto_navigate_in_fs)
 		elif (setting == OPEN_OUTLINE_POPUP):
-			# Update outline popup shortcut.
-			open_outline_popup_shc = get_editor_settings().get_setting(OPEN_OUTLINE_POPUP)
+			open_outline_popup_shc = get_shortcut(OPEN_OUTLINE_POPUP)
 		elif (setting == OPEN_SCRIPTS_POPUP):
-			# Update scripts popup shortcut.
-			open_scripts_popup_shc = get_editor_settings().get_setting(OPEN_SCRIPTS_POPUP)
+			open_scripts_popup_shc = get_shortcut(OPEN_SCRIPTS_POPUP)
+		elif (setting == TAB_CYCLE_FORWARD):
+			tab_cycle_forward_shc = get_shortcut(TAB_CYCLE_FORWARD)
+		elif (setting == TAB_CYCLE_BACKWARD):
+			tab_cycle_backward_shc = get_shortcut(TAB_CYCLE_BACKWARD)
 		else:
 			# Update filter buttons.
 			for btn_node: Node in filter_box.get_children():
@@ -766,8 +846,11 @@ func set_setting(property: StringName, value: bool):
 	editor_settings.set_setting(property, value)
 	suppress_settings_sync = false
 
-func on_tab_changed(idx: int):
-	selected_tab = idx;
+func get_shortcut(property: StringName) -> Shortcut:
+	return get_editor_settings().get_setting(property)
+
+func on_tab_changed(index: int):
+	selected_tab = index;
 
 	if (old_script_editor_base != null):
 		old_script_editor_base.edited_script_changed.disconnect(update_selected_tab)
@@ -896,7 +979,7 @@ func for_each_script_member(script: Script, consumer: Callable):
 
 	# Signals
 	for dict: Dictionary in script.get_script_signal_list():
-		var signal_name: String = dict["name"]
+		var signal_name: String = dict[&"name"]
 
 		consumer.call(outline_cache.signals, signal_name)
 
@@ -944,7 +1027,7 @@ func update_outline():
 
 	# Engine functions
 	if (engine_func_btn.button_pressed):
-		add_to_outline(outline_cache.engine_funcs, keyword_icon, &"func")
+		add_to_outline(outline_cache.engine_funcs, engine_func_icon, &"func")
 
 func add_to_outline(items: Array[String], icon: ImageTexture, type: String, modifier: StringName = &""):
 	add_to_outline_ext(items, func(str: String): return icon, type, modifier)
@@ -1070,9 +1153,11 @@ func get_editor_settings() -> EditorSettings:
 
 static func find_or_null(arr: Array[Node], index: int = 0) -> Node:
 	if arr.is_empty():
-		push_error("Node not found - Plugin will not work correctly. This might be due to some other plugins or changes in the Engine.")
+		push_error("""Node that is needed for Script-IDE not found.
+Plugin will not work correctly.
+This might be due to some other plugins or changes in the Engine.
+Please report this to Script-IDE, so we can figure out a fix.""")
 		return null
-
 	return arr[index]
 
 ## Cache for everything inside the outline.
