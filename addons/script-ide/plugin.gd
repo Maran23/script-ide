@@ -104,6 +104,7 @@ var old_script_type: StringName
 var selected_tab: int = -1
 var last_tab_hovered: int = -1
 var sync_script_list: bool = false
+var file_to_navigate: String = &""
 var suppress_settings_sync: bool = false
 
 const SHORTCUT_INTERVAL: int = 400
@@ -441,6 +442,10 @@ func update_editor():
 	update_script_text_filter()
 
 	if (sync_script_list):
+		if (file_to_navigate != &""):
+			EditorInterface.get_file_system_dock().navigate_to_path(file_to_navigate)
+			file_to_navigate = &""
+
 		sync_tab_with_script_list()
 		sync_script_list = false
 
@@ -865,7 +870,6 @@ func on_tab_changed(index: int):
 		old_script_editor_base = script_editor_base
 
 	sync_script_list = true
-	schedule_update()
 
 	if (is_auto_navigate_in_fs && script_editor.get_current_script() != null):
 		var file: String = script_editor.get_current_script().get_path()
@@ -874,7 +878,11 @@ func on_tab_changed(index: int):
 			# We navigate to the scene in case of a built-in script.
 			file = file.get_slice(BUILT_IN_SCRIPT, 0)
 
-		EditorInterface.get_file_system_dock().navigate_to_path(file)
+		file_to_navigate = file
+	else:
+		file_to_navigate = &""
+
+	schedule_update()
 
 func update_selected_tab():
 	if (selected_tab == -1):
@@ -1099,7 +1107,9 @@ func on_tab_bar_gui_input(event: InputEvent):
 		if event.is_pressed() and event.button_index == MOUSE_BUTTON_MIDDLE:
 			update_script_text_filter()
 			simulate_item_clicked(last_tab_hovered, MOUSE_BUTTON_MIDDLE)
-			last_tab_hovered = -1
+
+			if (last_tab_hovered >= scripts_tab_bar.tab_count - 1):
+				last_tab_hovered = -1
 
 func on_active_tab_rearranged(idx_to: int):
 	var control: Control = scripts_tab_container.get_tab_control(selected_tab)
