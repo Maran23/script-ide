@@ -484,7 +484,7 @@ func prepare_scripts_popup():
 	script_filter_txt.grab_focus()
 
 func restore_scripts_list():
-	script_filter_txt.text = ""
+	script_filter_txt.text = &""
 
 	update_script_list_visibility()
 
@@ -569,7 +569,7 @@ func open_outline_popup():
 		btn.set_pressed_no_signal(true)
 
 	var old_text: String = outline_filter_txt.text
-	outline_filter_txt.text = ""
+	outline_filter_txt.text = &""
 
 	if (outline_popup == null):
 		outline_popup = PopupPanel.new()
@@ -620,12 +620,12 @@ func open_scripts_popup():
 
 	script_filter_txt.grab_focus()
 
-## Removes the script filter text and emits the signal so that the Tabs stay
+## Removes the script filter text and emits the signal so that the tabs stay
 ## and we do not break anything there.
 func update_script_text_filter():
-	if (script_filter_txt.text != ""):
-		script_filter_txt.text = ""
-		script_filter_txt.text_changed.emit("")
+	if (script_filter_txt.text != &""):
+		script_filter_txt.text = &""
+		script_filter_txt.text_changed.emit(&"")
 
 func get_current_script() -> Script:
 	var script_editor: ScriptEditor = EditorInterface.get_script_editor()
@@ -883,13 +883,16 @@ func update_selected_tab():
 	if (scripts_item_list.item_count == 0):
 		return
 
-	scripts_tab_container.set_tab_title(selected_tab, scripts_item_list.get_item_text(selected_tab))
-	scripts_tab_container.set_tab_icon(selected_tab, scripts_item_list.get_item_icon(selected_tab))
+	update_tab(selected_tab)
 
 func update_tabs():
 	for index: int in scripts_tab_container.get_tab_count():
-		scripts_tab_container.set_tab_title(index, scripts_item_list.get_item_text(index))
-		scripts_tab_container.set_tab_icon(index, scripts_item_list.get_item_icon(index))
+		update_tab(index)
+
+func update_tab(index: int):
+	scripts_tab_container.set_tab_title(index, scripts_item_list.get_item_text(index))
+	scripts_tab_container.set_tab_icon(index, scripts_item_list.get_item_icon(index))
+	scripts_tab_container.set_tab_tooltip(index, scripts_item_list.get_item_tooltip(index))
 
 #region Outline (cache) update
 func update_keywords(script: Script):
@@ -1089,16 +1092,14 @@ func on_tab_hovered(idx: int):
 	last_tab_hovered = idx
 
 func on_tab_bar_gui_input(event: InputEvent):
-	if last_tab_hovered == -1:
+	if (last_tab_hovered == -1):
 		return
 
-	if event is InputEventMouseMotion:
-		scripts_tab_bar.tooltip_text = get_res_path(last_tab_hovered)
-
-	if event is InputEventMouseButton:
+	if (event is InputEventMouseButton):
 		if event.is_pressed() and event.button_index == MOUSE_BUTTON_MIDDLE:
 			update_script_text_filter()
 			simulate_item_clicked(last_tab_hovered, MOUSE_BUTTON_MIDDLE)
+			last_tab_hovered = -1
 
 func on_active_tab_rearranged(idx_to: int):
 	var control: Control = scripts_tab_container.get_tab_control(selected_tab)
@@ -1121,6 +1122,7 @@ func get_res_path(idx: int) -> String:
 	return path_var
 
 func on_tab_rmb(tab_idx: int):
+	update_script_text_filter()
 	simulate_item_clicked(tab_idx, MOUSE_BUTTON_RIGHT)
 
 func on_tab_close(tab_idx: int):
@@ -1128,8 +1130,6 @@ func on_tab_close(tab_idx: int):
 	simulate_item_clicked(tab_idx, MOUSE_BUTTON_MIDDLE)
 
 func simulate_item_clicked(tab_idx: int, mouse_idx: int):
-	script_filter_txt.text = ""
-
 	scripts_item_list.item_clicked.emit(tab_idx, scripts_item_list.get_local_mouse_position(), mouse_idx)
 #endregion
 

@@ -10,6 +10,8 @@ const TAB_CYCLE_FORWARD: StringName = SCRIPT_IDE + &"tab_cycle_forward"
 const TAB_CYCLE_BACKWARD: StringName = SCRIPT_IDE + &"tab_cycle_backward"
 #endregion
 
+const ADDONS: StringName = &"res://addons"
+
 #region UI
 @onready var filter_bar: TabBar = %FilterBar
 @onready var search_option_btn: OptionButton = %SearchOptionBtn
@@ -135,15 +137,15 @@ func build_file_cache_dir(dir: EditorFileSystemDirectory):
 
 	for index: int in dir.get_file_count():
 		var file: String = dir.get_file_path(index)
-		if (search_option_btn.get_selected_id() == 0 && file.begins_with("res://addons")):
+		if (search_option_btn.get_selected_id() == 0 && file.begins_with(ADDONS)):
 			continue
 
-		var last_delim: int =  file.rfind("/")
+		var last_delim: int = file.rfind(&"/")
 
 		var file_name: String = file.substr(last_delim + 1)
-		var file_structure: String = &" - ."
+		var file_structure: String = &""
 		if (file_name.length() + 6 != file.length()):
-			file_structure = " - " + file.substr(6, last_delim - 6) + ""
+			file_structure = " - (" + file.substr(6, last_delim - 6) + ")"
 
 		file_name = file_name + file_structure
 
@@ -186,6 +188,7 @@ func fill_files_list():
 
 func fill_files_list_with(files: Array[FileData]):
 	var filter_text: String = filter_txt.text
+	files.sort_custom(sort_by_filter)
 
 	for file_data: FileData in files:
 		var file: String = file_data.file
@@ -244,6 +247,29 @@ func navigate_list(list: ItemList, index: int, amount: int):
 	list.select(index)
 	list.ensure_current_is_visible()
 	list.accept_event()
+
+func sort_by_filter(a: FileData, b: FileData) -> bool:
+	var filter_text: String = filter_txt.text
+	var a_name: String = a.file_name
+	var b_name: String = b.file_name
+
+	for index: int in filter_text.length():
+		if (index >= a_name.length()):
+			return true
+		if (index >= b_name.length()):
+			return false
+
+		var char: String = filter_text[index]
+		var a_match: bool = char== a_name[index]
+		var b_match: bool = char == b_name[index]
+
+		if (a_match && !b_match):
+			return true
+
+		if (b_match && !a_match):
+			return false
+
+	return a_name < b_name
 
 class FileData:
 	var file: String
