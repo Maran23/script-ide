@@ -16,6 +16,8 @@ Features:
 	- (Static) Variables (Red)
 	- Engine callback functions (Blue)
 	- (Static) Functions (Green)
+		- Setter functions (Green circle, with an arrow inside it pointing to the right)
+		- Getter functions (Green circle, with an arrow inside it pointing to the left)
 - All the different members of the script can be hidden or made visible again by the outline filter. This allows fine control what should be visible (e.g. only signals, (Godot) functions, ...)
 - A `Right Click` enables only the clicked filter, another `Right Click` will enable all filters again
 - The Outline can be opened in a Popup with a defined shortcut for quick navigation between methods
