@@ -365,15 +365,10 @@ func init_shortcuts():
 		var shortcut: Shortcut = Shortcut.new()
 		var event: InputEventKey = InputEventKey.new()
 		event.device = -1
-		event.ctrl_pressed = true
+		event.command_or_control_autoremap = true
 		event.keycode = KEY_O
 
-		var event2: InputEventKey = InputEventKey.new()
-		event2.device = -1
-		event2.meta_pressed = true
-		event2.keycode = KEY_O
-
-		shortcut.events = [ event, event2 ]
+		shortcut.events = [ event ]
 		editor_settings.set_setting(OPEN_OUTLINE_POPUP, shortcut)
 		editor_settings.set_initial_value(OPEN_OUTLINE_POPUP, shortcut, false)
 
@@ -381,15 +376,10 @@ func init_shortcuts():
 		var shortcut: Shortcut = Shortcut.new()
 		var event: InputEventKey = InputEventKey.new()
 		event.device = -1
-		event.ctrl_pressed = true
+		event.command_or_control_autoremap = true
 		event.keycode = KEY_U
 
-		var event2: InputEventKey = InputEventKey.new()
-		event2.device = -1
-		event2.meta_pressed = true
-		event2.keycode = KEY_U
-
-		shortcut.events = [ event, event2 ]
+		shortcut.events = [ event ]
 		editor_settings.set_setting(OPEN_SCRIPTS_POPUP, shortcut)
 		editor_settings.set_initial_value(OPEN_SCRIPTS_POPUP, shortcut, false)
 
