@@ -447,6 +447,7 @@ func open_quick_search():
 	if (quick_open_popup == null):
 		var script_path: String = get_script().get_path().get_base_dir()
 		quick_open_popup = load(script_path.path_join("quickopen/quick_open_panel.tscn")).instantiate()
+		quick_open_popup.plugin = self
 
 	if (quick_open_popup.get_parent() != null):
 		quick_open_popup.get_parent().remove_child(quick_open_popup)
@@ -581,9 +582,8 @@ func open_outline_popup():
 		outline_popup.get_parent().remove_child(outline_popup)
 	outline_popup.popup_exclusive_on_parent(EditorInterface.get_script_editor(), get_center_editor_rect())
 
-	outline_filter_txt.grab_focus()
-
 	update_outline()
+	outline_filter_txt.grab_focus()
 
 func on_outline_popup_hidden(outline_initially_closed: bool, old_text: String, button_flags: Array[bool]):
 	outline_popup.popup_hide.disconnect(on_outline_popup_hidden)
@@ -683,9 +683,11 @@ func goto_line(index: int):
 
 	var code_edit: CodeEdit = script_editor.get_current_editor().get_base_editor()
 	code_edit.set_caret_line(index)
-	code_edit.set_caret_column(0)
 	code_edit.set_v_scroll(index)
+	code_edit.set_caret_column(code_edit.get_line(index).length())
 	code_edit.set_h_scroll(0)
+
+	code_edit.grab_focus()
 
 func create_filter_btn(icon: ImageTexture, title: String) -> Button:
 	var btn: Button = Button.new()
@@ -726,7 +728,6 @@ func on_right_click(event: InputEvent, btn: Button):
 	if (!mouse_event.is_pressed() || mouse_event.button_index != MOUSE_BUTTON_RIGHT):
 		return
 
-	btn.grab_focus()
 	btn.button_pressed = true
 
 	var pressed_state: bool = false
@@ -742,10 +743,13 @@ func on_right_click(event: InputEvent, btn: Button):
 		if (btn != other_btn):
 			other_btn.button_pressed = !pressed_state
 
+	outline_filter_txt.grab_focus()
+
 func on_filter_button_pressed(pressed: bool, btn: Button):
 	set_setting(btn.get_meta(&"property"), pressed)
 
 	update_outline()
+	outline_filter_txt.grab_focus()
 
 func update_outline_position():
 	if (is_outline_right):

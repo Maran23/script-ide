@@ -1,15 +1,6 @@
 @tool
 extends PopupPanel
 
-#region Settings and Shortcuts
-## Editor setting path
-const SCRIPT_IDE: StringName = &"plugin/script_ide/"
-## Editor setting for the 'Tab cycle forward' shortcut
-const TAB_CYCLE_FORWARD: StringName = SCRIPT_IDE + &"tab_cycle_forward"
-## Editor setting for the 'Tab cycle backward' shortcut
-const TAB_CYCLE_BACKWARD: StringName = SCRIPT_IDE + &"tab_cycle_backward"
-#endregion
-
 const ADDONS: StringName = &"res://addons"
 
 #region UI
@@ -19,8 +10,7 @@ const ADDONS: StringName = &"res://addons"
 @onready var files_list: ItemList = %FilesList
 #endregion
 
-var tab_cycle_forward_shc: Shortcut
-var tab_cycle_backward_shc: Shortcut
+var plugin: EditorPlugin
 
 var scenes: Array[FileData]
 var scripts: Array[FileData]
@@ -31,10 +21,6 @@ var is_rebuild_cache: bool = true
 
 #region Plugin and Shortcut processing
 func _ready() -> void:
-	var editor_settings: EditorSettings = EditorInterface.get_editor_settings()
-	tab_cycle_forward_shc = editor_settings.get_setting(TAB_CYCLE_FORWARD)
-	tab_cycle_backward_shc = editor_settings.get_setting(TAB_CYCLE_BACKWARD)
-
 	files_list.item_selected.connect(open_file)
 	search_option_btn.item_selected.connect(rebuild_cache_and_ui.unbind(1))
 	filter_txt.text_changed.connect(fill_files_list.unbind(1))
@@ -46,20 +32,20 @@ func _ready() -> void:
 	var file_system: EditorFileSystem = EditorInterface.get_resource_filesystem()
 	file_system.filesystem_changed.connect(schedule_rebuild)
 
-	filter_txt.gui_input.connect(navigate_on_list.bind(files_list, open_file))
+	filter_txt.gui_input.connect(plugin.navigate_on_list.bind(files_list, open_file))
 
 func _shortcut_input(event: InputEvent) -> void:
 	if (!event.is_pressed() || event.is_echo()):
 		return
 
-	if (tab_cycle_forward_shc.matches_event(event)):
+	if (plugin.tab_cycle_forward_shc.matches_event(event)):
 		get_viewport().set_input_as_handled()
 
 		var new_tab: int = filter_bar.current_tab + 1
 		if (new_tab == filter_bar.get_tab_count()):
 			new_tab = 0
 		filter_bar.current_tab = new_tab
-	elif (tab_cycle_backward_shc.matches_event(event)):
+	elif (plugin.tab_cycle_backward_shc.matches_event(event)):
 		get_viewport().set_input_as_handled()
 
 		var new_tab: int = filter_bar.current_tab - 1
@@ -198,55 +184,6 @@ func fill_files_list_with(files: Array[FileData]):
 			files_list.add_item(file_data.file_name, icon)
 			files_list.set_item_metadata(files_list.item_count - 1, file)
 			files_list.set_item_tooltip(files_list.item_count - 1, file)
-
-func navigate_on_list(event: InputEvent, list: ItemList, submit: Callable):
-	if (event.is_action_pressed(&"ui_text_submit")):
-		var index: int = get_list_index(list)
-		if (index == -1):
-			return
-
-		submit.call(index)
-	elif (event.is_action_pressed(&"ui_down", true)):
-		var index: int = get_list_index(list)
-		if (index == list.item_count - 1):
-			return
-
-		navigate_list(list, index, 1)
-	elif (event.is_action_pressed(&"ui_up", true)):
-		var index: int = get_list_index(list)
-		if (index <= 0):
-			return
-
-		navigate_list(list, index, -1)
-	elif (event.is_action_pressed(&"ui_page_down", true)):
-		var index: int = get_list_index(list)
-		if (index == list.item_count - 1):
-			return
-
-		navigate_list(list, index, 5)
-	elif (event.is_action_pressed(&"ui_page_up", true)):
-		var index: int = get_list_index(list)
-		if (index <= 0):
-			return
-
-		navigate_list(list, index, -5)
-	elif (event is InputEventKey && list.item_count > 0 && !list.is_anything_selected()):
-		list.select(0)
-
-func get_list_index(list: ItemList) -> int:
-	var items: PackedInt32Array = list.get_selected_items()
-
-	if (items.is_empty()):
-		return -1
-
-	return items[0]
-
-func navigate_list(list: ItemList, index: int, amount: int):
-	index = clamp(index + amount, 0, list.item_count - 1)
-
-	list.select(index)
-	list.ensure_current_is_visible()
-	list.accept_event()
 
 func sort_by_filter(a: FileData, b: FileData) -> bool:
 	var filter_text: String = filter_txt.text
