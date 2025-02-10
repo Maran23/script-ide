@@ -1055,8 +1055,24 @@ func add_to_outline_ext(items: Array[String], icon_callable: Callable, type: Str
 				&"modifier": modifier
 			}
 			outline.set_item_metadata(outline.item_count - 1, dict)
+			var get_set_str: String = ""
+			if (item.begins_with(GETTER)):
+				get_set_str = "(Getter)"
+			elif (item.begins_with(SETTER)):
+				get_set_str = "(Setter)"
+			if (modifier.is_empty()):
+				outline.set_item_tooltip(
+					outline.item_count - 1,
+					"%s %s" % [type.capitalize(), get_set_str]
+				)
+			else:
+				outline.set_item_tooltip(
+					outline.item_count - 1,
+					("%s / %s %s" % [
+						type.capitalize(), modifier.capitalize(), get_set_str
+					])
+				)
 			outline.move_item(outline.item_count - 1, move_index)
-
 			move_index += 1
 
 func get_icon(func_name: String) -> ImageTexture:
