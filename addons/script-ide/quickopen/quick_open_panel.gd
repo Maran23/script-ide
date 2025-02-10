@@ -2,6 +2,9 @@
 extends PopupPanel
 
 const ADDONS: StringName = &"res://addons"
+const SEPARATOR: StringName = &" - "
+const STRUCTURE_START: StringName = &"("
+const STRUCTURE_END: StringName = &")"
 
 #region UI
 @onready var filter_bar: TabBar = %FilterBar
@@ -16,6 +19,9 @@ var scenes: Array[FileData]
 var scripts: Array[FileData]
 var resources: Array[FileData]
 var others: Array[FileData]
+
+# For performance and memory considerations, we add all files into one reusable array.
+var all_files: Array[FileData]
 
 var is_rebuild_cache: bool = true
 
@@ -95,6 +101,7 @@ func on_show():
 func rebuild_cache():
 	is_rebuild_cache = false
 
+	all_files.clear()
 	scenes.clear()
 	scripts.clear()
 	resources.clear()
@@ -110,12 +117,18 @@ func rebuild_cache_and_ui():
 
 func focus_and_select_first():
 	filter_txt.grab_focus()
+
 	if (files_list.item_count > 0):
 		files_list.select(0)
 
 func build_file_cache():
 	var dir: EditorFileSystemDirectory = EditorInterface.get_resource_filesystem().get_filesystem()
 	build_file_cache_dir(dir)
+
+	all_files.append_array(scenes)
+	all_files.append_array(scripts)
+	all_files.append_array(resources)
+	all_files.append_array(others)
 
 func build_file_cache_dir(dir: EditorFileSystemDirectory):
 	for index: int in dir.get_subdir_count():
@@ -126,20 +139,20 @@ func build_file_cache_dir(dir: EditorFileSystemDirectory):
 		if (search_option_btn.get_selected_id() == 0 && file.begins_with(ADDONS)):
 			continue
 
-		var last_delim: int = file.rfind(&"/")
+		var last_delimiter: int = file.rfind(&"/")
 
-		var file_name: String = file.substr(last_delim + 1)
+		var file_name: String = file.substr(last_delimiter + 1)
 		var file_structure: String = &""
 		if (file_name.length() + 6 != file.length()):
-			file_structure = " - (" + file.substr(6, last_delim - 6) + ")"
-
-		file_name = file_name + file_structure
+			file_structure = SEPARATOR + STRUCTURE_START + file.substr(6, last_delimiter - 6) + STRUCTURE_END
 
 		var file_data: FileData = FileData.new()
 		file_data.file = file
 		file_data.file_name = file_name
+		file_data.file_name_structure = file_name + file_structure
 		file_data.file_type = dir.get_file_type(index)
 
+		# Needed, as otherwise we have no icon.
 		if (file_data.file_type == &"Resource"):
 			file_data.file_type = &"Object"
 
@@ -159,10 +172,7 @@ func fill_files_list():
 	files_list.clear()
 
 	if (filter_bar.current_tab == 0):
-		fill_files_list_with(scenes)
-		fill_files_list_with(scripts)
-		fill_files_list_with(resources)
-		fill_files_list_with(others)
+		fill_files_list_with(all_files)
 	elif (filter_bar.current_tab == 1):
 		fill_files_list_with(scenes)
 	elif (filter_bar.current_tab == 2):
@@ -181,7 +191,7 @@ func fill_files_list_with(files: Array[FileData]):
 		if (filter_text.is_empty() || filter_text.is_subsequence_ofn(file)):
 			var icon: Texture2D = EditorInterface.get_base_control().get_theme_icon(file_data.file_type, &"EditorIcons")
 
-			files_list.add_item(file_data.file_name, icon)
+			files_list.add_item(file_data.file_name_structure, icon)
 			files_list.set_item_metadata(files_list.item_count - 1, file)
 			files_list.set_item_tooltip(files_list.item_count - 1, file)
 
@@ -211,4 +221,5 @@ func sort_by_filter(a: FileData, b: FileData) -> bool:
 class FileData:
 	var file: String
 	var file_name: String
+	var file_name_structure: String
 	var file_type: StringName
