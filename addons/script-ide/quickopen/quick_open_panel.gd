@@ -1,3 +1,6 @@
+## Quick open panel to quickly access all resources that are in the project.
+## Initially shows all resources, but can be changed to more specific resources
+## or filtered down with text.
 @tool
 extends PopupPanel
 
@@ -38,10 +41,14 @@ func _ready() -> void:
 	var file_system: EditorFileSystem = EditorInterface.get_resource_filesystem()
 	file_system.filesystem_changed.connect(schedule_rebuild)
 
-	filter_txt.gui_input.connect(plugin.navigate_on_list.bind(files_list, open_file))
+	if (plugin != null):
+		filter_txt.gui_input.connect(plugin.navigate_on_list.bind(files_list, open_file))
 
 func _shortcut_input(event: InputEvent) -> void:
 	if (!event.is_pressed() || event.is_echo()):
+		return
+
+	if (plugin == null):
 		return
 
 	if (plugin.tab_cycle_forward_shc.matches_event(event)):

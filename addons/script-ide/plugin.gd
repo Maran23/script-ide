@@ -1,7 +1,12 @@
-## Registered plugin class for script-ide.
-## This plugin mainly 'modifies' the outline code that is inside 'script_editor_plugin.cpp'.
-## The internals of the C++ code are therefore important in order to make this plugin work
-## without interfering with the Engine.
+## The editor plugin entrypoint for Script-IDE. Made by Marius Hanl.
+##
+## This plugin mainly 'modifies' the script and outline code
+## that is inside 'script_editor_plugin.cpp'. The internals of the C++ code are therefore important
+## in order to make this plugin work without interfering with the Engine.
+##
+## All Script-IDE code does not use global class_names in order to not clutter projects using it.
+## Especially since this is a editor only plugin that is not needed in the final game.
+## So some code is untyped for this reason.
 @tool
 extends EditorPlugin
 
@@ -24,6 +29,10 @@ const HIDE_PRIVATE_MEMBERS: StringName = SCRIPT_IDE + &"hide_private_members"
 const AUTO_NAVIGATE_IN_FS: StringName = SCRIPT_IDE + &"auto_navigate_in_filesystem_dock"
 ## Editor setting to control whether the script list should be visible or not
 const SCRIPT_LIST_VISIBLE: StringName = SCRIPT_IDE + &"script_list_visible"
+## Editor setting to control whether the script tabs should be visible or not.
+const SCRIPT_TABS_VISIBLE: StringName = SCRIPT_IDE + &"script_tabs_visible"
+## Editor setting to control where the script tabs should be.
+const SCRIPT_TAB_POSITION_TOP: StringName = SCRIPT_IDE + &"script_tab_position_top"
 
 ## Editor setting for the 'Open Outline Popup' shortcut
 const OPEN_OUTLINE_POPUP: StringName = SCRIPT_IDE + &"open_outline_popup"
@@ -54,6 +63,8 @@ var is_outline_right: bool = true
 var is_script_list_visible: bool = false
 var hide_private_members: bool = false
 var is_auto_navigate_in_fs: bool = true
+var is_script_tabs_visible: bool = true
+var is_script_tabs_top: bool = true
 
 var open_outline_popup_shc: Shortcut
 var open_scripts_popup_shc: Shortcut
@@ -148,9 +159,10 @@ func _enter_tree() -> void:
 	create_set_scripts_popup()
 
 	# Configure tab container and bar.
-	scripts_tab_container.tabs_visible = true
+	scripts_tab_container.tabs_visible = is_script_tabs_visible
 	scripts_tab_container.drag_to_rearrange_enabled = true
 	scripts_tab_container.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	update_tabs_position()
 
 	scripts_tab_bar.tab_close_display_policy = TabBar.CLOSE_BUTTON_SHOW_ACTIVE_ONLY
 	scripts_tab_bar.drag_to_rearrange_enabled = true
@@ -350,15 +362,17 @@ func init_icons():
 	class_icon = create_editor_texture(load(script_path.path_join("icon/class.svg")))
 
 ## Initializes all settings.
-## Every settings can be changed while this plugin is active, which will override this setting.
+## Every setting can be changed while this plugin is active, which will override them.
 func init_settings():
 	is_outline_right = get_setting(OUTLINE_POSITION_RIGHT, is_outline_right)
 	hide_private_members = get_setting(HIDE_PRIVATE_MEMBERS, hide_private_members)
 	is_script_list_visible = get_setting(SCRIPT_LIST_VISIBLE, is_script_list_visible)
 	is_auto_navigate_in_fs = get_setting(AUTO_NAVIGATE_IN_FS, is_auto_navigate_in_fs)
+	is_script_tabs_visible = get_setting(SCRIPT_TABS_VISIBLE, is_script_tabs_visible)
+	is_script_tabs_top = get_setting(SCRIPT_TAB_POSITION_TOP, is_script_tabs_top)
 
 ## Initializes all shortcuts.
-## Every shortcut can be changed while plugin is active, which will override them.
+## Every shortcut can be changed while this plugin is active, which will override them.
 func init_shortcuts():
 	var editor_settings: EditorSettings = get_editor_settings()
 	if (!editor_settings.has_setting(OPEN_OUTLINE_POPUP)):
@@ -808,6 +822,18 @@ func sync_settings():
 				is_script_list_visible = new_script_list_visible
 
 				update_script_list_visibility()
+		elif (setting == SCRIPT_TABS_VISIBLE):
+			var new_script_tabs_visible: bool = get_setting(SCRIPT_TABS_VISIBLE, is_script_tabs_visible)
+			if (new_script_tabs_visible != is_script_tabs_visible):
+				is_script_tabs_visible = new_script_tabs_visible
+
+				scripts_tab_container.tabs_visible = is_script_tabs_visible
+		elif (setting == SCRIPT_TAB_POSITION_TOP):
+			var new_script_tabs_top: bool = get_setting(SCRIPT_TAB_POSITION_TOP, is_script_tabs_top)
+			if (new_script_tabs_top != is_script_tabs_top):
+				is_script_tabs_top = new_script_tabs_top
+
+				update_tabs_position()
 		elif (setting == AUTO_NAVIGATE_IN_FS):
 			is_auto_navigate_in_fs = get_setting(AUTO_NAVIGATE_IN_FS, is_auto_navigate_in_fs)
 		elif (setting == OPEN_OUTLINE_POPUP):
@@ -895,6 +921,12 @@ func update_tab(index: int):
 	scripts_tab_container.set_tab_title(index, scripts_item_list.get_item_text(index))
 	scripts_tab_container.set_tab_icon(index, scripts_item_list.get_item_icon(index))
 	scripts_tab_container.set_tab_tooltip(index, scripts_item_list.get_item_tooltip(index))
+
+func update_tabs_position():
+	if (is_script_tabs_top):
+		scripts_tab_container.tabs_position = TabContainer.POSITION_TOP
+	else:
+		scripts_tab_container.tabs_position = TabContainer.POSITION_BOTTOM
 
 #region Outline (cache) update
 func update_keywords(script: Script):
