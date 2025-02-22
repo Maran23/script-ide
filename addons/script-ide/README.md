@@ -39,8 +39,10 @@ All settings can be changed in the `Editor Settings` under `Plugin` -> `Script I
 - `Hide Private Members` = Flag to control whether private members (methods/variables/constants starting with '_') should be hidden in the Outline or not (default=false)
 - `Open Script Popup` = Shortcut to control how the Script Popup should be triggered (default=CTRL+U or META+U)
 - `Script List Visible` = Flag to control whether the script list should still be visible or not (above the outline) (default=false)
+- `Script Tabs Visible` = Flag to control whether the script tabs should be visible or not (default=true)
+- `Script Tabs Position Top` = Flag to control whether the script tabs should be on the top or on the bottom (default=true)
 - `Auto Navigate in FileSystem Dock` = Flag to control whether the script that is currently edited should be automatically selected in the Filesystem Dock (default=true)
-- `Open Quick Search Popup` = Shortcut to control how the Quick Search Popup should be triggered (default=Shift+Shift, behavior is hardcoded for now)
+- `Open Quick Search Popup` = Shortcut to control how the Quick Search Popup should be triggered (default=Shift+Shift, double press behavior is hardcoded for now)
 - `Cycle Tab forward` = Shortcut to cycle the script tabs in the forward direction (only works in the 'Script' Editor Tab) (default=CTRL+TAB)
 - `Cycle Tab backward` = Shortcut to cycle the script tabs in the backward direction (only works in the 'Script' Editor Tab) (default=CTRL+SHIFT+TAB)
 - All outline visibility settings
@@ -55,4 +57,4 @@ All settings can be changed in the `Editor Settings` under `Plugin` -> `Script I
 
 ![Example of the Quick Search Popup](https://github.com/user-attachments/assets/01141f05-e07c-4059-8d6f-e4c7490cbd40)
 
-![Example of the plugin editor settings](https://github.com/user-attachments/assets/0450e423-bc49-4076-862b-c95a62190df1)
+![Example of the Plugin Editor Settings](https://github.com/user-attachments/assets/0450e423-bc49-4076-862b-c95a62190df1)
