@@ -118,8 +118,8 @@ var sync_script_list: bool = false
 var file_to_navigate: String = &""
 var suppress_settings_sync: bool = false
 
-const SHORTCUT_INTERVAL: int = 400
-var last_shortcut_time: int = -SHORTCUT_INTERVAL
+const QUICK_OPEN_INTERVAL: int = 400
+var quick_open_tween: Tween
 
 #region Plugin Enter / Exit setup
 ## Change the Godot script UI and transform into an IDE like UI
@@ -317,12 +317,19 @@ func _shortcut_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		open_scripts_popup()
 	elif (open_quick_search_popup_shc.matches_event(event)):
-		var old_time: int = last_shortcut_time
-		last_shortcut_time = Time.get_ticks_msec()
-
-		if ((last_shortcut_time - old_time) < SHORTCUT_INTERVAL):
+		if (quick_open_tween != null && quick_open_tween.is_running()):
 			get_viewport().set_input_as_handled()
-			open_quick_search()
+			if (quick_open_tween != null):
+				quick_open_tween.kill()
+
+			quick_open_tween = create_tween()
+			quick_open_tween.tween_interval(0.1)
+			quick_open_tween.tween_callback(open_quick_search)
+			quick_open_tween.tween_callback(func(): quick_open_tween = null)
+		else:
+			quick_open_tween = create_tween()
+			quick_open_tween.tween_interval(QUICK_OPEN_INTERVAL / 1000.0)
+			quick_open_tween.tween_callback(func(): quick_open_tween = null)
 	elif (EditorInterface.get_script_editor().is_visible_in_tree()):
 		if (tab_cycle_forward_shc.matches_event(event)):
 			get_viewport().set_input_as_handled()
@@ -343,7 +350,9 @@ func _shortcut_input(event: InputEvent) -> void:
 func _input(event: InputEvent) -> void:
 	if (event is InputEventKey):
 		if (!open_quick_search_popup_shc.matches_event(event)):
-			last_shortcut_time = -SHORTCUT_INTERVAL
+			if (quick_open_tween != null):
+				quick_open_tween.kill()
+				quick_open_tween = null
 #endregion
 
 #region Icon, Settings, Shortcut initializing
