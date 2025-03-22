@@ -22,6 +22,8 @@ const BUILT_IN_SCRIPT: StringName = &"::GDScript"
 const SCRIPT_IDE: StringName = &"plugin/script_ide/"
 ## Editor setting for the outline position
 const OUTLINE_POSITION_RIGHT: StringName = SCRIPT_IDE + &"outline_position_right"
+## Editor setting to control the order of the outline
+const OUTLINE_ORDER: StringName = SCRIPT_IDE + &"outline_order"
 ## Editor setting to control whether private members (annotated with '_' should be hidden or not)
 const HIDE_PRIVATE_MEMBERS: StringName = SCRIPT_IDE + &"hide_private_members"
 ## Editor setting to control whether we want to auto navigate to the script
@@ -46,7 +48,15 @@ const TAB_CYCLE_FORWARD: StringName = SCRIPT_IDE + &"tab_cycle_forward"
 const TAB_CYCLE_BACKWARD: StringName = SCRIPT_IDE + &"tab_cycle_backward"
 #endregion
 
-#region Outline icons
+#region Outline type name and icon
+const ENGINE_FUNCS: StringName = &"Engine Callbacks"
+const FUNCS: StringName = &"Functions"
+const SIGNALS: StringName = &"Signals"
+const EXPORTED: StringName = &"Exported Properties"
+const PROPERTIES: StringName = &"Properties"
+const CLASSES: StringName = &"Classes"
+const CONSTANTS: StringName = &"Constants"
+
 var engine_func_icon: ImageTexture
 var func_icon: ImageTexture
 var func_get_icon: ImageTexture
@@ -65,6 +75,7 @@ var hide_private_members: bool = false
 var is_auto_navigate_in_fs: bool = true
 var is_script_tabs_visible: bool = true
 var is_script_tabs_top: bool = true
+var outline_order: PackedStringArray
 
 var open_outline_popup_shc: Shortcut
 var open_scripts_popup_shc: Shortcut
@@ -106,6 +117,7 @@ var engine_func_btn: Button
 #endregion
 
 var keywords: Dictionary = {} # Basically used as Set, since Godot has none. [String, int = 0]
+var outline_type_order: Array[OutlineType] = []
 var outline_cache: OutlineCache
 var tab_state: TabStateCache
 
@@ -197,26 +209,14 @@ func _enter_tree() -> void:
 	# Add a filter box for all kind of members
 	filter_box = HBoxContainer.new()
 
-	engine_func_btn = create_filter_btn(engine_func_icon, "Engine callbacks")
-	filter_box.add_child(engine_func_btn)
-
-	func_btn = create_filter_btn(func_icon, "Functions")
-	filter_box.add_child(func_btn)
-
-	signal_btn = create_filter_btn(signal_icon, "Signals")
-	filter_box.add_child(signal_btn)
-
-	export_btn = create_filter_btn(export_icon, "Exported properties")
-	filter_box.add_child(export_btn)
-
-	property_btn = create_filter_btn(property_icon, "Properties")
-	filter_box.add_child(property_btn)
-
-	class_btn = create_filter_btn(class_icon, "Classes")
-	filter_box.add_child(class_btn)
-
-	constant_btn = create_filter_btn(constant_icon, "Constants")
-	filter_box.add_child(constant_btn)
+	engine_func_btn = create_filter_btn(engine_func_icon, ENGINE_FUNCS)
+	func_btn = create_filter_btn(func_icon, FUNCS)
+	signal_btn = create_filter_btn(signal_icon, SIGNALS)
+	export_btn = create_filter_btn(export_icon, EXPORTED)
+	property_btn = create_filter_btn(property_icon, PROPERTIES)
+	class_btn = create_filter_btn(class_icon, CLASSES)
+	constant_btn = create_filter_btn(constant_icon, CONSTANTS)
+	update_outline_button_order()
 
 	outline.get_parent().add_child(filter_box)
 	outline.get_parent().move_child(filter_box, outline.get_index())
@@ -371,6 +371,75 @@ func init_settings():
 	is_script_tabs_visible = get_setting(SCRIPT_TABS_VISIBLE, is_script_tabs_visible)
 	is_script_tabs_top = get_setting(SCRIPT_TAB_POSITION_TOP, is_script_tabs_top)
 
+	init_outline_order()
+
+## Initializes the outline type structure and updates the order if changed.
+func init_outline_order():
+	var outline_type: OutlineType = OutlineType.new()
+	outline_type.type_name = ENGINE_FUNCS
+	outline_type.add_to_outline = func(): add_to_outline_if_selected(engine_func_btn,
+		func(): add_to_outline(outline_cache.engine_funcs, engine_func_icon, &"func"))
+	outline_type_order.append(outline_type)
+
+	outline_type = OutlineType.new()
+	outline_type.type_name = FUNCS
+	outline_type.add_to_outline = func(): add_to_outline_if_selected(func_btn,
+		func(): add_to_outline_ext(outline_cache.funcs, get_func_icon, &"func", &"static"))
+	outline_type_order.append(outline_type)
+
+	outline_type = OutlineType.new()
+	outline_type.type_name = SIGNALS
+	outline_type.add_to_outline = func(): add_to_outline_if_selected(signal_btn,
+		func(): add_to_outline(outline_cache.signals, signal_icon, &"signal"))
+	outline_type_order.append(outline_type)
+
+	outline_type = OutlineType.new()
+	outline_type.type_name = EXPORTED
+	outline_type.add_to_outline = func(): add_to_outline_if_selected(signal_btn,
+		func(): add_to_outline(outline_cache.exports, export_icon, &"var", &"@export"))
+	outline_type_order.append(outline_type)
+
+	outline_type = OutlineType.new()
+	outline_type.type_name = PROPERTIES
+	outline_type.add_to_outline = func(): add_to_outline_if_selected(property_btn,
+		func(): add_to_outline(outline_cache.properties, property_icon, &"var"))
+	outline_type_order.append(outline_type)
+
+	outline_type = OutlineType.new()
+	outline_type.type_name = CONSTANTS
+	outline_type.add_to_outline = func(): add_to_outline_if_selected(constant_btn,
+		func(): add_to_outline(outline_cache.constants, constant_icon, &"const", &"enum"))
+	outline_type_order.append(outline_type)
+
+	outline_type = OutlineType.new()
+	outline_type.type_name = CLASSES
+	outline_type.add_to_outline = func(): add_to_outline_if_selected(class_btn,
+		func(): add_to_outline(outline_cache.classes, class_icon, &"class"))
+	outline_type_order.append(outline_type)
+
+	update_outline_order()
+
+func update_outline_button_order():
+	var all_buttons: Array[Button] = [engine_func_btn, func_btn, signal_btn, export_btn, property_btn, class_btn, constant_btn]
+	all_buttons.sort_custom(func(btn1, btn2): return outline_order.find(btn1.tooltip_text) < outline_order.find(btn2.tooltip_text))
+
+	for btn: Button in all_buttons:
+		if (btn.get_parent() != null):
+			filter_box.remove_child(btn)
+
+	for btn: Button in all_buttons:
+		filter_box.add_child(btn)
+
+func update_outline_order():
+	var editor_settings: EditorSettings = get_editor_settings()
+	if (editor_settings.has_setting(OUTLINE_ORDER)):
+		outline_order = editor_settings.get_setting(OUTLINE_ORDER)
+	else:
+		outline_order = [ENGINE_FUNCS, FUNCS, SIGNALS, EXPORTED, PROPERTIES, CONSTANTS, CLASSES]
+		editor_settings.set_setting(OUTLINE_ORDER, outline_order)
+
+	outline_type_order.sort_custom(func(type1, type2): return outline_order.find(type1.type_name) < outline_order.find(type2.type_name))
+
 ## Initializes all shortcuts.
 ## Every shortcut can be changed while this plugin is active, which will override them.
 func init_shortcuts():
@@ -384,7 +453,6 @@ func init_shortcuts():
 
 		shortcut.events = [ event ]
 		editor_settings.set_setting(OPEN_OUTLINE_POPUP, shortcut)
-		editor_settings.set_initial_value(OPEN_OUTLINE_POPUP, shortcut, false)
 
 	if (!editor_settings.has_setting(OPEN_SCRIPTS_POPUP)):
 		var shortcut: Shortcut = Shortcut.new()
@@ -395,7 +463,6 @@ func init_shortcuts():
 
 		shortcut.events = [ event ]
 		editor_settings.set_setting(OPEN_SCRIPTS_POPUP, shortcut)
-		editor_settings.set_initial_value(OPEN_SCRIPTS_POPUP, shortcut, false)
 
 	if (!editor_settings.has_setting(OPEN_QUICK_SEARCH_POPUP)):
 		var shortcut: Shortcut = Shortcut.new()
@@ -405,7 +472,6 @@ func init_shortcuts():
 
 		shortcut.events = [ event ]
 		editor_settings.set_setting(OPEN_QUICK_SEARCH_POPUP, shortcut)
-		editor_settings.set_initial_value(OPEN_QUICK_SEARCH_POPUP, shortcut, false)
 
 	if (!editor_settings.has_setting(TAB_CYCLE_FORWARD)):
 		var shortcut: Shortcut = Shortcut.new()
@@ -416,7 +482,6 @@ func init_shortcuts():
 
 		shortcut.events = [ event ]
 		editor_settings.set_setting(TAB_CYCLE_FORWARD, shortcut)
-		editor_settings.set_initial_value(TAB_CYCLE_FORWARD, shortcut, false)
 
 	if (!editor_settings.has_setting(TAB_CYCLE_BACKWARD)):
 		var shortcut: Shortcut = Shortcut.new()
@@ -428,7 +493,6 @@ func init_shortcuts():
 
 		shortcut.events = [ event ]
 		editor_settings.set_setting(TAB_CYCLE_BACKWARD, shortcut)
-		editor_settings.set_initial_value(TAB_CYCLE_BACKWARD, shortcut, false)
 
 	open_outline_popup_shc = editor_settings.get_setting(OPEN_OUTLINE_POPUP)
 	open_scripts_popup_shc = editor_settings.get_setting(OPEN_SCRIPTS_POPUP)
@@ -456,6 +520,10 @@ func update_editor():
 	update_tabs()
 	update_outline_cache()
 	update_outline()
+
+func add_to_outline_if_selected(btn: Button, action: Callable):
+	if (btn.button_pressed):
+		action.call()
 
 func open_quick_search():
 	if (quick_open_popup == null):
@@ -703,14 +771,14 @@ func goto_line(index: int):
 
 	code_edit.grab_focus()
 
-func create_filter_btn(icon: ImageTexture, title: String) -> Button:
+func create_filter_btn(icon: ImageTexture, title: StringName) -> Button:
 	var btn: Button = Button.new()
 	btn.toggle_mode = true
 	btn.icon = icon
 	btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	btn.tooltip_text = title
 
-	var property: StringName = as_setting(title)
+	var property: StringName = SCRIPT_IDE + title.to_lower().replace(" ", "_")
 	btn.set_meta(&"property", property)
 	btn.button_pressed = get_setting(property, true)
 
@@ -719,6 +787,7 @@ func create_filter_btn(icon: ImageTexture, title: String) -> Button:
 
 	btn.add_theme_color_override(&"icon_pressed_color", Color.WHITE)
 	btn.add_theme_color_override(&"icon_hover_color", Color.WHITE)
+	btn.add_theme_color_override(&"icon_hover_pressed_color", Color.WHITE)
 	btn.add_theme_color_override(&"icon_focus_color", Color.WHITE)
 
 	var style_box_empty: StyleBoxEmpty = StyleBoxEmpty.new()
@@ -809,6 +878,10 @@ func sync_settings():
 				is_outline_right = new_outline_right
 
 				update_outline_position()
+		elif (setting == OUTLINE_ORDER):
+			update_outline_order()
+			update_outline_button_order()
+			update_outline()
 		elif (setting == HIDE_PRIVATE_MEMBERS):
 			var new_hide_private_members: bool = get_setting(HIDE_PRIVATE_MEMBERS, hide_private_members)
 			if (new_hide_private_members != hide_private_members):
@@ -852,16 +925,12 @@ func sync_settings():
 
 				btn.button_pressed = get_setting(property, btn.button_pressed)
 
-func as_setting(property: String) -> StringName:
-	return SCRIPT_IDE + property.to_lower().replace(" ", "_")
-
 func get_setting(property: StringName, alt: bool) -> bool:
 	var editor_settings: EditorSettings = get_editor_settings()
 	if (editor_settings.has_setting(property)):
 		return editor_settings.get_setting(property)
 	else:
 		editor_settings.set_setting(property, alt)
-		editor_settings.set_initial_value(property, alt, false)
 		return alt
 
 func set_setting(property: StringName, value: bool):
@@ -1038,40 +1107,14 @@ func update_outline():
 	if (outline_cache == null):
 		return
 
-	# Classes
-	if (class_btn.button_pressed):
-		add_to_outline(outline_cache.classes, class_icon, &"class")
-
-	# Constants
-	if (constant_btn.button_pressed):
-		add_to_outline(outline_cache.constants, constant_icon, &"const", &"enum")
-
-	# Properties
-	if (property_btn.button_pressed):
-		add_to_outline(outline_cache.properties, property_icon, &"var")
-
-	# Exports
-	if (export_btn.button_pressed):
-		add_to_outline(outline_cache.exports, export_icon, &"var", &"@export")
-
-	# Signals
-	if (signal_btn.button_pressed):
-		add_to_outline(outline_cache.signals, signal_icon, &"signal")
-
-	# Functions
-	if (func_btn.button_pressed):
-		add_to_outline_ext(outline_cache.funcs, get_icon, &"func", &"static")
-
-	# Engine functions
-	if (engine_func_btn.button_pressed):
-		add_to_outline(outline_cache.engine_funcs, engine_func_icon, &"func")
+	for outline_type: OutlineType in outline_type_order:
+		outline_type.add_to_outline.call()
 
 func add_to_outline(items: Array[String], icon: ImageTexture, type: String, modifier: StringName = &""):
 	add_to_outline_ext(items, func(str: String): return icon, type, modifier)
 
 func add_to_outline_ext(items: Array[String], icon_callable: Callable, type: String, modifier: StringName = &""):
 	var text: String = outline_filter_txt.get_text()
-	var move_index: int = 0
 
 	if (is_sorted()):
 		items = items.duplicate()
@@ -1087,11 +1130,8 @@ func add_to_outline_ext(items: Array[String], icon_callable: Callable, type: Str
 				&"modifier": modifier
 			}
 			outline.set_item_metadata(outline.item_count - 1, dict)
-			outline.move_item(outline.item_count - 1, move_index)
 
-			move_index += 1
-
-func get_icon(func_name: String) -> ImageTexture:
+func get_func_icon(func_name: String) -> ImageTexture:
 	var icon: ImageTexture = func_icon
 	if (func_name.begins_with(GETTER)):
 		icon = func_get_icon
@@ -1205,6 +1245,10 @@ class OutlineCache:
 	var properties: Array[String] = []
 	var funcs: Array[String] = []
 	var engine_funcs: Array[String] = []
+
+class OutlineType:
+	var type_name: StringName
+	var add_to_outline: Callable
 
 ## Contains everything we modify on the Tab Control. Used to save and restore the behaviour
 ## to keep the Godot Engine in a clean state when the plugin is disabled.
