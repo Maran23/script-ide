@@ -1,12 +1,15 @@
-## The editor plugin entrypoint for Script-IDE. Made by Marius Hanl.
+## Copyright (c) 2023-present Marius Hanl under the MIT License.
+## The editor plugin entrypoint for Script-IDE.
 ##
-## This plugin mainly 'modifies' the script and outline code
-## that is inside 'script_editor_plugin.cpp'. The internals of the C++ code are therefore important
-## in order to make this plugin work without interfering with the Engine.
+## The Script Tabs and Outline modifies the code that is inside 'script_editor_plugin.cpp'.
+## That is, the structure is changed a little bit.
+## The internals of then native C++ code are therefore important in order to make this plugin work
+## without interfering with the Engine.
+## All the other functionality does not modify anything Engine related.
 ##
-## All Script-IDE code does not use global class_names in order to not clutter projects using it.
-## Especially since this is a editor only plugin that is not needed in the final game.
-## So some code is untyped for this reason.
+## Script-IDE does not use global class_name's in order to not clutter projects using it.
+## Especially since this is an editor only plugin, we do not want this plugin in the final game.
+## Therefore, code that references other code inside this plugin is untyped.
 @tool
 extends EditorPlugin
 
@@ -116,6 +119,7 @@ var func_btn: Button
 var engine_func_btn: Button
 #endregion
 
+#region Plugin variables
 var keywords: Dictionary = {} # Basically used as Set, since Godot has none. [String, int = 0]
 var outline_type_order: Array[OutlineType] = []
 var outline_cache: OutlineCache
@@ -132,6 +136,7 @@ var suppress_settings_sync: bool = false
 
 const QUICK_OPEN_INTERVAL: int = 400
 var quick_open_tween: Tween
+#endregion
 
 #region Plugin Enter / Exit setup
 ## Change the Godot script UI and transform into an IDE like UI
@@ -355,7 +360,7 @@ func _input(event: InputEvent) -> void:
 				quick_open_tween = null
 #endregion
 
-#region Icon, Settings, Shortcut initializing
+#region Icon, Settings, Shortcut initialization
 ## Initializes all plugin icons, while respecting the editor settings.
 func init_icons():
 	var script_path: String = get_script().get_path().get_base_dir()
@@ -382,7 +387,7 @@ func init_settings():
 
 	init_outline_order()
 
-## Initializes the outline type structure and updates the order if changed.
+## Initializes the outline type structure and sorts it based off the outline order.
 func init_outline_order():
 	var outline_type: OutlineType = OutlineType.new()
 	outline_type.type_name = ENGINE_FUNCS
@@ -430,7 +435,7 @@ func init_outline_order():
 
 func update_outline_button_order():
 	var all_buttons: Array[Button] = [engine_func_btn, func_btn, signal_btn, export_btn, property_btn, class_btn, constant_btn]
-	all_buttons.sort_custom(func(btn1, btn2): return outline_order.find(btn1.tooltip_text) < outline_order.find(btn2.tooltip_text))
+	all_buttons.sort_custom(sort_buttons_by_outline_order)
 
 	for btn: Button in all_buttons:
 		if (btn.get_parent() != null):
@@ -447,7 +452,16 @@ func update_outline_order():
 		outline_order = [ENGINE_FUNCS, FUNCS, SIGNALS, EXPORTED, PROPERTIES, CONSTANTS, CLASSES]
 		editor_settings.set_setting(OUTLINE_ORDER, outline_order)
 
-	outline_type_order.sort_custom(func(type1, type2): return outline_order.find(type1.type_name) < outline_order.find(type2.type_name))
+	outline_type_order.sort_custom(sort_types_by_outline_order)
+
+func sort_buttons_by_outline_order(btn1: Button, btn2: Button):
+	return sort_by_outline_order(btn1.tooltip_text, btn2.tooltip_text)
+
+func sort_types_by_outline_order(type1: OutlineType, type2: OutlineType):
+	return sort_by_outline_order(type1.type_name, type2.type_name)
+
+func sort_by_outline_order(outline_type1: StringName, outline_type2: StringName):
+	return outline_order.find(outline_type1) < outline_order.find(outline_type2)
 
 ## Initializes all shortcuts.
 ## Every shortcut can be changed while this plugin is active, which will override them.
@@ -1006,7 +1020,6 @@ func update_tabs_position():
 	else:
 		scripts_tab_container.tabs_position = TabContainer.POSITION_BOTTOM
 
-#region Outline (cache) update
 func update_keywords(script: Script):
 	if (script == null):
 		return
@@ -1127,7 +1140,7 @@ func add_to_outline_ext(items: Array[String], icon_callable: Callable, type: Str
 
 	if (is_sorted()):
 		items = items.duplicate()
-		items.sort_custom(func(a, b): return a.naturalnocasecmp_to(b) < 0)
+		items.sort_custom(func(str1: String, str2: String): return str1.naturalnocasecmp_to(str2) < 0)
 
 	for item: String in items:
 		if (text.is_empty() || text.is_subsequence_ofn(item)):
@@ -1148,7 +1161,6 @@ func get_func_icon(func_name: String) -> ImageTexture:
 		icon = func_set_icon
 
 	return icon
-#endregion
 
 func sync_tab_with_script_list():
 	# For some reason the selected tab is wrong. Looks like a Godot bug.
@@ -1167,7 +1179,6 @@ func sync_tab_with_script_list():
 
 		scripts_item_list.ensure_current_is_visible()
 
-#region Tab Handling
 func on_tab_bar_mouse_exited():
 	last_tab_hovered = -1
 
@@ -1216,7 +1227,6 @@ func on_tab_close(tab_idx: int):
 
 func simulate_item_clicked(tab_idx: int, mouse_idx: int):
 	scripts_item_list.item_clicked.emit(tab_idx, scripts_item_list.get_local_mouse_position(), mouse_idx)
-#endregion
 
 func get_editor_scale() -> float:
 	return EditorInterface.get_editor_scale()
@@ -1237,7 +1247,7 @@ func get_editor_settings() -> EditorSettings:
 	return EditorInterface.get_editor_settings()
 
 static func find_or_null(arr: Array[Node], index: int = 0) -> Node:
-	if arr.is_empty():
+	if (arr.is_empty()):
 		push_error("""Node that is needed for Script-IDE not found.
 Plugin will not work correctly.
 This might be due to some other plugins or changes in the Engine.
@@ -1245,7 +1255,7 @@ Please report this to Script-IDE, so we can figure out a fix.""")
 		return null
 	return arr[index]
 
-## Cache for everything inside the outline.
+## Cache for everything inside we collected to show in the Outline.
 class OutlineCache:
 	var classes: Array[String] = []
 	var constants: Array[String] = []
@@ -1255,12 +1265,13 @@ class OutlineCache:
 	var funcs: Array[String] = []
 	var engine_funcs: Array[String] = []
 
+## Outline type for a concrete button with their items in the Outline.
 class OutlineType:
 	var type_name: StringName
 	var add_to_outline: Callable
 
 ## Contains everything we modify on the Tab Control. Used to save and restore the behaviour
-## to keep the Godot Engine in a clean state when the plugin is disabled.
+## to keep the Engine in a clean state when the plugin is disabled.
 class TabStateCache:
 	var tabs_visible: bool
 	var drag_to_rearrange_enabled: bool
