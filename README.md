@@ -5,6 +5,7 @@ Tabs are used for navigating between scripts.
 The default Outline got an overhaul and now shows all members of the script (not just methods) with unique icons for faster navigation.
 Enhanced keyboard navigation for Scripts and Outline.
 Fast quick search functionality.
+Quick function Override functionality.
 
 Features:
 - Scripts are now shown as Tabs inside a TabContainer
@@ -25,6 +26,7 @@ Features:
 - Scripts can be opened in a Popup with a defined shortcut or when clicking the three dots on the top right of the TabContainer for quick navigation between scripts
 - The currently edited script is automatically selected in the Filesystem Dock
 - Files can be quickly searched by the Quick Search Popup with `Shift`+`Shift`
+- You can find and quickly override any method from your super classes with `Alt`+`Ins`
 - The plugin is written with performance in mind, everything is very fast and works without any lags or stuttering
 
 Customization:
@@ -45,6 +47,7 @@ All settings can be changed in the `Editor Settings` under `Plugin` -> `Script I
 - `Script Tabs Position Top` = Flag to control whether the script tabs should be on the top or on the bottom (default=true)
 - `Auto Navigate in FileSystem Dock` = Flag to control whether the script that is currently edited should be automatically selected in the Filesystem Dock (default=true)
 - `Open Quick Search Popup` = Shortcut to control how the Quick Search Popup should be triggered (default=Shift+Shift, double press behavior is hardcoded for now)
+- `Open Override Popup` = Shortcut to control how the Override Popup should be triggered (default=Alt+Ins)
 - `Cycle Tab forward` = Shortcut to cycle the script tabs in the forward direction (only works in the 'Script' Editor Tab) (default=CTRL+TAB)
 - `Cycle Tab backward` = Shortcut to cycle the script tabs in the backward direction (only works in the 'Script' Editor Tab) (default=CTRL+SHIFT+TAB)
 - All outline visibility settings
