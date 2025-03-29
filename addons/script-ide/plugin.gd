@@ -60,15 +60,15 @@ const PROPERTIES: StringName = &"Properties"
 const CLASSES: StringName = &"Classes"
 const CONSTANTS: StringName = &"Constants"
 
-var engine_func_icon: ImageTexture
-var func_icon: ImageTexture
-var func_get_icon: ImageTexture
-var func_set_icon: ImageTexture
-var property_icon: ImageTexture
-var export_icon: ImageTexture
-var signal_icon: ImageTexture
-var constant_icon: ImageTexture
-var class_icon: ImageTexture
+var engine_func_icon: Texture2D
+var func_icon: Texture2D
+var func_get_icon: Texture2D
+var func_set_icon: Texture2D
+var property_icon: Texture2D
+var export_icon: Texture2D
+var signal_icon: Texture2D
+var constant_icon: Texture2D
+var class_icon: Texture2D
 #endregion
 
 #region Editor settings
@@ -120,7 +120,7 @@ var engine_func_btn: Button
 #endregion
 
 #region Plugin variables
-var keywords: Dictionary = {} # Basically used as Set, since Godot has none. [String, int = 0]
+var keywords: Dictionary = {} # [String, int = 0] # Used as Set.
 var outline_type_order: Array[OutlineType] = []
 var outline_cache: OutlineCache
 var tab_state: TabStateCache
@@ -329,7 +329,7 @@ func _shortcut_input(event: InputEvent) -> void:
 
 			quick_open_tween = create_tween()
 			quick_open_tween.tween_interval(0.1)
-			quick_open_tween.tween_callback(open_quick_search)
+			quick_open_tween.tween_callback(open_quick_search_popup)
 			quick_open_tween.tween_callback(func(): quick_open_tween = null)
 		else:
 			quick_open_tween = create_tween()
@@ -363,17 +363,15 @@ func _input(event: InputEvent) -> void:
 #region Icon, Settings, Shortcut initialization
 ## Initializes all plugin icons, while respecting the editor settings.
 func init_icons():
-	var script_path: String = get_script().get_path().get_base_dir()
-
-	engine_func_icon = create_editor_texture(load(script_path.path_join("icon/engine_func.svg")))
-	func_icon = create_editor_texture(load(script_path.path_join("icon/func.svg")))
-	func_get_icon = create_editor_texture(load(script_path.path_join("icon/func_get.svg")))
-	func_set_icon = create_editor_texture(load(script_path.path_join("icon/func_set.svg")))
-	property_icon = create_editor_texture(load(script_path.path_join("icon/property.svg")))
-	export_icon = create_editor_texture(load(script_path.path_join("icon/export.svg")))
-	signal_icon = create_editor_texture(load(script_path.path_join("icon/signal.svg")))
-	constant_icon = create_editor_texture(load(script_path.path_join("icon/constant.svg")))
-	class_icon = create_editor_texture(load(script_path.path_join("icon/class.svg")))
+	engine_func_icon = create_editor_texture(load_rel("icon/engine_func.svg"))
+	func_icon = create_editor_texture(load_rel("icon/func.svg"))
+	func_get_icon = create_editor_texture(load_rel("icon/func_get.svg"))
+	func_set_icon = create_editor_texture(load_rel("icon/func_set.svg"))
+	property_icon = create_editor_texture(load_rel("icon/property.svg"))
+	export_icon = create_editor_texture(load_rel("icon/export.svg"))
+	signal_icon = create_editor_texture(load_rel("icon/signal.svg"))
+	constant_icon = create_editor_texture(load_rel("icon/constant.svg"))
+	class_icon = create_editor_texture(load_rel("icon/class.svg"))
 
 ## Initializes all settings.
 ## Every setting can be changed while this plugin is active, which will override them.
@@ -454,13 +452,13 @@ func update_outline_order():
 
 	outline_type_order.sort_custom(sort_types_by_outline_order)
 
-func sort_buttons_by_outline_order(btn1: Button, btn2: Button):
+func sort_buttons_by_outline_order(btn1: Button, btn2: Button) -> bool:
 	return sort_by_outline_order(btn1.tooltip_text, btn2.tooltip_text)
 
-func sort_types_by_outline_order(type1: OutlineType, type2: OutlineType):
+func sort_types_by_outline_order(type1: OutlineType, type2: OutlineType) -> bool:
 	return sort_by_outline_order(type1.type_name, type2.type_name)
 
-func sort_by_outline_order(outline_type1: StringName, outline_type2: StringName):
+func sort_by_outline_order(outline_type1: StringName, outline_type2: StringName) -> bool:
 	return outline_order.find(outline_type1) < outline_order.find(outline_type2)
 
 ## Initializes all shortcuts.
@@ -548,10 +546,9 @@ func add_to_outline_if_selected(btn: Button, action: Callable):
 	if (btn.button_pressed):
 		action.call()
 
-func open_quick_search():
+func open_quick_search_popup():
 	if (quick_open_popup == null):
-		var script_path: String = get_script().get_path().get_base_dir()
-		quick_open_popup = load(script_path.path_join("quickopen/quick_open_panel.tscn")).instantiate()
+		quick_open_popup = load_rel("quickopen/quick_open_panel.tscn").instantiate()
 		quick_open_popup.plugin = self
 
 	if (quick_open_popup.get_parent() != null):
@@ -794,7 +791,7 @@ func goto_line(index: int):
 
 	code_edit.grab_focus()
 
-func create_filter_btn(icon: ImageTexture, title: StringName) -> Button:
+func create_filter_btn(icon: Texture2D, title: StringName) -> Button:
 	var btn: Button = Button.new()
 	btn.toggle_mode = true
 	btn.icon = icon
@@ -869,7 +866,8 @@ func update_outline_position():
 func update_script_list_visibility():
 	scripts_item_list.get_parent().visible = is_script_list_visible
 
-func create_editor_texture(image: Image) -> ImageTexture:
+func create_editor_texture(texture: Texture2D) -> Texture2D:
+	var image: Image = texture.get_image().duplicate()
 	image.adjust_bcs(1.0, 1.0, get_editor_icon_saturation())
 
 	return ImageTexture.create_from_image(image)
@@ -1132,7 +1130,7 @@ func update_outline():
 	for outline_type: OutlineType in outline_type_order:
 		outline_type.add_to_outline.call()
 
-func add_to_outline(items: Array[String], icon: ImageTexture, type: String, modifier: StringName = &""):
+func add_to_outline(items: Array[String], icon: Texture2D, type: String, modifier: StringName = &""):
 	add_to_outline_ext(items, func(str: String): return icon, type, modifier)
 
 func add_to_outline_ext(items: Array[String], icon_callable: Callable, type: String, modifier: StringName = &""):
@@ -1144,7 +1142,7 @@ func add_to_outline_ext(items: Array[String], icon_callable: Callable, type: Str
 
 	for item: String in items:
 		if (text.is_empty() || text.is_subsequence_ofn(item)):
-			var icon: ImageTexture = icon_callable.call(item)
+			var icon: Texture2D = icon_callable.call(item)
 			outline.add_item(item, icon, true)
 
 			var dict: Dictionary = {
@@ -1153,8 +1151,8 @@ func add_to_outline_ext(items: Array[String], icon_callable: Callable, type: Str
 			}
 			outline.set_item_metadata(outline.item_count - 1, dict)
 
-func get_func_icon(func_name: String) -> ImageTexture:
-	var icon: ImageTexture = func_icon
+func get_func_icon(func_name: String) -> Texture2D:
+	var icon: Texture2D = func_icon
 	if (func_name.begins_with(GETTER)):
 		icon = func_get_icon
 	elif (func_name.begins_with(SETTER)):
@@ -1245,6 +1243,10 @@ func is_sorted() -> bool:
 
 func get_editor_settings() -> EditorSettings:
 	return EditorInterface.get_editor_settings()
+
+func load_rel(path: String) -> Variant:
+	var script_path: String = get_script().get_path().get_base_dir()
+	return load(script_path.path_join(path))
 
 static func find_or_null(arr: Array[Node], index: int = 0) -> Node:
 	if (arr.is_empty()):
