@@ -446,7 +446,11 @@ func _get_header_virtual(dict : Dictionary) -> String:
 	else:
 		var _type : int = return_dic["type"]
 		if _type < 1:
-			return_type = "void"
+			var func_name : String = str(dict["name"]).to_lower()
+			if func_name.begins_with("_get") or func_name.ends_with("_get"):
+				return_type = "Variant"
+			else:
+				return_type = "void"
 		else:
 			return_type = _get_type(return_dic["type"])
 
