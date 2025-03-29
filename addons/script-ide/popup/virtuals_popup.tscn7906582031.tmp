@@ -1,0 +1,53 @@
+[gd_scene load_steps=3 format=3 uid="uid://cs744ege7je66"]
+
+[ext_resource type="Texture2D" uid="uid://da47hotbqfln3" path="res://addons/script-ide/popup/virtuals_icon.svg" id="1_knkse"]
+[ext_resource type="Script" uid="uid://dr0ybrl2ogq1s" path="res://addons/script-ide/popup/virtuals_popup.gd" id="1_uwkyc"]
+
+[node name="Virtuals" type="PopupPanel" node_paths=PackedStringArray("tree")]
+size = Vector2i(346, 326)
+visible = true
+script = ExtResource("1_uwkyc")
+tree = NodePath("Container/Tree")
+
+[node name="Container" type="VBoxContainer" parent="."]
+offset_left = 4.0
+offset_top = 4.0
+offset_right = 342.0
+offset_bottom = 322.0
+
+[node name="TittleContainer" type="HBoxContainer" parent="Container"]
+layout_mode = 2
+
+[node name="Icon" type="TextureRect" parent="Container/TittleContainer"]
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 4
+texture = ExtResource("1_knkse")
+expand_mode = 1
+stretch_mode = 4
+
+[node name="Tittle" type="Label" parent="Container/TittleContainer"]
+layout_mode = 2
+size_flags_horizontal = 6
+text = "Select Methods to Override/Implement"
+
+[node name="Tree" type="Tree" parent="Container"]
+custom_minimum_size = Vector2(128, 256)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="FooterContainer" type="HBoxContainer" parent="Container"]
+layout_mode = 2
+
+[node name="OkButton" type="Button" parent="Container/FooterContainer"]
+custom_minimum_size = Vector2(64, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "OK"
+
+[node name="CancelButton" type="Button" parent="Container/FooterContainer"]
+custom_minimum_size = Vector2(64, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Cancel"

@@ -69,7 +69,6 @@ var export_icon: ImageTexture
 var signal_icon: ImageTexture
 var constant_icon: ImageTexture
 var class_icon: ImageTexture
-var vfunc_icon : ImageTexture
 #endregion
 
 #region Editor settings
@@ -118,7 +117,6 @@ var property_btn: Button
 var export_btn: Button
 var func_btn: Button
 var engine_func_btn: Button
-var virtual_func_btn: Button
 #endregion
 
 #region Plugin variables
@@ -140,7 +138,10 @@ const QUICK_OPEN_INTERVAL: int = 400
 var quick_open_tween: Tween
 #endregion
 
-var _virtual_func_comment_update : bool = true
+#region extension_features
+var popup_virtual_functions : RefCounted = null
+var popup_virtual_functions_code : RefCounted = null
+#endregion
 
 #region Plugin Enter / Exit setup
 ## Change the Godot script UI and transform into an IDE like UI
@@ -148,6 +149,7 @@ func _enter_tree() -> void:
 	init_icons()
 	init_settings()
 	init_shortcuts()
+	init_extension_features()
 
 	# Update on filesystem changed (e.g. save operation).
 	var file_system: EditorFileSystem = EditorInterface.get_resource_filesystem()
@@ -227,9 +229,6 @@ func _enter_tree() -> void:
 	constant_btn = create_filter_btn(constant_icon, CONSTANTS)
 	update_outline_button_order()
 
-	virtual_func_btn = create_filter_btn(vfunc_icon, "{0} {1}".format([tr("Virtual"), tr("Functions")]))
-	filter_box.add_child(virtual_func_btn)
-
 	outline.get_parent().add_child(filter_box)
 	outline.get_parent().move_child(filter_box, outline.get_index())
 
@@ -246,6 +245,8 @@ func _enter_tree() -> void:
 
 ## Restore the old Godot script UI and free everything we created
 func _exit_tree() -> void:
+	remove_extension_features()
+
 	var file_system: EditorFileSystem = EditorInterface.get_resource_filesystem()
 	file_system.filesystem_changed.disconnect(schedule_update)
 
@@ -381,7 +382,6 @@ func init_icons():
 	signal_icon = create_editor_texture(load(script_path.path_join("icon/signal.svg")))
 	constant_icon = create_editor_texture(load(script_path.path_join("icon/constant.svg")))
 	class_icon = create_editor_texture(load(script_path.path_join("icon/class.svg")))
-	vfunc_icon = create_editor_texture(load(script_path.path_join("icon/vfunc.svg")))
 
 ## Initializes all settings.
 ## Every setting can be changed while this plugin is active, which will override them.
@@ -440,6 +440,31 @@ func init_outline_order():
 	outline_type_order.append(outline_type)
 
 	update_outline_order()
+
+##Enter tree init features.
+func init_extension_features() -> void:
+	#region popup_virtual_functions
+	if popup_virtual_functions == null:
+		var lazy_load : EditorContextMenuPlugin = ResourceLoader.load("res://addons/script-ide/popup/virtuals_popup_context.gd").new()
+		popup_virtual_functions = lazy_load
+		add_context_menu_plugin(EditorContextMenuPlugin.CONTEXT_SLOT_SCRIPT_EDITOR, lazy_load)
+	if popup_virtual_functions_code == null:
+		var lazy_load : EditorContextMenuPlugin = ResourceLoader.load("res://addons/script-ide/popup/virtuals_popup_context.gd").new()
+		popup_virtual_functions_code = lazy_load
+		add_context_menu_plugin(EditorContextMenuPlugin.CONTEXT_SLOT_SCRIPT_EDITOR_CODE, lazy_load)
+	#endregion
+
+##Exit tree remove features.
+func remove_extension_features() -> void:
+	#region popup_virtual_functions
+	if is_instance_valid(popup_virtual_functions):
+		remove_context_menu_plugin(popup_virtual_functions)
+		popup_virtual_functions = null
+	if is_instance_valid(popup_virtual_functions_code):
+		remove_context_menu_plugin(popup_virtual_functions_code)
+		popup_virtual_functions_code = null
+	#region endregion
+
 
 func update_outline_button_order():
 	var all_buttons: Array[Button] = [engine_func_btn, func_btn, signal_btn, export_btn, property_btn, class_btn, constant_btn]
@@ -547,8 +572,6 @@ func update_editor():
 
 		sync_tab_with_script_list()
 		sync_script_list = false
-
-		_virtual_func_comment_update = true
 
 	update_tabs()
 	update_outline_cache()
@@ -790,89 +813,6 @@ func scroll_outline(selected_idx: int):
 
 		index += 1
 
-	if text in outline_cache.virtual_funcs:
-		#Cook virtual
-		for m : Dictionary in script.get_script_method_list():
-			var _name : String = m["name"]
-			if _name == text:
-				var script_editor: ScriptEditor = EditorInterface.get_script_editor()
-				var edit : CodeEdit = script_editor.get_current_editor().get_base_editor()
-				if "func {0}".format([text]) in edit.text:break
-
-				var params : String = ""
-				var args : Array = m["args"]
-				var default_args : Array = m["default_args"]
-				var separator : String = ""
-				var _default_index : int = default_args.size()
-
-				for y : int in range(args.size() - 1, -1, -1):
-					var arg : Dictionary = args[y]
-					var txt : String = arg["name"]
-					if !(arg["class_name"]).is_empty():
-						txt += str(" : ", arg["class_name"] as String)
-					else:
-						var _typeof : int = arg["type"]
-						txt += str(" : ", _get_type(_typeof))
-					if _default_index > 0:
-						_default_index -= 1
-						var def : Variant = default_args[_default_index]
-						var _type : int = typeof(def)
-						if def == null or _type < 1:
-							txt += str(' = null')
-						elif _type < 5:
-							if def is String:
-								txt += str(' = "', def, '"')
-							elif def is StringName:
-								txt += str(' = &"', def, '"')
-							else:
-								txt += str(" = ", def)
-						else:
-							txt += str(" = ",_get_type(typeof(def)), def)
-					params = str(txt, separator, params)
-					separator = ", "
-
-				var return_dic : Dictionary = m["return"]
-				var return_type : String = "void"
-				var return_value : String = "pass"
-				if !return_dic["class_name"].is_empty():
-					return_type = (return_dic["class_name"] as String)
-					return_value = "return null"
-				else:
-					var _type : int = return_dic["type"]
-					if _type < 1:
-						return_type = "void"
-					else:
-						return_type = _get_type(return_dic["type"])
-						if _type == TYPE_INT:
-							return_value = "return 0"
-						elif _type == TYPE_BOOL:
-							return_value = "return false"
-						elif _type == TYPE_FLOAT:
-							return_value = "return 0.0"
-						elif _type == TYPE_STRING:
-							return_value = 'return ""'
-						elif _type == TYPE_ARRAY:
-							return_value = "return []"
-						else:
-							return_value = str("return ", return_type,"()")
-
-				params = "func {0}({1}) -> {2}:\n\t#TODO: code here :)\n\t{3}".format([text, params, return_type, return_value])
-
-				var comment : String = str('\n#Override virtual function')
-				
-				if _virtual_func_comment_update:
-					_virtual_func_comment_update = false
-					var script_name : String = (get_script() as Script).resource_path.get_base_dir().get_file()
-					print('[',script_name, '] Created virtual function "', text , '" >> (save for update ', script_name ,' panel)')
-				else:
-					var script_name : String = (get_script() as Script).resource_path.get_base_dir().get_file()
-					print('[',script_name, '] Created virtual function "', text , '"')
-
-				if edit.text.ends_with("\n"):edit.text += str(comment,"\n", params)
-				else:edit.text += str("\n", comment,"\n", params)
-				goto_line(edit.get_line_count() - 1)
-				break
-		return
 	push_error(type_with_text + " or " + modifier + " not found in source code")
 
 func goto_line(index: int):
@@ -1146,25 +1086,14 @@ func update_outline_cache():
 	outline_cache = OutlineCache.new()
 
 	# Collect all script members.
-	for_each_script_member(script, func(array: Array[String], item: String):
-		#if !item in array:
-		array.append(item)
-		)
+	for_each_script_member(script, func(array: Array[String], item: String): array.append(item))
 
 	# Remove script members that only exist in the base script (which includes the base of the base etc.).
 	# Note: The method that only collects script members without including the base script(s)
 	# is not exposed to GDScript.
 	var base_script: Script = script.get_base_script()
 	if (base_script != null):
-		for_each_script_member(base_script, func(array: Array[String], item: String):
-				if item in array:
-					array.erase(item)
-					if outline_cache.funcs == array:
-						if !(item in array):
-							if item.begins_with(UNDERSCORE):
-								if !outline_cache.virtual_funcs.has(item):
-									outline_cache.virtual_funcs.append(item)
-								)
+		for_each_script_member(base_script, func(array: Array[String], item: String): array.erase(item))
 
 func for_each_script_member(script: Script, consumer: Callable):
 	# Functions / Methods
@@ -1181,6 +1110,7 @@ func for_each_script_member(script: Script, consumer: Callable):
 			# Since we already show the variable itself, we will skip those.
 			if (func_name.begins_with(INLINE)):
 				continue
+
 			consumer.call(outline_cache.funcs, func_name)
 
 	# Properties / Exported variables
@@ -1234,10 +1164,6 @@ func update_outline():
 
 	for outline_type: OutlineType in outline_type_order:
 		outline_type.add_to_outline.call()
-
-	# Virtual functions
-	if (virtual_func_btn.button_pressed):
-		add_to_outline(outline_cache.virtual_funcs, vfunc_icon, &"virtual_funcs")
 
 func add_to_outline(items: Array[String], icon: ImageTexture, type: String, modifier: StringName = &""):
 	add_to_outline_ext(items, func(str: String): return icon, type, modifier)
@@ -1371,7 +1297,6 @@ class OutlineCache:
 	var properties: Array[String] = []
 	var funcs: Array[String] = []
 	var engine_funcs: Array[String] = []
-	var virtual_funcs: Array[String] = []
 
 ## Outline type for a concrete button with their items in the Outline.
 class OutlineType:
@@ -1407,48 +1332,3 @@ class TabStateCache:
 			tab_bar.drag_to_rearrange_enabled = drag_to_rearrange_enabled
 			tab_bar.tab_close_display_policy = tab_close_display_policy
 			tab_bar.select_with_rmb = select_with_rmb
-
-func _get_type(_typeof : int) -> String:
-	var txt : String = ""
-	match _typeof:
-		TYPE_BOOL : txt += "bool"
-		TYPE_INT : txt += "int"
-		TYPE_FLOAT: txt += "float"
-		TYPE_STRING : txt += "String"
-		TYPE_VECTOR2 : txt += "Vector2"
-		TYPE_VECTOR2I : txt += "Vector2i"
-		TYPE_RECT2 : txt += "Rect2"
-		TYPE_RECT2I : txt += "Rect2i"
-		TYPE_VECTOR3 : txt += "Vector3"
-		TYPE_VECTOR3I : txt += "Vector3i"
-		TYPE_TRANSFORM2D : txt += "Tranform2D"
-		TYPE_VECTOR4 : txt += "Vector4"
-		TYPE_VECTOR4I : txt += "Vector4i"
-		TYPE_PLANE : txt += "Plane"
-		TYPE_QUATERNION : txt += "Quaternion"
-		TYPE_AABB : txt += "AABB"
-		TYPE_BASIS : txt += "Basis"
-		TYPE_TRANSFORM3D : txt += "Transform3D"
-		TYPE_PROJECTION : txt += "Projection"
-		TYPE_COLOR : txt += "Color"
-		TYPE_STRING_NAME : txt += "StringName"
-		TYPE_NODE_PATH : txt += "NodePath"
-		TYPE_RID : txt += "RID"
-		TYPE_OBJECT : txt += "Object"
-		TYPE_CALLABLE : txt += "Callable"
-		TYPE_SIGNAL : txt += "Signal"
-		TYPE_DICTIONARY : txt += "Dictionary"
-		TYPE_ARRAY : txt += "Array"
-		TYPE_PACKED_BYTE_ARRAY : txt += "PackedByteArray"
-		TYPE_PACKED_INT32_ARRAY : txt += "PackedInt32Array"
-		TYPE_PACKED_INT64_ARRAY : txt += "PackedInt64Array"
-		TYPE_PACKED_FLOAT32_ARRAY : txt += "PackedFloat32Array"
-		TYPE_PACKED_FLOAT64_ARRAY : txt += "PackedFloat64Array"
-		TYPE_PACKED_STRING_ARRAY : txt += "PackedStringArray"
-		TYPE_PACKED_VECTOR2_ARRAY : txt += "PackedVector2Array"
-		TYPE_PACKED_VECTOR3_ARRAY : txt += "PackedVector3Array"
-		TYPE_PACKED_COLOR_ARRAY : txt += "PackedColorArray"
-		TYPE_PACKED_VECTOR4_ARRAY : txt += "PackedVector4Array"
-		_:
-			txt += "Variant"
-	return txt
