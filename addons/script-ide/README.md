@@ -30,12 +30,14 @@ Features:
 Customization:
 - The Outline is on the right side (can be changed to be on the left side again)
 - The Outline can be toggled via `File -> Toggle Scripts Panel`. This will hide or show it
+- The order in the Outline can be changed
 - There is also the possibility to hide private members, this is all members starting with a `_`
 - The Script ItemList is not visible by default, but can be made visible again
 
 All settings can be changed in the `Editor Settings` under `Plugin` -> `Script Ide`:
 - `Open Outline Popup` = Shortcut to control how the Outline Popup should be triggered (default=CTRL+O or META+O)
 - `Outline Position Right` = Flag to control whether the outline should be on the right or on the left side of the script editor (default=true)
+- `Outline Order` = List which specifies the order of all different types in the Outline
 - `Hide Private Members` = Flag to control whether private members (methods/variables/constants starting with '_') should be hidden in the Outline or not (default=false)
 - `Open Script Popup` = Shortcut to control how the Script Popup should be triggered (default=CTRL+U or META+U)
 - `Script List Visible` = Flag to control whether the script list should still be visible or not (above the outline) (default=false)
