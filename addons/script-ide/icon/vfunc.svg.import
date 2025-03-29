@@ -1,0 +1,14 @@
+[remap]
+
+importer="image"
+type="Image"
+uid="uid://erkkdsn4ghxc"
+path="res://.godot/imported/vfunc.svg-f306a8f8f5a45d73c9da8ad7dafd7aaa.image"
+
+[deps]
+
+source_file="res://addons/script-ide/icon/vfunc.svg"
+dest_files=["res://.godot/imported/vfunc.svg-f306a8f8f5a45d73c9da8ad7dafd7aaa.image"]
+
+[params]
+
