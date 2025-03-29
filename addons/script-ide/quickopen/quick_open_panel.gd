@@ -48,9 +48,6 @@ func _shortcut_input(event: InputEvent) -> void:
 	if (!event.is_pressed() || event.is_echo()):
 		return
 
-	if (plugin == null):
-		return
-
 	if (plugin.tab_cycle_forward_shc.matches_event(event)):
 		get_viewport().set_input_as_handled()
 

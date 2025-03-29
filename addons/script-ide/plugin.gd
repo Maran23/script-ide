@@ -45,6 +45,8 @@ const OPEN_OUTLINE_POPUP: StringName = SCRIPT_IDE + &"open_outline_popup"
 const OPEN_SCRIPTS_POPUP: StringName = SCRIPT_IDE + &"open_scripts_popup"
 ## Editor setting for the 'Open Scripts Popup' shortcut
 const OPEN_QUICK_SEARCH_POPUP: StringName = SCRIPT_IDE + &"open_quick_search_popup"
+## Editor setting for the 'Open Override Popup' shortcut
+const OPEN_OVERRIDE_POPUP: StringName = SCRIPT_IDE + &"open_override_popup"
 ## Editor setting for the 'Tab cycle forward' shortcut
 const TAB_CYCLE_FORWARD: StringName = SCRIPT_IDE + &"tab_cycle_forward"
 ## Editor setting for the 'Tab cycle backward' shortcut
@@ -83,6 +85,7 @@ var outline_order: PackedStringArray
 var open_outline_popup_shc: Shortcut
 var open_scripts_popup_shc: Shortcut
 var open_quick_search_popup_shc: Shortcut
+var open_override_popup_shc: Shortcut
 var tab_cycle_forward_shc: Shortcut
 var tab_cycle_backward_shc: Shortcut
 #endregion
@@ -109,6 +112,7 @@ var filter_box: HBoxContainer
 
 var scripts_popup: PopupPanel
 var quick_open_popup: PopupPanel
+var override_popup: PopupPanel
 
 var class_btn: Button
 var constant_btn: Button
@@ -297,9 +301,10 @@ func _exit_tree() -> void:
 
 	if (outline_popup != null):
 		outline_popup.free()
-
 	if (quick_open_popup != null):
 		quick_open_popup.free()
+	if (override_popup != null):
+		override_popup.free()
 
 	get_editor_settings().settings_changed.disconnect(sync_settings)
 #endregion
@@ -335,6 +340,9 @@ func _shortcut_input(event: InputEvent) -> void:
 			quick_open_tween = create_tween()
 			quick_open_tween.tween_interval(QUICK_OPEN_INTERVAL / 1000.0)
 			quick_open_tween.tween_callback(func(): quick_open_tween = null)
+	elif (open_override_popup_shc.matches_event(event)):
+		get_viewport().set_input_as_handled()
+		open_override_popup()
 	elif (EditorInterface.get_script_editor().is_visible_in_tree()):
 		if (tab_cycle_forward_shc.matches_event(event)):
 			get_viewport().set_input_as_handled()
@@ -494,6 +502,16 @@ func init_shortcuts():
 		shortcut.events = [ event ]
 		editor_settings.set_setting(OPEN_QUICK_SEARCH_POPUP, shortcut)
 
+	if (!editor_settings.has_setting(OPEN_OVERRIDE_POPUP)):
+		var shortcut: Shortcut = Shortcut.new()
+		var event: InputEventKey = InputEventKey.new()
+		event.device = -1
+		event.keycode = KEY_INSERT
+		event.alt_pressed = true
+
+		shortcut.events = [ event ]
+		editor_settings.set_setting(OPEN_OVERRIDE_POPUP, shortcut)
+
 	if (!editor_settings.has_setting(TAB_CYCLE_FORWARD)):
 		var shortcut: Shortcut = Shortcut.new()
 		var event: InputEventKey = InputEventKey.new()
@@ -518,6 +536,7 @@ func init_shortcuts():
 	open_outline_popup_shc = editor_settings.get_setting(OPEN_OUTLINE_POPUP)
 	open_scripts_popup_shc = editor_settings.get_setting(OPEN_SCRIPTS_POPUP)
 	open_quick_search_popup_shc = editor_settings.get_setting(OPEN_QUICK_SEARCH_POPUP)
+	open_override_popup_shc = editor_settings.get_setting(OPEN_OVERRIDE_POPUP)
 	tab_cycle_forward_shc = editor_settings.get_setting(TAB_CYCLE_FORWARD)
 	tab_cycle_backward_shc = editor_settings.get_setting(TAB_CYCLE_BACKWARD)
 #endregion
@@ -555,6 +574,19 @@ func open_quick_search_popup():
 	if (quick_open_popup.get_parent() != null):
 		quick_open_popup.get_parent().remove_child(quick_open_popup)
 	quick_open_popup.popup_exclusive_on_parent(EditorInterface.get_script_editor(), get_center_editor_rect())
+
+func open_override_popup():
+	var script: Script = get_current_script()
+	if (!script):
+		return
+
+	if (override_popup == null):
+		override_popup = load_rel("override/override_panel.tscn").instantiate()
+		override_popup.plugin = self
+
+	if (override_popup.get_parent() != null):
+		override_popup.get_parent().remove_child(override_popup)
+	override_popup.popup_exclusive_on_parent(EditorInterface.get_script_editor(), get_center_editor_rect())
 
 func hide_scripts_popup():
 	if (scripts_popup != null && scripts_popup.visible):
@@ -935,6 +967,8 @@ func sync_settings():
 			open_outline_popup_shc = get_shortcut(OPEN_OUTLINE_POPUP)
 		elif (setting == OPEN_SCRIPTS_POPUP):
 			open_scripts_popup_shc = get_shortcut(OPEN_SCRIPTS_POPUP)
+		elif (setting == OPEN_OVERRIDE_POPUP):
+			open_override_popup_shc = get_shortcut(OPEN_OVERRIDE_POPUP)
 		elif (setting == TAB_CYCLE_FORWARD):
 			tab_cycle_forward_shc = get_shortcut(TAB_CYCLE_FORWARD)
 		elif (setting == TAB_CYCLE_BACKWARD):
@@ -1033,8 +1067,8 @@ func update_keywords(script: Script):
 
 func register_virtual_methods(clazz: String):
 	for method: Dictionary in ClassDB.class_get_method_list(clazz):
-		if method.flags & METHOD_FLAG_VIRTUAL > 0:
-			keywords[method.name] = 0
+		if (method[&"flags"] & METHOD_FLAG_VIRTUAL > 0):
+			keywords[method[&"name"]] = 0
 
 func update_outline_cache():
 	outline_cache = null
