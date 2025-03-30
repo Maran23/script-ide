@@ -9,6 +9,13 @@ var ICON : Texture = null:
 				ICON = ImageTexture.create_from_image(image)
 		return ICON
 
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE:
+		var root : Node = Engine.get_main_loop().root
+		var virtual_popup : Popup = root.get_node_or_null("_VPOPUP_")
+		if is_instance_valid(virtual_popup) and !virtual_popup.is_queued_for_deletion():
+			virtual_popup.queue_free()
+
 func callback(input : Object) -> void:
 	var input_script : Script = null
 
