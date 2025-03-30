@@ -192,23 +192,8 @@ func make_tree(input_script : Script, filter_type : FILTER_TYPE = FILTER_TYPE.RE
 ## Generate tree data, @output Array(base class data, total bases inherited class])
 func generate_data(script : Script) -> Array:
 	var data_base : Dictionary = {}
-	var funcs : Dictionary = {}
-	#var data : Dictionary =  {
-		#"name" : _get_name(script)
-		#,"funcs" : funcs
-		#,"native" : false
-	#}
-
-	#Get data functions
 	var base_count : int = _generate_native(script.get_instance_base_type(), data_base, _generate(script.get_base_script(), data_base))
-
-	#Get Implemented functions
-	for dict: Dictionary in script.get_script_method_list():
-		var func_name: String = dict[&"name"]
-		if func_name.begins_with(CHAR_VIRTUAL_FUNCTION) and !func_name.begins_with(CHAR_PRIVATE_FUNCTION):
-			funcs[func_name] = func_name
-
-	return [data_base, base_count] #[data, data_base, base_count]
+	return [data_base, base_count]
 
 #region init
 func _ready() -> void:
@@ -310,7 +295,7 @@ func _on_accept_button(input_script : Script) -> void:
 func _on_cancel_button() -> void:
 	hide()
 
-func _on_tree_multi_selected(item: TreeItem, column: int, selected: bool) -> void:
+func _on_tree_multi_selected(_item: TreeItem, _column: int, _selected: bool) -> void:
 	_update_gui()
 #endregion
 
