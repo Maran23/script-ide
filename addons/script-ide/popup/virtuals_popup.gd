@@ -299,9 +299,9 @@ func _on_accept_button(input_script : Script) -> void:
 		item = tree.get_next_selected(item)
 
 	if ClassDB.class_exists(type_base):
-		__iterate_metada(input_script, funcs, ClassDB.class_get_method_list(type_base), __iterate_metada(input_script, funcs, input_script.get_method_list(), 0))
+		__iterate_metada(input_script, funcs, ClassDB.class_get_method_list(type_base), __iterate_metada(input_script, funcs, input_script.get_script_method_list(), 0))
 	else:
-		__iterate_metada(input_script, funcs, input_script.get_method_list(), 0)
+		__iterate_metada(input_script, funcs, input_script.get_script_method_list(), 0)
 	hide()
 
 func _on_cancel_button() -> void:
