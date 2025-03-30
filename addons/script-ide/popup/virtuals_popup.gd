@@ -291,13 +291,17 @@ func __iterate_metada(input_script : Script, funcs : PackedStringArray, metadata
 func _on_accept_button(input_script : Script) -> void:
 	var item : TreeItem = tree.get_selected()
 	var funcs : PackedStringArray = []
+	var type_base : StringName = input_script.get_instance_base_type()
 
 	while item != null:
 		var fname : String = item.get_text(0)
 		funcs.append(fname)
 		item = tree.get_next_selected(item)
 
-	__iterate_metada(input_script, funcs, ClassDB.class_get_method_list(input_script.get_instance_base_type()), __iterate_metada(input_script, funcs, input_script.get_method_list(), 0))
+	if ClassDB.class_exists(type_base):
+		__iterate_metada(input_script, funcs, ClassDB.class_get_method_list(type_base), __iterate_metada(input_script, funcs, input_script.get_method_list(), 0))
+	else:
+		__iterate_metada(input_script, funcs, input_script.get_method_list(), 0)
 	hide()
 
 func _on_cancel_button() -> void:
