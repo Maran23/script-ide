@@ -272,24 +272,32 @@ func _goto_line(script_editor : ScriptEditor, index : int):
 
 	code_edit.grab_focus()
 
+func __iterate_metada(input_script : Script, funcs : PackedStringArray, metadata : Array[Dictionary], totals : int = 0) -> int:
+	if totals < funcs.size():
+		for _func : String in funcs:
+			for meta : Dictionary in metadata:
+				if meta.name == _func:
+					if _write_lines(input_script, _get_full_header_virtual(meta)):
+						print('[PLUGIN] Created virtual function "', _func , '"')
+					else:
+						if Engine.is_editor_hint():
+							print('[PLUGIN] Error on create virtual function "', _func , '"')
+					totals += 1
+					if totals == funcs.size():
+						break
+	return totals
+
 #region UI_CALLBACK
 func _on_accept_button(input_script : Script) -> void:
 	var item : TreeItem = tree.get_selected()
-	var data : Array[Dictionary] = input_script.get_method_list()
 	var funcs : PackedStringArray = []
 
 	while item != null:
 		var fname : String = item.get_text(0)
 		funcs.append(fname)
 		item = tree.get_next_selected(item)
-	for _func : String in funcs:
-		for meta : Dictionary in data:
-			if meta.name == _func:
-				if _write_lines(input_script, _get_full_header_virtual(meta)):
-					print('[PLUGIN] Created virtual function "', _func , '"')
-				else:
-					if Engine.is_editor_hint():
-						print('[PLUGIN] Error on create virtual function "', _func , '"')
+
+	__iterate_metada(input_script, funcs, ClassDB.class_get_method_list(input_script.get_instance_base_type()), __iterate_metada(input_script, funcs, input_script.get_method_list(), 0))
 	hide()
 
 func _on_cancel_button() -> void:
