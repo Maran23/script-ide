@@ -407,7 +407,7 @@ func init_outline_order():
 
 	outline_type = OutlineType.new()
 	outline_type.type_name = EXPORTED
-	outline_type.add_to_outline = func(): add_to_outline_if_selected(signal_btn,
+	outline_type.add_to_outline = func(): add_to_outline_if_selected(export_btn,
 		func(): add_to_outline(outline_cache.exports, export_icon, &"var", &"@export"))
 	outline_type_order.append(outline_type)
 
@@ -418,15 +418,15 @@ func init_outline_order():
 	outline_type_order.append(outline_type)
 
 	outline_type = OutlineType.new()
-	outline_type.type_name = CONSTANTS
-	outline_type.add_to_outline = func(): add_to_outline_if_selected(constant_btn,
-		func(): add_to_outline(outline_cache.constants, constant_icon, &"const", &"enum"))
-	outline_type_order.append(outline_type)
-
-	outline_type = OutlineType.new()
 	outline_type.type_name = CLASSES
 	outline_type.add_to_outline = func(): add_to_outline_if_selected(class_btn,
 		func(): add_to_outline(outline_cache.classes, class_icon, &"class"))
+	outline_type_order.append(outline_type)
+
+	outline_type = OutlineType.new()
+	outline_type.type_name = CONSTANTS
+	outline_type.add_to_outline = func(): add_to_outline_if_selected(constant_btn,
+		func(): add_to_outline(outline_cache.constants, constant_icon, &"const", &"enum"))
 	outline_type_order.append(outline_type)
 
 	update_outline_order()
