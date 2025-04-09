@@ -138,12 +138,18 @@ const QUICK_OPEN_INTERVAL: int = 400
 var quick_open_tween: Tween
 #endregion
 
+#region extension_features
+var popup_virtual_functions : RefCounted = null
+var popup_virtual_functions_code : RefCounted = null
+#endregion
+
 #region Plugin Enter / Exit setup
 ## Change the Godot script UI and transform into an IDE like UI
 func _enter_tree() -> void:
 	init_icons()
 	init_settings()
 	init_shortcuts()
+	init_extension_features()
 
 	# Update on filesystem changed (e.g. save operation).
 	var file_system: EditorFileSystem = EditorInterface.get_resource_filesystem()
@@ -239,6 +245,8 @@ func _enter_tree() -> void:
 
 ## Restore the old Godot script UI and free everything we created
 func _exit_tree() -> void:
+	remove_extension_features()
+
 	var file_system: EditorFileSystem = EditorInterface.get_resource_filesystem()
 	file_system.filesystem_changed.disconnect(schedule_update)
 
@@ -430,6 +438,31 @@ func init_outline_order():
 	outline_type_order.append(outline_type)
 
 	update_outline_order()
+
+##Enter tree init features.
+func init_extension_features() -> void:
+	#region popup_virtual_functions
+	if popup_virtual_functions == null:
+		var lazy_load : EditorContextMenuPlugin = ResourceLoader.load("res://addons/script-ide/popup/virtuals_popup_context.gd").new()
+		popup_virtual_functions = lazy_load
+		add_context_menu_plugin(EditorContextMenuPlugin.CONTEXT_SLOT_SCRIPT_EDITOR, lazy_load)
+	if popup_virtual_functions_code == null:
+		var lazy_load : EditorContextMenuPlugin = ResourceLoader.load("res://addons/script-ide/popup/virtuals_popup_context.gd").new()
+		popup_virtual_functions_code = lazy_load
+		add_context_menu_plugin(EditorContextMenuPlugin.CONTEXT_SLOT_SCRIPT_EDITOR_CODE, lazy_load)
+	#endregion
+
+##Exit tree remove features.
+func remove_extension_features() -> void:
+	#region popup_virtual_functions
+	if is_instance_valid(popup_virtual_functions):
+		remove_context_menu_plugin(popup_virtual_functions)
+		popup_virtual_functions = null
+	if is_instance_valid(popup_virtual_functions_code):
+		remove_context_menu_plugin(popup_virtual_functions_code)
+		popup_virtual_functions_code = null
+	#region endregion
+
 
 func update_outline_button_order():
 	var all_buttons: Array[Button] = [engine_func_btn, func_btn, signal_btn, export_btn, property_btn, class_btn, constant_btn]
