@@ -533,6 +533,7 @@ func update_editor():
 	if (sync_script_list):
 		if (file_to_navigate != &""):
 			EditorInterface.get_file_system_dock().navigate_to_path(file_to_navigate)
+			EditorInterface.get_script_editor().get_current_editor().get_base_editor().grab_focus()
 			file_to_navigate = &""
 
 		sync_tab_with_script_list()
