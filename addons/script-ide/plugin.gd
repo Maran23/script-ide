@@ -20,6 +20,9 @@ const INLINE: StringName = &"@"
 
 const BUILT_IN_SCRIPT: StringName = &"::GDScript"
 
+const CustomTabBar := preload("tabbar/custom_tab_bar.gd")
+const CustomTabContainer := preload("tabbar/custom_tab_container.gd")
+
 #region Settings and Shortcuts
 ## Editor setting path
 const SCRIPT_IDE: StringName = &"plugin/script_ide/"
@@ -38,6 +41,8 @@ const SCRIPT_LIST_VISIBLE: StringName = SCRIPT_IDE + &"script_list_visible"
 const SCRIPT_TABS_VISIBLE: StringName = SCRIPT_IDE + &"script_tabs_visible"
 ## Editor setting to control where the script tabs should be.
 const SCRIPT_TAB_POSITION_TOP: StringName = SCRIPT_IDE + &"script_tab_position_top"
+## Editor setting to control multiline tabs.
+const SCRIPT_MULTILINE_TABS: StringName = SCRIPT_IDE + &"script_multiline_tabs"
 
 ## Editor setting for the 'Open Outline Popup' shortcut
 const OPEN_OUTLINE_POPUP: StringName = SCRIPT_IDE + &"open_outline_popup"
@@ -78,6 +83,7 @@ var hide_private_members: bool = false
 var is_auto_navigate_in_fs: bool = true
 var is_script_tabs_visible: bool = true
 var is_script_tabs_top: bool = true
+var is_script_multiline_tabs: bool = false
 var outline_order: PackedStringArray
 
 var open_outline_popup_shc: Shortcut
@@ -95,6 +101,8 @@ var scripts_tab_bar: TabBar
 var script_filter_txt: LineEdit
 var scripts_item_list: ItemList
 var panel_container: VSplitContainer
+var custom_tab_bar: CustomTabBar
+var custom_tab_container: CustomTabContainer
 
 var split_container: HSplitContainer
 var old_outline: ItemList
@@ -167,6 +175,18 @@ func _enter_tree() -> void:
 	# Make tab container visible.
 	scripts_tab_container = find_or_null(script_editor.find_children("*", "TabContainer", true, false))
 	scripts_tab_bar = scripts_tab_container.get_tab_bar()
+	scripts_tab_bar.visible = false
+
+	custom_tab_container = CustomTabContainer.new()
+	custom_tab_container.scripts_tab_container = scripts_tab_container
+	custom_tab_container.scripts_item_list = scripts_item_list
+	scripts_tab_container.get_parent().add_theme_constant_override(&"separation", 0)
+	scripts_tab_container.get_parent().add_child(custom_tab_container)
+	scripts_tab_container.get_parent().move_child(custom_tab_container, 0)
+	custom_tab_bar = custom_tab_container.custom_tab_bar
+	custom_tab_container.visible = is_script_tabs_visible and is_script_multiline_tabs
+
+	scripts_tab_container.tabs_visible = false
 
 	# Save old tab state to restore later.
 	tab_state = TabStateCache.new()
@@ -176,7 +196,7 @@ func _enter_tree() -> void:
 	create_set_scripts_popup()
 
 	# Configure tab container and bar.
-	scripts_tab_container.tabs_visible = is_script_tabs_visible
+	scripts_tab_container.tabs_visible = is_script_tabs_visible and not is_script_multiline_tabs
 	scripts_tab_container.drag_to_rearrange_enabled = true
 	scripts_tab_container.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	update_tabs_position()
@@ -275,6 +295,9 @@ func _exit_tree() -> void:
 
 		scripts_tab_container.pre_popup_pressed.disconnect(prepare_scripts_popup)
 		scripts_tab_container.set_popup(null)
+		scripts_tab_container.get_parent().remove_child(custom_tab_container)
+		custom_tab_container.set_popup(null)
+		custom_tab_container.free()
 		scripts_popup.free()
 
 		if (scripts_tab_bar != null):
@@ -381,6 +404,7 @@ func init_settings():
 	is_script_list_visible = get_setting(SCRIPT_LIST_VISIBLE, is_script_list_visible)
 	is_auto_navigate_in_fs = get_setting(AUTO_NAVIGATE_IN_FS, is_auto_navigate_in_fs)
 	is_script_tabs_visible = get_setting(SCRIPT_TABS_VISIBLE, is_script_tabs_visible)
+	is_script_multiline_tabs = get_setting(SCRIPT_MULTILINE_TABS, is_script_multiline_tabs)
 	is_script_tabs_top = get_setting(SCRIPT_TAB_POSITION_TOP, is_script_tabs_top)
 
 	init_outline_order()
@@ -572,6 +596,9 @@ func create_set_scripts_popup():
 
 	scripts_tab_container.pre_popup_pressed.connect(prepare_scripts_popup)
 	scripts_tab_container.set_popup(scripts_popup)
+
+	custom_tab_container.pre_popup_pressed.connect(prepare_scripts_popup)
+	custom_tab_container.set_popup(scripts_popup)
 
 func prepare_scripts_popup():
 	scripts_popup.size.x = outline.size.x
@@ -922,13 +949,21 @@ func sync_settings():
 			if (new_script_tabs_visible != is_script_tabs_visible):
 				is_script_tabs_visible = new_script_tabs_visible
 
-				scripts_tab_container.tabs_visible = is_script_tabs_visible
+				scripts_tab_container.tabs_visible = is_script_tabs_visible and not is_script_multiline_tabs
+				custom_tab_container.visible = is_script_tabs_visible and is_script_multiline_tabs
 		elif (setting == SCRIPT_TAB_POSITION_TOP):
 			var new_script_tabs_top: bool = get_setting(SCRIPT_TAB_POSITION_TOP, is_script_tabs_top)
 			if (new_script_tabs_top != is_script_tabs_top):
 				is_script_tabs_top = new_script_tabs_top
 
 				update_tabs_position()
+		elif (setting == SCRIPT_MULTILINE_TABS):
+			var new_script_multiline_tabs: bool = get_setting(SCRIPT_MULTILINE_TABS, is_script_multiline_tabs)
+			if (new_script_multiline_tabs != is_script_multiline_tabs):
+				is_script_multiline_tabs = new_script_multiline_tabs
+
+				scripts_tab_container.tabs_visible = is_script_tabs_visible and not is_script_multiline_tabs
+				custom_tab_container.visible = is_script_tabs_visible and is_script_multiline_tabs
 		elif (setting == AUTO_NAVIGATE_IN_FS):
 			is_auto_navigate_in_fs = get_setting(AUTO_NAVIGATE_IN_FS, is_auto_navigate_in_fs)
 		elif (setting == OPEN_OUTLINE_POPUP):
@@ -966,7 +1001,7 @@ func get_shortcut(property: StringName) -> Shortcut:
 	return get_editor_settings().get_setting(property)
 
 func on_tab_changed(index: int):
-	selected_tab = index;
+	selected_tab = index
 
 	if (old_script_editor_base != null):
 		old_script_editor_base.edited_script_changed.disconnect(update_selected_tab)
@@ -1302,3 +1337,21 @@ class TabStateCache:
 			tab_bar.drag_to_rearrange_enabled = drag_to_rearrange_enabled
 			tab_bar.tab_close_display_policy = tab_close_display_policy
 			tab_bar.select_with_rmb = select_with_rmb
+
+
+func _get_window_layout(configuration: ConfigFile) -> void:
+	var tabs: Array
+	for tab in custom_tab_bar.get_children():
+		if tab.pinned:
+			tabs.append(tab.get_tab_path())
+	configuration.set_value("script-ide", "pinned_tabs", tabs)
+
+
+func _set_window_layout(configuration: ConfigFile) -> void:
+	var tabs: Array = configuration.get_value("script-ide", "pinned_tabs", [])
+	custom_tab_container.synced.connect(_update_pinned_tabs.bind(tabs), CONNECT_ONE_SHOT)
+
+
+func _update_pinned_tabs(pinned_tabs: Array) -> void:
+	for tab in pinned_tabs:
+		custom_tab_bar.pin_tab(tab)
