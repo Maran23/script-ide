@@ -125,15 +125,10 @@ tab_3/icon = SubResource("ImageTexture_grjtr")
 tab_4/title = "Other"
 tab_4/icon = SubResource("ImageTexture_xupch")
 
-[node name="SearchOptionBtn" type="OptionButton" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="IncludeAddonsCheckbox" type="CheckBox" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
-selected = 0
-item_count = 2
-popup/item_0/text = "Project"
-popup/item_0/id = 0
-popup/item_1/text = "Project+Addons"
-popup/item_1/id = 1
+text = "Include Addons"
 
 [node name="FilterTxt" type="LineEdit" parent="PanelContainer/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
