@@ -11,7 +11,7 @@ const STRUCTURE_END: StringName = &")"
 
 #region UI
 @onready var filter_bar: TabBar = %FilterBar
-@onready var search_option_btn: OptionButton = %SearchOptionBtn
+@onready var include_addons_check: CheckBox = %IncludeAddonsCheckbox
 @onready var filter_txt: LineEdit = %FilterTxt
 @onready var files_list: ItemList = %FilesList
 #endregion
@@ -31,7 +31,7 @@ var is_rebuild_cache: bool = true
 #region Plugin and Shortcut processing
 func _ready() -> void:
 	files_list.item_selected.connect(open_file)
-	search_option_btn.item_selected.connect(rebuild_cache_and_ui.unbind(1))
+	include_addons_check.toggled.connect(rebuild_cache_and_ui.unbind(1))
 	filter_txt.text_changed.connect(fill_files_list.unbind(1))
 
 	filter_bar.tab_changed.connect(change_fill_files_list.unbind(1))
@@ -83,10 +83,6 @@ func schedule_rebuild():
 	is_rebuild_cache = true
 
 func on_show():
-	if (search_option_btn.selected != 0):
-		search_option_btn.selected = 0
-
-		is_rebuild_cache = true
 
 	var rebuild_ui: bool = false
 	var all_tab_not_pressed: bool = filter_bar.current_tab != 0
@@ -143,7 +139,7 @@ func build_file_cache_dir(dir: EditorFileSystemDirectory):
 
 	for index: int in dir.get_file_count():
 		var file: String = dir.get_file_path(index)
-		if (search_option_btn.get_selected_id() == 0 && file.begins_with(ADDONS)):
+		if (!include_addons_check.button_pressed && file.begins_with(ADDONS)):
 			continue
 
 		var last_delimiter: int = file.rfind(&"/")
