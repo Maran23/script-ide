@@ -88,6 +88,7 @@ var tab_cycle_backward_shc: Shortcut
 #endregion
 
 #region Existing controls we modify
+var script_editor: ScriptEditor
 var outline_container: Control
 var outline_parent: Control
 var scripts_tab_container: TabContainer
@@ -117,6 +118,7 @@ var property_btn: Button
 var export_btn: Button
 var func_btn: Button
 var engine_func_btn: Button
+var custom_run_bar : CustomRunBar
 #endregion
 
 #region Plugin variables
@@ -152,7 +154,7 @@ func _enter_tree() -> void:
 	# Sync settings changes for this plugin.
 	get_editor_settings().settings_changed.connect(sync_settings)
 
-	var script_editor: ScriptEditor = EditorInterface.get_script_editor()
+	script_editor = EditorInterface.get_script_editor()
 
 	# Change script item list visibility (based on settings).
 	scripts_item_list = find_or_null(script_editor.find_children("*", "ItemList", true, false))
@@ -234,11 +236,19 @@ func _enter_tree() -> void:
 	# Add callback when the sorting changed.
 	sort_btn = find_or_null(outline_container.find_children("*", "Button", true, false))
 	sort_btn.pressed.connect(update_outline)
+	
+	# Add custom run buttons
+	custom_run_bar = load("res://addons/script-ide/customrunbar/custom_run_bar.tscn").instantiate()
+	var editor_run_bar : Node = _find_editor_run_bar(get_editor_interface().get_base_control())
+	var editor_run_bar_buttons_container : Control = editor_run_bar.get_child(0).get_child(0)
+	custom_run_bar.duplicate_engine_run_bar(editor_run_bar_buttons_container)
+	script_editor.get_child(0).get_child(0).get_child(3).add_child(custom_run_bar)
 
 	on_tab_changed(scripts_tab_bar.current_tab)
 
 ## Restore the old Godot script UI and free everything we created
 func _exit_tree() -> void:
+	script_editor.get_child(0).get_child(0).get_child(3).remove_child(custom_run_bar)
 	var file_system: EditorFileSystem = EditorInterface.get_resource_filesystem()
 	file_system.filesystem_changed.disconnect(schedule_update)
 
@@ -1257,6 +1267,16 @@ This might be due to some other plugins or changes in the Engine.
 Please report this to Script-IDE, so we can figure out a fix.""")
 		return null
 	return arr[index]
+	
+func _find_editor_run_bar(root: Node) -> Node:
+	#We go recursively accross godot base control childs until we found the EditorRunBar
+	for child in root.get_children():
+		if child is Control and child.name.contains("EditorRunBar"):
+			return child
+		var result: Node = _find_editor_run_bar(child)
+		if result:
+			return result
+	return null
 
 ## Cache for everything inside we collected to show in the Outline.
 class OutlineCache:
