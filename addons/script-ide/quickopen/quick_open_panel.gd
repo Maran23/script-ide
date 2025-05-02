@@ -199,20 +199,20 @@ func fill_files_list_with(files: Array[FileData]):
 			files_list.set_item_metadata(files_list.item_count - 1, file)
 			files_list.set_item_tooltip(files_list.item_count - 1, file)
 
-func sort_by_filter(a: FileData, b: FileData) -> bool:
+func sort_by_filter(file_data1: FileData, file_data2: FileData) -> bool:
 	var filter_text: String = filter_txt.text
-	var a_name: String = a.file_name
-	var b_name: String = b.file_name
+	var name1: String = file_data1.file_name
+	var name2: String = file_data2.file_name
 
 	for index: int in filter_text.length():
-		if (index >= a_name.length()):
+		if (index >= name1.length()):
 			return true
-		if (index >= b_name.length()):
+		if (index >= name2.length()):
 			return false
 
 		var char: String = filter_text[index]
-		var a_match: bool = char== a_name[index]
-		var b_match: bool = char == b_name[index]
+		var a_match: bool = char== name1[index]
+		var b_match: bool = char == name2[index]
 
 		if (a_match && !b_match):
 			return true
@@ -220,7 +220,7 @@ func sort_by_filter(a: FileData, b: FileData) -> bool:
 		if (b_match && !a_match):
 			return false
 
-	return a_name < b_name
+	return name1 < name2
 
 class FileData:
 	var file: String

@@ -11,7 +11,7 @@ const FUNC_META: StringName = &"func"
 var plugin: EditorPlugin
 
 var selections: int = 0
-var class_to_functions: Dictionary
+var class_to_functions: Dictionary[StringName, PackedStringArray]
 
 func _ready() -> void:
 	filter_txt.text_changed.connect(update_tree_filter.unbind(1))
@@ -70,26 +70,26 @@ func update_tree():
 					func_item.set_icon(0, plugin.func_icon)
 				func_item.set_meta(FUNC_META, function)
 
-func collect_all_class_functions(script: Script)-> Dictionary: # [StringName, Array[Function]]
-	var existing_funcs: Dictionary = {} # [String, int] # Used as Set.
+func collect_all_class_functions(script: Script) -> Dictionary[StringName, PackedStringArray]:
+	var existing_funcs: Dictionary[String, int] = {} # Used as Set.
 	for func_str: String in plugin.outline_cache.engine_funcs:
 		existing_funcs[func_str] = 0
 	for func_str: String in plugin.outline_cache.funcs:
 		existing_funcs[func_str] = 0
 
-	var class_to_functions: Dictionary = collect_super_class_functions(script.get_base_script(), existing_funcs)
-	var native_class_to_functions: Dictionary = collect_native_class_functions(script.get_instance_base_type(), existing_funcs)
+	var class_to_functions: Dictionary[StringName, PackedStringArray] = collect_super_class_functions(script.get_base_script(), existing_funcs)
+	var native_class_to_functions: Dictionary[StringName, PackedStringArray] = collect_native_class_functions(script.get_instance_base_type(), existing_funcs)
 
 	return native_class_to_functions.merged(class_to_functions)
 
-func collect_super_class_functions(base_script: Script, existing_funcs: Dictionary) -> Dictionary: # [StringName, PackedStringArray]
+func collect_super_class_functions(base_script: Script, existing_funcs: Dictionary[String, int]) -> Dictionary[StringName, PackedStringArray]:
 	var super_classes: Array[Script] = []
 	while (base_script != null):
 		super_classes.insert(0, base_script)
 
 		base_script = base_script.get_base_script()
 
-	var class_to_functions: Dictionary = {}
+	var class_to_functions: Dictionary[StringName, PackedStringArray] = {}
 	for super_class: Script in super_classes:
 		var functions: PackedStringArray = collect_script_functions(super_class, existing_funcs)
 		if (functions.is_empty()):
@@ -99,14 +99,14 @@ func collect_super_class_functions(base_script: Script, existing_funcs: Dictiona
 
 	return class_to_functions
 
-func collect_native_class_functions(native_class: StringName, existing_funcs: Dictionary) -> Dictionary: # [StringName, PackedStringArray]
+func collect_native_class_functions(native_class: StringName, existing_funcs: Dictionary[String, int]) -> Dictionary[StringName, PackedStringArray]:
 	var super_native_classes: Array[StringName] = []
 	while (native_class != &""):
 		super_native_classes.insert(0, native_class)
 
 		native_class = ClassDB.get_parent_class(native_class)
 
-	var class_to_functions: Dictionary = {}
+	var class_to_functions: Dictionary[StringName, PackedStringArray] = {}
 	for super_native_class: StringName in super_native_classes:
 		var functions: PackedStringArray = collect_class_functions(super_native_class, existing_funcs)
 		if (functions.is_empty()):
@@ -116,7 +116,7 @@ func collect_native_class_functions(native_class: StringName, existing_funcs: Di
 
 	return class_to_functions
 
-func collect_class_functions(native_class: StringName, existing_funcs: Dictionary):
+func collect_class_functions(native_class: StringName, existing_funcs: Dictionary[String, int]):
 	var functions: PackedStringArray = []
 
 	for method: Dictionary in ClassDB.class_get_method_list(native_class, true):
@@ -132,7 +132,7 @@ func collect_class_functions(native_class: StringName, existing_funcs: Dictionar
 
 	return functions
 
-func collect_script_functions(super_class: Script, existing_funcs: Dictionary) -> PackedStringArray:
+func collect_script_functions(super_class: Script, existing_funcs: Dictionary[String, int]) -> PackedStringArray:
 	var functions: PackedStringArray = []
 
 	for method: Dictionary in super_class.get_script_method_list():

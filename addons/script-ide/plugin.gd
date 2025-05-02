@@ -124,7 +124,7 @@ var engine_func_btn: Button
 #endregion
 
 #region Plugin variables
-var keywords: Dictionary = {} # [String, int = 0] # Used as Set.
+var keywords: Dictionary[String, int] = {} # Used as Set.
 var outline_type_order: Array[OutlineType] = []
 var outline_cache: OutlineCache
 var tab_state: TabStateCache
@@ -775,7 +775,7 @@ func scroll_outline(selected_idx: int):
 		return
 
 	var text: String = outline.get_item_text(selected_idx)
-	var metadata: Dictionary = outline.get_item_metadata(selected_idx)
+	var metadata: Dictionary[StringName, StringName] = outline.get_item_metadata(selected_idx)
 	var modifier: StringName = metadata[&"modifier"]
 	var type: StringName = metadata[&"type"]
 
@@ -1165,10 +1165,10 @@ func update_outline():
 	for outline_type: OutlineType in outline_type_order:
 		outline_type.add_to_outline.call()
 
-func add_to_outline(items: Array[String], icon: Texture2D, type: String, modifier: StringName = &""):
+func add_to_outline(items: Array[String], icon: Texture2D, type: StringName, modifier: StringName = &""):
 	add_to_outline_ext(items, func(str: String): return icon, type, modifier)
 
-func add_to_outline_ext(items: Array[String], icon_callable: Callable, type: String, modifier: StringName = &""):
+func add_to_outline_ext(items: Array[String], icon_callable: Callable, type: StringName, modifier: StringName = &""):
 	var text: String = outline_filter_txt.get_text()
 
 	if (is_sorted()):
@@ -1180,7 +1180,7 @@ func add_to_outline_ext(items: Array[String], icon_callable: Callable, type: Str
 			var icon: Texture2D = icon_callable.call(item)
 			outline.add_item(item, icon, true)
 
-			var dict: Dictionary = {
+			var dict: Dictionary[StringName, StringName] = {
 				&"type": type,
 				&"modifier": modifier
 			}
