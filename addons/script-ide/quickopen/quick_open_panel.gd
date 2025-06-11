@@ -205,22 +205,30 @@ func sort_by_filter(file_data1: FileData, file_data2: FileData) -> bool:
 	var name2: String = file_data2.file_name
 
 	for index: int in filter_text.length():
-		if (index >= name1.length()):
-			return true
-		if (index >= name2.length()):
-			return false
+		var end1: bool = index >= name1.length()
+		var end2: bool = index >= name2.length()
 
+		if (end1 == true) && (end2 == true):
+			break
+		elif end1 == true:
+			return true
+		elif end2 == true:
+			return false
+			
 		var char: String = filter_text[index]
-		var a_match: bool = char== name1[index]
+		var a_match: bool = char == name1[index]
 		var b_match: bool = char == name2[index]
 
 		if (a_match && !b_match):
 			return true
-
-		if (b_match && !a_match):
+		elif (b_match && !a_match):
 			return false
 
-	return name1 < name2
+	if name1 < name2:
+		return true
+	elif name1 >= name2:
+		return false
+	return false
 
 class FileData:
 	var file: String
