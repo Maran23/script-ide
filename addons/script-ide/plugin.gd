@@ -124,7 +124,7 @@ var engine_func_btn: Button
 #endregion
 
 #region Plugin variables
-var keywords: Dictionary[String, int] = {} # Used as Set.
+var keywords: Dictionary[String, bool] = {} # Used as Set.
 var outline_type_order: Array[OutlineType] = []
 var outline_cache: OutlineCache
 var tab_state: TabStateCache
@@ -629,6 +629,7 @@ func navigate_on_list(event: InputEvent, list: ItemList, submit: Callable):
 			return
 
 		submit.call(index)
+		list.accept_event()
 	elif (event.is_action_pressed(&"ui_down", true)):
 		var index: int = get_list_index(list)
 		if (index == list.item_count - 1):
@@ -1062,13 +1063,13 @@ func update_keywords(script: Script):
 		old_script_type = new_script_type
 
 		keywords.clear()
-		keywords["_static_init"] = 0
+		keywords["_static_init"] = true
 		register_virtual_methods(new_script_type)
 
 func register_virtual_methods(clazz: String):
 	for method: Dictionary in ClassDB.class_get_method_list(clazz):
 		if (method[&"flags"] & METHOD_FLAG_VIRTUAL > 0):
-			keywords[method[&"name"]] = 0
+			keywords[method[&"name"]] = true
 
 func update_outline_cache():
 	outline_cache = null
