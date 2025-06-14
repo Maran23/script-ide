@@ -10,13 +10,13 @@ const FUNC_META: StringName = &"func"
 
 var plugin: EditorPlugin
 
-var selections: int = 0
+var selections: Dictionary[String, bool] = {} # Used as Set.
 var class_to_functions: Dictionary[StringName, PackedStringArray]
 
 func _ready() -> void:
 	filter_txt.text_changed.connect(update_tree_filter.unbind(1))
 
-	class_func_tree.multi_selected.connect(func(item: TreeItem, col: int, selected: bool): count_selection(selected))
+	class_func_tree.multi_selected.connect(func(item: TreeItem, col: int, selected: bool): save_selection(selected, item))
 	class_func_tree.item_activated.connect(generate_functions)
 
 	cancel_btn.pressed.connect(hide)
@@ -24,20 +24,115 @@ func _ready() -> void:
 
 	about_to_popup.connect(on_show)
 
+	if (plugin != null):
+		filter_txt.gui_input.connect(navigate_on_tree)
+
+func navigate_on_tree(event: InputEvent):
+	if (event.is_action_pressed(&"ui_down", true)):
+		var selected: TreeItem = get_selected_tree_item()
+		if (selected == null):
+			return
+		var item: TreeItem = selected.get_next_in_tree()
+		if (item == null):
+			return
+
+		focus_tree_item(item)
+	elif (event.is_action_pressed(&"ui_up", true)):
+		var selected: TreeItem = get_selected_tree_item()
+		if (selected == null):
+			return
+		var item: TreeItem = selected.get_prev_in_tree()
+		if (item == null):
+			return
+
+		focus_tree_item(item)
+	elif (event.is_action_pressed(&"ui_page_down", true)):
+		var selected: TreeItem = get_selected_tree_item()
+		if (selected == null):
+			return
+
+		var item: TreeItem = selected.get_next_in_tree()
+		if (item == null):
+			return
+
+		for index: int in 4:
+			var next: TreeItem = item.get_next_in_tree()
+			if (next == null):
+				break
+			item = next
+
+		focus_tree_item(item)
+	elif (event.is_action_pressed(&"ui_page_up", true)):
+		var selected: TreeItem = get_selected_tree_item()
+		if (selected == null):
+			return
+
+		var item: TreeItem = selected.get_prev_in_tree()
+		if (item == null):
+			return
+
+		for index: int in 4:
+			var prev: TreeItem = item.get_prev_in_tree()
+			if (prev == null):
+				break
+			item = prev
+
+		focus_tree_item(item)
+	elif (event.is_action_pressed(&"ui_select", true)):
+		var selected: TreeItem = get_selected_tree_item()
+		if (selected == null):
+			return
+
+		if (!selected.is_selectable(0)):
+			selected.collapsed = !selected.collapsed
+			class_func_tree.accept_event()
+			return
+
+		if (selected.is_selected(0)):
+			selected.deselect(0)
+			save_selection(false, selected)
+		else:
+			selected.select(0)
+			save_selection(true, selected)
+
+		class_func_tree.accept_event()
+	elif (event.is_action_pressed(&"ui_text_submit", true)):
+		if (selections.size() == 0):
+			return
+
+		generate_functions()
+		class_func_tree.accept_event()
+
+func get_selected_tree_item() -> TreeItem:
+	var selected: TreeItem = class_func_tree.get_selected()
+	if (selected == null):
+		selected = class_func_tree.get_root()
+	return selected
+
+func focus_tree_item(item: TreeItem):
+	var was_selected: bool = item.is_selected(0)
+	item.select(0)
+	item.deselect(0)
+	if (was_selected):
+		item.select(0)
+
+	class_func_tree.ensure_cursor_is_visible()
+	class_func_tree.accept_event()
+
 func update_tree_filter():
 	update_tree()
 
-func count_selection(selected: bool):
+func save_selection(selected: bool, item: TreeItem):
 	if (selected):
-		selections += 1
+		selections[item.get_text(0)] = true
 	else:
-		selections -= 1
+		selections.erase(item.get_text(0))
 
-	ok_btn.disabled = selections == 0
+	ok_btn.disabled = selections.size() == 0
 
 func on_show():
 	class_func_tree.clear()
-	selections = 0
+	selections.clear()
 	ok_btn.disabled = true
 	filter_txt.text = &""
 
@@ -61,28 +156,31 @@ func update_tree():
 		class_item.set_text(0, class_name_str)
 
 		for function: String in class_to_functions.get(class_name_str):
-			if (text.is_empty() || text.is_subsequence_ofn(function)):
+			var is_preselected: bool = selections.has(function)
+			if (is_preselected || text.is_empty() || text.is_subsequence_ofn(function)):
 				var func_item: TreeItem = class_item.create_child()
 				func_item.set_text(0, function)
 				if (plugin.keywords.has(function.get_slice("(", 0))):
 					func_item.set_icon(0, plugin.engine_func_icon)
 				else:
 					func_item.set_icon(0, plugin.func_icon)
-				func_item.set_meta(FUNC_META, function)
+
+				if (is_preselected):
+					func_item.select(0)
 
 func collect_all_class_functions(script: Script) -> Dictionary[StringName, PackedStringArray]:
-	var existing_funcs: Dictionary[String, int] = {} # Used as Set.
+	var existing_funcs: Dictionary[String, bool] = {} # Used as Set.
 	for func_str: String in plugin.outline_cache.engine_funcs:
-		existing_funcs[func_str] = 0
+		existing_funcs[func_str] = true
 	for func_str: String in plugin.outline_cache.funcs:
-		existing_funcs[func_str] = 0
+		existing_funcs[func_str] = true
 
 	var class_to_functions: Dictionary[StringName, PackedStringArray] = collect_super_class_functions(script.get_base_script(), existing_funcs)
 	var native_class_to_functions: Dictionary[StringName, PackedStringArray] = collect_native_class_functions(script.get_instance_base_type(), existing_funcs)
 
 	return native_class_to_functions.merged(class_to_functions)
 
-func collect_super_class_functions(base_script: Script, existing_funcs: Dictionary[String, int]) -> Dictionary[StringName, PackedStringArray]:
+func collect_super_class_functions(base_script: Script, existing_funcs: Dictionary[String, bool]) -> Dictionary[StringName, PackedStringArray]:
 	var super_classes: Array[Script] = []
 	while (base_script != null):
 		super_classes.insert(0, base_script)
@@ -99,7 +197,7 @@ func collect_super_class_functions(base_script: Script, existing_funcs: Dictiona
 
 	return class_to_functions
 
-func collect_native_class_functions(native_class: StringName, existing_funcs: Dictionary[String, int]) -> Dictionary[StringName, PackedStringArray]:
+func collect_native_class_functions(native_class: StringName, existing_funcs: Dictionary[String, bool]) -> Dictionary[StringName, PackedStringArray]:
 	var super_native_classes: Array[StringName] = []
 	while (native_class != &""):
 		super_native_classes.insert(0, native_class)
@@ -116,7 +214,7 @@ func collect_native_class_functions(native_class: StringName, existing_funcs: Di
 
 	return class_to_functions
 
-func collect_class_functions(native_class: StringName, existing_funcs: Dictionary[String, int]):
+func collect_class_functions(native_class: StringName, existing_funcs: Dictionary[String, bool]):
 	var functions: PackedStringArray = []
 
 	for method: Dictionary in ClassDB.class_get_method_list(native_class, true):
@@ -132,7 +230,7 @@ func collect_class_functions(native_class: StringName, existing_funcs: Dictionar
 
 	return functions
 
-func collect_script_functions(super_class: Script, existing_funcs: Dictionary[String, int]) -> PackedStringArray:
+func collect_script_functions(super_class: Script, existing_funcs: Dictionary[String, bool]) -> PackedStringArray:
 	var functions: PackedStringArray = []
 
 	for method: Dictionary in super_class.get_script_method_list():
@@ -140,7 +238,7 @@ func collect_script_functions(super_class: Script, existing_funcs: Dictionary[St
 		if (existing_funcs.has(func_name)):
 			continue
 
-		existing_funcs[func_name] = 0
+		existing_funcs[func_name] = true
 
 		func_name = create_function_signature(method)
 		functions.append(func_name)
@@ -151,8 +249,13 @@ func create_function_signature(method: Dictionary) -> String:
 	var func_name: String = method[&"name"]
 	func_name += "("
 
+	var args: Array = method[&"args"]
+	var default_args: Array = method[&"default_args"]
+
+	var arg_index: int = 0
+	var default_arg_index: int = 0
 	var arg_str: String = ""
-	for arg: Dictionary in method[&"args"]:
+	for arg: Dictionary in args:
 		if (arg_str != ""):
 			arg_str += ", "
 
@@ -161,29 +264,37 @@ func create_function_signature(method: Dictionary) -> String:
 		if (type != ""):
 			arg_str += ": " + type
 
+		if (args.size() - arg_index <= default_args.size()):
+			var default_arg: Variant = default_args[default_arg_index]
+			if (!default_arg):
+				var type_hint: int = arg[&"type"]
+				if (is_dictionary(type_hint)):
+					default_arg = {}
+				elif (is_array(type_hint)):
+					default_arg = []
+
+			arg_str += " = " + var_to_str(default_arg)
+
+			default_arg_index += 1
+
+		arg_index += 1
+
 	func_name += arg_str + ")"
 
 	var return_str: String = get_type(method[&"return"])
-	if (return_str != ""):
-		func_name += " -> " + return_str
+	if (return_str == ""):
+		return_str = "void"
+
+	func_name += " -> " + return_str
 
 	return func_name
 
 func generate_functions():
-	var selected_item: TreeItem = class_func_tree.get_next_selected(null)
-	if (selected_item == null):
+	if (selections.size() == 0):
 		return
 
-	var selected_functions: PackedStringArray = []
-
-	while (selected_item != null):
-		var function: String = selected_item.get_meta(FUNC_META)
-		selected_functions.append(function)
-
-		selected_item = class_func_tree.get_next_selected(selected_item)
-
 	var generated_text: String = ""
-	for function: String in selected_functions:
+	for function: String in selections.keys():
 		generated_text += "\nfunc " + function + ":\n\tpass\n"
 
 	var editor: CodeEdit = EditorInterface.get_script_editor().get_current_editor().get_base_editor()
@@ -203,18 +314,23 @@ func get_type(dict: Dictionary) -> String:
 		return &""
 
 	type = type_string(type_hint)
-	# Dictionary
-	if (type_hint == 27):
+
+	if (is_dictionary(type_hint)):
 		var generic: String = dict[&"hint_string"]
 		if (generic != &""):
 			var generic_parts: PackedStringArray = generic.split(";")
 			if (generic_parts.size() == 2):
 				return type + "[" + generic_parts[0] + ", " + generic_parts[1] + "]"
 
-	# Array
-	if (type_hint == 28):
+	if (is_array(type_hint)):
 		var generic: String = dict[&"hint_string"]
 		if (generic != &""):
 			return type + "[" + generic + "]"
 
 	return type
+
+func is_dictionary(type_hint: int):
+	return type_hint == 27
+
+func is_array(type_hint: int):
+	return type_hint == 28
