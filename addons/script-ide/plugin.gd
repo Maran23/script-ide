@@ -1232,13 +1232,13 @@ func on_tab_bar_gui_input(event: InputEvent):
 				last_tab_hovered = -1
 
 func on_active_tab_rearranged(idx_to: int):
-	var control: Control = scripts_tab_container.get_tab_control(selected_tab)
-	if (!control):
-		return
-
-	scripts_tab_container.move_child(control, idx_to)
-	scripts_tab_container.current_tab = scripts_tab_container.current_tab
-	selected_tab = scripts_tab_container.current_tab
+	pass
+	# var control: Control = scripts_tab_container.get_tab_control(selected_tab)
+	# if (!control):
+	# 	return
+	# scripts_tab_container.move_child(control, idx_to)
+	# scripts_tab_container.current_tab = scripts_tab_container.current_tab
+	# selected_tab = scripts_tab_container.current_tab
 
 func get_res_path(idx: int) -> String:
 	var tab_control: Control = scripts_tab_container.get_tab_control(idx)
