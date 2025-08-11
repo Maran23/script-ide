@@ -209,6 +209,7 @@ func _enter_tree() -> void:
 	outline_parent.remove_child(old_outline)
 
 	outline = ItemList.new()
+	outline.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	outline.allow_reselect = true
 	outline.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	outline_parent.add_child(outline)
