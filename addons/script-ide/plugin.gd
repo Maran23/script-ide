@@ -180,9 +180,9 @@ func _enter_tree() -> void:
 	create_set_scripts_popup()
 
 	# Configure tab container and bar.
+	scripts_tab_bar.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	scripts_tab_container.tabs_visible = is_script_tabs_visible
 	scripts_tab_container.drag_to_rearrange_enabled = true
-	scripts_tab_container.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	update_tabs_position()
 
 	scripts_tab_bar.tab_close_display_policy = TabBar.CLOSE_BUTTON_SHOW_ACTIVE_ONLY
@@ -1323,18 +1323,18 @@ class TabStateCache:
 		if (tab_container != null):
 			tabs_visible = tab_container.tabs_visible
 			drag_to_rearrange_enabled = tab_container.drag_to_rearrange_enabled
-			auto_translate_mode_state = tab_container.auto_translate_mode
 		if (tab_bar != null):
 			tab_bar_drag_to_rearrange_enabled = tab_bar.drag_to_rearrange_enabled
 			tab_close_display_policy = tab_bar.tab_close_display_policy
 			select_with_rmb = tab_bar.select_with_rmb
+			auto_translate_mode_state = tab_bar.auto_translate_mode
 
 	func restore(tab_container: TabContainer, tab_bar: TabBar):
 		if (tab_container != null):
 			tab_container.tabs_visible = tabs_visible
 			tab_container.drag_to_rearrange_enabled = drag_to_rearrange_enabled
-			tab_container.auto_translate_mode = auto_translate_mode_state
 		if (tab_bar != null):
 			tab_bar.drag_to_rearrange_enabled = drag_to_rearrange_enabled
 			tab_bar.tab_close_display_policy = tab_close_display_policy
 			tab_bar.select_with_rmb = select_with_rmb
+			tab_bar.auto_translate_mode = auto_translate_mode_state
