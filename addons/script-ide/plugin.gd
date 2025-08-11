@@ -1221,6 +1221,10 @@ func on_tab_hovered(idx: int):
 	last_tab_hovered = idx
 
 func on_tab_bar_gui_input(event: InputEvent):
+	# MIGRATION: This is not needed anymore in Godot 4.5
+	if (Engine.get_version_info()["minor"] > 4):
+		return
+
 	if (last_tab_hovered == -1):
 		return
 
@@ -1233,6 +1237,10 @@ func on_tab_bar_gui_input(event: InputEvent):
 				last_tab_hovered = -1
 
 func on_active_tab_rearranged(idx_to: int):
+	# MIGRATION: This is not needed anymore in Godot 4.5
+	if (Engine.get_version_info()["minor"] > 4):
+		return
+
 	var control: Control = scripts_tab_container.get_tab_control(selected_tab)
 	if (!control):
 		return
