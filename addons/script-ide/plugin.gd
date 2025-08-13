@@ -51,6 +51,8 @@ const OPEN_OVERRIDE_POPUP: StringName = SCRIPT_IDE + &"open_override_popup"
 const TAB_CYCLE_FORWARD: StringName = SCRIPT_IDE + &"tab_cycle_forward"
 ## Editor setting for the 'Tab cycle backward' shortcut
 const TAB_CYCLE_BACKWARD: StringName = SCRIPT_IDE + &"tab_cycle_backward"
+## Editor setting for MRU tab cycling
+const MRU_TAB_CYCLING: StringName = SCRIPT_IDE + &"mru_tab_cycling"
 #endregion
 
 #region Outline type name and icon
@@ -88,6 +90,11 @@ var open_quick_search_popup_shc: Shortcut
 var open_override_popup_shc: Shortcut
 var tab_cycle_forward_shc: Shortcut
 var tab_cycle_backward_shc: Shortcut
+
+var mru_tab_cycling: bool = false
+var mru_tab_order: Array[int] = []
+var mru_cycling_active: bool = false
+var mru_cycling_index: int = -1
 #endregion
 
 #region Existing controls we modify
@@ -345,7 +352,22 @@ func _shortcut_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		open_override_popup()
 	elif (EditorInterface.get_script_editor().is_visible_in_tree()):
-		if (tab_cycle_forward_shc.matches_event(event)):
+		if (mru_tab_cycling && (tab_cycle_forward_shc.matches_event(event) || tab_cycle_backward_shc.matches_event(event))):
+			get_viewport().set_input_as_handled()
+			if (!mru_cycling_active):
+				mru_cycling_active = true
+				mru_cycling_index = mru_tab_order.find(scripts_tab_container.current_tab)
+				if (mru_cycling_index == -1):
+					mru_tab_order.clear()
+					mru_tab_order = range(0, scripts_tab_container.get_tab_count())
+					update_mru_tab_order(scripts_tab_container.current_tab)
+					mru_cycling_index = mru_tab_order.size() - 1
+			if (tab_cycle_forward_shc.matches_event(event)):
+				mru_cycling_index = (mru_cycling_index if mru_cycling_index > 0 else mru_tab_order.size()) - 1
+			else:
+				mru_cycling_index = (mru_cycling_index + 1) % mru_tab_order.size()
+			scripts_tab_container.current_tab = mru_tab_order[mru_cycling_index]
+		elif (tab_cycle_forward_shc.matches_event(event)):
 			get_viewport().set_input_as_handled()
 
 			var new_tab: int = scripts_tab_container.current_tab + 1
@@ -360,13 +382,20 @@ func _shortcut_input(event: InputEvent) -> void:
 				new_tab = scripts_tab_container.get_tab_count() - 1
 			scripts_tab_container.current_tab = new_tab
 
-## May cancels the quick search shortcut timer.
 func _input(event: InputEvent) -> void:
-	if (event is InputEventKey):
-		if (!open_quick_search_popup_shc.matches_event(event)):
-			if (quick_open_tween != null):
-				quick_open_tween.kill()
-				quick_open_tween = null
+	if !(event is InputEventKey):
+		return
+
+	# End MRU cycling on ctrl release
+	if (mru_tab_cycling && mru_cycling_active && event.keycode == KEY_CTRL && !event.ctrl_pressed):
+		mru_cycling_active = false
+		update_mru_tab_order(scripts_tab_container.current_tab)
+
+	## May cancels the quick search shortcut timer.
+	if (!open_quick_search_popup_shc.matches_event(event)):
+		if (quick_open_tween != null):
+			quick_open_tween.kill()
+			quick_open_tween = null
 #endregion
 
 #region Icon, Settings, Shortcut initialization
@@ -391,6 +420,7 @@ func init_settings():
 	is_auto_navigate_in_fs = get_setting(AUTO_NAVIGATE_IN_FS, is_auto_navigate_in_fs)
 	is_script_tabs_visible = get_setting(SCRIPT_TABS_VISIBLE, is_script_tabs_visible)
 	is_script_tabs_top = get_setting(SCRIPT_TAB_POSITION_TOP, is_script_tabs_top)
+	mru_tab_cycling = get_setting(MRU_TAB_CYCLING, mru_tab_cycling)
 
 	init_outline_order()
 
@@ -972,6 +1002,8 @@ func sync_settings():
 			tab_cycle_forward_shc = get_shortcut(TAB_CYCLE_FORWARD)
 		elif (setting == TAB_CYCLE_BACKWARD):
 			tab_cycle_backward_shc = get_shortcut(TAB_CYCLE_BACKWARD)
+		elif (setting == MRU_TAB_CYCLING):
+			mru_tab_cycling = get_setting(MRU_TAB_CYCLING, mru_tab_cycling)
 		else:
 			# Update filter buttons.
 			for btn_node: Node in filter_box.get_children():
@@ -1013,6 +1045,9 @@ func on_tab_changed(index: int):
 
 		old_script_editor_base = script_editor_base
 
+	if (mru_tab_cycling && !mru_cycling_active):
+		update_mru_tab_order(index)
+
 	sync_script_list = true
 
 	if (is_auto_navigate_in_fs && script_editor.get_current_script() != null):
@@ -1027,6 +1062,13 @@ func on_tab_changed(index: int):
 		file_to_navigate = &""
 
 	schedule_update()
+
+# Update MRU tab order, moving the given tab index to the end (most recent)
+func update_mru_tab_order(tab_idx: int):
+	if (tab_idx < 0):
+		return
+	mru_tab_order.erase(tab_idx)
+	mru_tab_order.append(tab_idx)
 
 func update_selected_tab():
 	if (selected_tab == -1):
