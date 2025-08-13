@@ -570,10 +570,9 @@ func add_to_outline_if_selected(btn: Button, action: Callable):
 func open_quick_search_popup():
 	if (quick_open_popup == null):
 		quick_open_popup = load_rel("quickopen/quick_open_panel.tscn").instantiate()
+		quick_open_popup.set_unparent_when_invisible(true)
 		quick_open_popup.plugin = self
 
-	if (quick_open_popup.get_parent() != null):
-		quick_open_popup.get_parent().remove_child(quick_open_popup)
 	quick_open_popup.popup_exclusive_on_parent(EditorInterface.get_script_editor(), get_center_editor_rect())
 
 func open_override_popup():
@@ -583,10 +582,9 @@ func open_override_popup():
 
 	if (override_popup == null):
 		override_popup = load_rel("override/override_panel.tscn").instantiate()
+		override_popup.set_unparent_when_invisible(true)
 		override_popup.plugin = self
 
-	if (override_popup.get_parent() != null):
-		override_popup.get_parent().remove_child(override_popup)
 	override_popup.popup_exclusive_on_parent(EditorInterface.get_script_editor(), get_center_editor_rect())
 
 func hide_scripts_popup():
@@ -676,7 +674,7 @@ func navigate_list(list: ItemList, index: int, amount: int):
 func get_center_editor_rect() -> Rect2i:
 	var script_editor: ScriptEditor = EditorInterface.get_script_editor()
 
-	var size: Vector2i = Vector2i(400, 500)
+	var size: Vector2i = Vector2i(400, 500) * get_editor_scale()
 	var x: int
 	var y: int
 
@@ -706,6 +704,7 @@ func open_outline_popup():
 
 	if (outline_popup == null):
 		outline_popup = PopupPanel.new()
+		outline_popup.set_unparent_when_invisible(true)
 
 	var outline_initially_closed: bool = !outline_container.visible
 	if (outline_initially_closed):
@@ -715,8 +714,6 @@ func open_outline_popup():
 
 	outline_popup.popup_hide.connect(on_outline_popup_hidden.bind(outline_initially_closed, old_text, button_flags))
 
-	if (outline_popup.get_parent() != null):
-		outline_popup.get_parent().remove_child(outline_popup)
 	outline_popup.popup_exclusive_on_parent(EditorInterface.get_script_editor(), get_center_editor_rect())
 
 	update_outline()
