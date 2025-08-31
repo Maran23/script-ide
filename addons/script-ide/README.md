@@ -38,6 +38,7 @@ Customization:
 
 All settings can be changed in the `Editor Settings` under `Plugin` -> `Script Ide`:
 - `Open Outline Popup` = Shortcut to control how the Outline Popup should be triggered (default=CTRL+O or META+O)
+- `Outline Visible At Start` = Flag to control whether the outline should be visible at the start or not (default=true)
 - `Outline Position Right` = Flag to control whether the outline should be on the right or on the left side of the script editor (default=true)
 - `Outline Order` = List which specifies the order of all different types in the Outline
 - `Hide Private Members` = Flag to control whether private members (methods/variables/constants starting with '_') should be hidden in the Outline or not (default=false)
