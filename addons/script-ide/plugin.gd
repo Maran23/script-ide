@@ -23,6 +23,8 @@ const BUILT_IN_SCRIPT: StringName = &"::GDScript"
 #region Settings and Shortcuts
 ## Editor setting path
 const SCRIPT_IDE: StringName = &"plugin/script_ide/"
+## Editor setting to control whether the outline should be visible at the start or not.
+const OUTLINE_VISIBLE_AT_START: StringName = SCRIPT_IDE + &"outline_visible_at_start"
 ## Editor setting for the outline position
 const OUTLINE_POSITION_RIGHT: StringName = SCRIPT_IDE + &"outline_position_right"
 ## Editor setting to control the order of the outline
@@ -74,6 +76,7 @@ var class_icon: Texture2D
 #endregion
 
 #region Editor settings
+var is_outline_visible_at_start: bool = true
 var is_outline_right: bool = true
 var is_script_list_visible: bool = false
 var hide_private_members: bool = false
@@ -204,6 +207,8 @@ func _enter_tree() -> void:
 	if (is_outline_right):
 		update_outline_position()
 
+	update_outline_visibility()
+
 	old_outline = find_or_null(outline_container.find_children("*", "ItemList", true, false), 1)
 	outline_parent = old_outline.get_parent()
 	outline_parent.remove_child(old_outline)
@@ -241,6 +246,7 @@ func _enter_tree() -> void:
 	sort_btn.pressed.connect(update_outline)
 
 	on_tab_changed(scripts_tab_bar.current_tab)
+	
 
 ## Restore the old Godot script UI and free everything we created
 func _exit_tree() -> void:
@@ -385,6 +391,7 @@ func init_icons():
 ## Initializes all settings.
 ## Every setting can be changed while this plugin is active, which will override them.
 func init_settings():
+	is_outline_visible_at_start = get_setting(OUTLINE_VISIBLE_AT_START, is_outline_visible_at_start)
 	is_outline_right = get_setting(OUTLINE_POSITION_RIGHT, is_outline_right)
 	hide_private_members = get_setting(HIDE_PRIVATE_MEMBERS, hide_private_members)
 	is_script_list_visible = get_setting(SCRIPT_LIST_VISIBLE, is_script_list_visible)
@@ -886,6 +893,9 @@ func on_filter_button_pressed(pressed: bool, btn: Button):
 	update_outline()
 	outline_filter_txt.grab_focus()
 
+func update_outline_visibility():
+	outline_container.visible = is_outline_visible_at_start
+
 func update_outline_position():
 	if (is_outline_right):
 		# Try to restore the previous split offset.
@@ -925,60 +935,61 @@ func sync_settings():
 		if (!setting.begins_with(SCRIPT_IDE)):
 			continue
 
-		if (setting == OUTLINE_POSITION_RIGHT):
-			var new_outline_right: bool = get_setting(OUTLINE_POSITION_RIGHT, is_outline_right)
-			if (new_outline_right != is_outline_right):
-				is_outline_right = new_outline_right
-
-				update_outline_position()
-		elif (setting == OUTLINE_ORDER):
-			update_outline_order()
-			update_outline_button_order()
-			update_outline()
-		elif (setting == HIDE_PRIVATE_MEMBERS):
-			var new_hide_private_members: bool = get_setting(HIDE_PRIVATE_MEMBERS, hide_private_members)
-			if (new_hide_private_members != hide_private_members):
-				hide_private_members = new_hide_private_members
-
-				update_outline_cache()
+		match setting:
+			OUTLINE_POSITION_RIGHT:
+				var new_outline_right: bool = get_setting(OUTLINE_POSITION_RIGHT, is_outline_right)
+				if (new_outline_right != is_outline_right):
+					is_outline_right = new_outline_right
+					
+					update_outline_position()
+			OUTLINE_ORDER:
+				update_outline_order()
+				update_outline_button_order()
 				update_outline()
-		elif (setting == SCRIPT_LIST_VISIBLE):
-			var new_script_list_visible: bool = get_setting(SCRIPT_LIST_VISIBLE, is_script_list_visible)
-			if (new_script_list_visible != is_script_list_visible):
-				is_script_list_visible = new_script_list_visible
+			HIDE_PRIVATE_MEMBERS:
+				var new_hide_private_members: bool = get_setting(HIDE_PRIVATE_MEMBERS, hide_private_members)
+				if (new_hide_private_members != hide_private_members):
+					hide_private_members = new_hide_private_members
 
-				update_script_list_visibility()
-		elif (setting == SCRIPT_TABS_VISIBLE):
-			var new_script_tabs_visible: bool = get_setting(SCRIPT_TABS_VISIBLE, is_script_tabs_visible)
-			if (new_script_tabs_visible != is_script_tabs_visible):
-				is_script_tabs_visible = new_script_tabs_visible
+					update_outline_cache()
+					update_outline()
+			SCRIPT_LIST_VISIBLE:
+				var new_script_list_visible: bool = get_setting(SCRIPT_LIST_VISIBLE, is_script_list_visible)
+				if (new_script_list_visible != is_script_list_visible):
+					is_script_list_visible = new_script_list_visible
 
-				scripts_tab_container.tabs_visible = is_script_tabs_visible
-		elif (setting == SCRIPT_TAB_POSITION_TOP):
-			var new_script_tabs_top: bool = get_setting(SCRIPT_TAB_POSITION_TOP, is_script_tabs_top)
-			if (new_script_tabs_top != is_script_tabs_top):
-				is_script_tabs_top = new_script_tabs_top
+					update_script_list_visibility()
+			SCRIPT_TABS_VISIBLE:
+				var new_script_tabs_visible: bool = get_setting(SCRIPT_TABS_VISIBLE, is_script_tabs_visible)
+				if (new_script_tabs_visible != is_script_tabs_visible):
+					is_script_tabs_visible = new_script_tabs_visible
 
-				update_tabs_position()
-		elif (setting == AUTO_NAVIGATE_IN_FS):
-			is_auto_navigate_in_fs = get_setting(AUTO_NAVIGATE_IN_FS, is_auto_navigate_in_fs)
-		elif (setting == OPEN_OUTLINE_POPUP):
-			open_outline_popup_shc = get_shortcut(OPEN_OUTLINE_POPUP)
-		elif (setting == OPEN_SCRIPTS_POPUP):
-			open_scripts_popup_shc = get_shortcut(OPEN_SCRIPTS_POPUP)
-		elif (setting == OPEN_OVERRIDE_POPUP):
-			open_override_popup_shc = get_shortcut(OPEN_OVERRIDE_POPUP)
-		elif (setting == TAB_CYCLE_FORWARD):
-			tab_cycle_forward_shc = get_shortcut(TAB_CYCLE_FORWARD)
-		elif (setting == TAB_CYCLE_BACKWARD):
-			tab_cycle_backward_shc = get_shortcut(TAB_CYCLE_BACKWARD)
-		else:
-			# Update filter buttons.
-			for btn_node: Node in filter_box.get_children():
-				var btn: Button = btn_node
-				var property: StringName = btn.get_meta(&"property")
+					scripts_tab_container.tabs_visible = is_script_tabs_visible
+			SCRIPT_TAB_POSITION_TOP:
+				var new_script_tabs_top: bool = get_setting(SCRIPT_TAB_POSITION_TOP, is_script_tabs_top)
+				if (new_script_tabs_top != is_script_tabs_top):
+					is_script_tabs_top = new_script_tabs_top
 
-				btn.button_pressed = get_setting(property, btn.button_pressed)
+					update_tabs_position()
+			AUTO_NAVIGATE_IN_FS:
+				is_auto_navigate_in_fs = get_setting(AUTO_NAVIGATE_IN_FS, is_auto_navigate_in_fs)
+			OPEN_OUTLINE_POPUP:
+				open_outline_popup_shc = get_shortcut(OPEN_OUTLINE_POPUP)
+			OPEN_SCRIPTS_POPUP:
+				open_scripts_popup_shc = get_shortcut(OPEN_SCRIPTS_POPUP)
+			OPEN_OVERRIDE_POPUP:
+				open_override_popup_shc = get_shortcut(OPEN_OVERRIDE_POPUP)
+			TAB_CYCLE_FORWARD:
+				tab_cycle_forward_shc = get_shortcut(TAB_CYCLE_FORWARD)
+			TAB_CYCLE_BACKWARD:
+				tab_cycle_backward_shc = get_shortcut(TAB_CYCLE_BACKWARD)
+			_:
+				# Update filter buttons.
+				for btn_node: Node in filter_box.get_children():
+					var btn: Button = btn_node
+					var property: StringName = btn.get_meta(&"property")
+
+					btn.button_pressed = get_setting(property, btn.button_pressed)
 
 func get_setting(property: StringName, alt: bool) -> bool:
 	var editor_settings: EditorSettings = get_editor_settings()
