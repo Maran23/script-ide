@@ -65,8 +65,6 @@ func _shortcut_input(event: InputEvent) -> void:
 #endregion
 
 func open_file(index: int):
-	hide()
-
 	var file: String = files_list.get_item_metadata(index)
 
 	if (ResourceLoader.exists(file)):
@@ -75,6 +73,17 @@ func open_file(index: int):
 
 		if (res is PackedScene):
 			EditorInterface.open_scene_from_path(file)
+
+			# Need to be deferred as it does not work otherwise.
+			var root: Node = EditorInterface.get_edited_scene_root()
+			if (root is Node3D):
+				EditorInterface.set_main_screen_editor.call_deferred("3D")
+			else:
+				EditorInterface.set_main_screen_editor.call_deferred("2D")
+
+	# Deferred as otherwise we get weird errors,
+	# probably due to this beeing called in a signal and auto unparent is true.
+	hide.call_deferred()
 
 func schedule_rebuild():
 	is_rebuild_cache = true
