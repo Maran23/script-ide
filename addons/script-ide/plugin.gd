@@ -929,66 +929,67 @@ func sync_settings():
 		if (!setting.begins_with(SCRIPT_IDE)):
 			continue
 
-		if (setting == OUTLINE_POSITION_RIGHT):
-			var new_outline_right: bool = get_setting(OUTLINE_POSITION_RIGHT, is_outline_right)
-			if (new_outline_right != is_outline_right):
-				is_outline_right = new_outline_right
+		match (setting):
+			OUTLINE_POSITION_RIGHT:
+				var new_outline_right: bool = get_setting(OUTLINE_POSITION_RIGHT, is_outline_right)
+				if (new_outline_right != is_outline_right):
+					is_outline_right = new_outline_right
 
-				update_outline_position()
-		elif (setting == OUTLINE_ORDER):
-			update_outline_order()
-			update_outline_button_order()
-			update_outline()
-		elif (setting == HIDE_PRIVATE_MEMBERS):
-			var new_hide_private_members: bool = get_setting(HIDE_PRIVATE_MEMBERS, hide_private_members)
-			if (new_hide_private_members != hide_private_members):
-				hide_private_members = new_hide_private_members
-
-				update_outline_cache()
+					update_outline_position()
+			OUTLINE_ORDER:
+				update_outline_order()
+				update_outline_button_order()
 				update_outline()
-		elif (setting == SCRIPT_LIST_VISIBLE):
-			var new_script_list_visible: bool = get_setting(SCRIPT_LIST_VISIBLE, is_script_list_visible)
-			if (new_script_list_visible != is_script_list_visible):
-				is_script_list_visible = new_script_list_visible
+			HIDE_PRIVATE_MEMBERS:
+				var new_hide_private_members: bool = get_setting(HIDE_PRIVATE_MEMBERS, hide_private_members)
+				if (new_hide_private_members != hide_private_members):
+					hide_private_members = new_hide_private_members
 
-				update_script_list_visibility()
-		elif (setting == SCRIPT_TABS_VISIBLE):
-			var new_script_tabs_visible: bool = get_setting(SCRIPT_TABS_VISIBLE, is_script_tabs_visible)
-			if (new_script_tabs_visible != is_script_tabs_visible):
-				is_script_tabs_visible = new_script_tabs_visible
+					update_outline_cache()
+					update_outline()
+			SCRIPT_LIST_VISIBLE:
+				var new_script_list_visible: bool = get_setting(SCRIPT_LIST_VISIBLE, is_script_list_visible)
+				if (new_script_list_visible != is_script_list_visible):
+					is_script_list_visible = new_script_list_visible
 
-				scripts_tab_container.tabs_visible = is_script_tabs_visible
-		elif (setting == SCRIPT_TABS_POSITION_TOP):
-			var new_script_tabs_top: bool = get_setting(SCRIPT_TABS_POSITION_TOP, is_script_tabs_top)
-			if (new_script_tabs_top != is_script_tabs_top):
-				is_script_tabs_top = new_script_tabs_top
+					update_script_list_visibility()
+			SCRIPT_TABS_VISIBLE:
+				var new_script_tabs_visible: bool = get_setting(SCRIPT_TABS_VISIBLE, is_script_tabs_visible)
+				if (new_script_tabs_visible != is_script_tabs_visible):
+					is_script_tabs_visible = new_script_tabs_visible
 
-				update_tabs_position()
-		elif (setting == SCRIPT_TABS_CLOSE_BUTTON_ALWAYS):
-			var new_script_tabs_close_button_always: bool = get_setting(SCRIPT_TABS_CLOSE_BUTTON_ALWAYS, script_tabs_close_button_always)
-			if (new_script_tabs_close_button_always != script_tabs_close_button_always):
-				script_tabs_close_button_always = new_script_tabs_close_button_always
+					scripts_tab_container.tabs_visible = is_script_tabs_visible
+			SCRIPT_TABS_POSITION_TOP:
+				var new_script_tabs_top: bool = get_setting(SCRIPT_TABS_POSITION_TOP, is_script_tabs_top)
+				if (new_script_tabs_top != is_script_tabs_top):
+					is_script_tabs_top = new_script_tabs_top
 
-				update_tabs_close_button()
-		elif (setting == AUTO_NAVIGATE_IN_FS):
-			is_auto_navigate_in_fs = get_setting(AUTO_NAVIGATE_IN_FS, is_auto_navigate_in_fs)
-		elif (setting == OPEN_OUTLINE_POPUP):
-			open_outline_popup_shc = get_shortcut(OPEN_OUTLINE_POPUP)
-		elif (setting == OPEN_SCRIPTS_POPUP):
-			open_scripts_popup_shc = get_shortcut(OPEN_SCRIPTS_POPUP)
-		elif (setting == OPEN_OVERRIDE_POPUP):
-			open_override_popup_shc = get_shortcut(OPEN_OVERRIDE_POPUP)
-		elif (setting == TAB_CYCLE_FORWARD):
-			tab_cycle_forward_shc = get_shortcut(TAB_CYCLE_FORWARD)
-		elif (setting == TAB_CYCLE_BACKWARD):
-			tab_cycle_backward_shc = get_shortcut(TAB_CYCLE_BACKWARD)
-		else:
-			# Update filter buttons.
-			for btn_node: Node in filter_box.get_children():
-				var btn: Button = btn_node
-				var property: StringName = btn.get_meta(&"property")
+					update_tabs_position()
+			SCRIPT_TABS_CLOSE_BUTTON_ALWAYS:
+				var new_script_tabs_close_button_always: bool = get_setting(SCRIPT_TABS_CLOSE_BUTTON_ALWAYS, script_tabs_close_button_always)
+				if (new_script_tabs_close_button_always != script_tabs_close_button_always):
+					script_tabs_close_button_always = new_script_tabs_close_button_always
 
-				btn.button_pressed = get_setting(property, btn.button_pressed)
+					update_tabs_close_button()
+			AUTO_NAVIGATE_IN_FS:
+				is_auto_navigate_in_fs = get_setting(AUTO_NAVIGATE_IN_FS, is_auto_navigate_in_fs)
+			OPEN_OUTLINE_POPUP:
+				open_outline_popup_shc = get_shortcut(OPEN_OUTLINE_POPUP)
+			OPEN_SCRIPTS_POPUP:
+				open_scripts_popup_shc = get_shortcut(OPEN_SCRIPTS_POPUP)
+			OPEN_OVERRIDE_POPUP:
+				open_override_popup_shc = get_shortcut(OPEN_OVERRIDE_POPUP)
+			TAB_CYCLE_FORWARD:
+				tab_cycle_forward_shc = get_shortcut(TAB_CYCLE_FORWARD)
+			TAB_CYCLE_BACKWARD:
+				tab_cycle_backward_shc = get_shortcut(TAB_CYCLE_BACKWARD)
+			_:
+				# Update filter buttons.
+				for btn_node: Node in filter_box.get_children():
+					var btn: Button = btn_node
+					var property: StringName = btn.get_meta(&"property")
+
+					btn.button_pressed = get_setting(property, btn.button_pressed)
 
 func get_setting(property: StringName, alt: bool) -> bool:
 	var editor_settings: EditorSettings = get_editor_settings()
