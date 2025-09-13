@@ -37,9 +37,9 @@ const SCRIPT_LIST_VISIBLE: StringName = SCRIPT_IDE + &"script_list_visible"
 ## Editor setting to control whether the script tabs should be visible or not.
 const SCRIPT_TABS_VISIBLE: StringName = SCRIPT_IDE + &"script_tabs_visible"
 ## Editor setting to control where the script tabs should be.
-const SCRIPT_TAB_POSITION_TOP: StringName = SCRIPT_IDE + &"script_tab_position_top"
-## Editor setting to control if all scripts tabs should have close button.
-const SCRIPT_TABS_CLOSE_BUTTON_ON_ALL: StringName = SCRIPT_IDE + &"script_tabs_close_button_on_all"
+const SCRIPT_TABS_POSITION_TOP: StringName = SCRIPT_IDE + &"script_tabs_position_top"
+## Editor setting to control if all script tabs should have close button.
+const SCRIPT_TABS_CLOSE_BUTTON_ALWAYS: StringName = SCRIPT_IDE + &"script_tabs_close_button_always"
 
 ## Editor setting for the 'Open Outline Popup' shortcut
 const OPEN_OUTLINE_POPUP: StringName = SCRIPT_IDE + &"open_outline_popup"
@@ -82,7 +82,7 @@ var hide_private_members: bool = false
 var is_auto_navigate_in_fs: bool = true
 var is_script_tabs_visible: bool = true
 var is_script_tabs_top: bool = true
-var script_tabs_close_button_on_all: bool = false
+var script_tabs_close_button_always: bool = false
 var outline_order: PackedStringArray
 
 var open_outline_popup_shc: Shortcut
@@ -393,8 +393,8 @@ func init_settings():
 	is_script_list_visible = get_setting(SCRIPT_LIST_VISIBLE, is_script_list_visible)
 	is_auto_navigate_in_fs = get_setting(AUTO_NAVIGATE_IN_FS, is_auto_navigate_in_fs)
 	is_script_tabs_visible = get_setting(SCRIPT_TABS_VISIBLE, is_script_tabs_visible)
-	is_script_tabs_top = get_setting(SCRIPT_TAB_POSITION_TOP, is_script_tabs_top)
-	script_tabs_close_button_on_all = get_setting(SCRIPT_TABS_CLOSE_BUTTON_ON_ALL, script_tabs_close_button_on_all)
+	is_script_tabs_top = get_setting(SCRIPT_TABS_POSITION_TOP, is_script_tabs_top)
+	script_tabs_close_button_always = get_setting(SCRIPT_TABS_CLOSE_BUTTON_ALWAYS, script_tabs_close_button_always)
 
 	init_outline_order()
 
@@ -958,16 +958,16 @@ func sync_settings():
 				is_script_tabs_visible = new_script_tabs_visible
 
 				scripts_tab_container.tabs_visible = is_script_tabs_visible
-		elif (setting == SCRIPT_TAB_POSITION_TOP):
-			var new_script_tabs_top: bool = get_setting(SCRIPT_TAB_POSITION_TOP, is_script_tabs_top)
+		elif (setting == SCRIPT_TABS_POSITION_TOP):
+			var new_script_tabs_top: bool = get_setting(SCRIPT_TABS_POSITION_TOP, is_script_tabs_top)
 			if (new_script_tabs_top != is_script_tabs_top):
 				is_script_tabs_top = new_script_tabs_top
 
 				update_tabs_position()
-		elif (setting == SCRIPT_TABS_CLOSE_BUTTON_ON_ALL):
-			var new_script_tabs_close_on_all: bool = get_setting(SCRIPT_TABS_CLOSE_BUTTON_ON_ALL, script_tabs_close_button_on_all)
-			if (new_script_tabs_close_on_all != script_tabs_close_button_on_all):
-				script_tabs_close_button_on_all = new_script_tabs_close_on_all
+		elif (setting == SCRIPT_TABS_CLOSE_BUTTON_ALWAYS):
+			var new_script_tabs_close_button_always: bool = get_setting(SCRIPT_TABS_CLOSE_BUTTON_ALWAYS, script_tabs_close_button_always)
+			if (new_script_tabs_close_button_always != script_tabs_close_button_always):
+				script_tabs_close_button_always = new_script_tabs_close_button_always
 
 				update_tabs_close_button()
 		elif (setting == AUTO_NAVIGATE_IN_FS):
@@ -1061,9 +1061,9 @@ func update_tabs_position():
 		scripts_tab_container.tabs_position = TabContainer.POSITION_TOP
 	else:
 		scripts_tab_container.tabs_position = TabContainer.POSITION_BOTTOM
-		
+
 func update_tabs_close_button():
-	if (script_tabs_close_button_on_all):
+	if (script_tabs_close_button_always):
 		scripts_tab_bar.tab_close_display_policy = TabBar.CloseButtonDisplayPolicy.CLOSE_BUTTON_SHOW_ALWAYS
 	else:
 		scripts_tab_bar.tab_close_display_policy = TabBar.CloseButtonDisplayPolicy.CLOSE_BUTTON_SHOW_ACTIVE_ONLY
