@@ -1,6 +1,6 @@
 [gd_scene load_steps=14 format=3 uid="uid://d2pttchmj3n7q"]
 
-[ext_resource type="Script" uid="uid://deyc8ora1jlkr" path="res://addons/script-ide/quickopen/quick_open_panel.gd" id="1_3tl1s"]
+[ext_resource type="Script" uid="uid://cgwp4rl1udqbb" path="res://addons/script-ide/quickopen/quick_open_panel.gd" id="1_3tl1s"]
 
 [sub_resource type="Image" id="Image_ta8yk"]
 data = {

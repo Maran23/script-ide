@@ -45,6 +45,7 @@ All settings can be changed in the `Editor Settings` under `Plugin` -> `Script I
 - `Script List Visible` = Flag to control whether the script list should still be visible or not (above the outline) (default=false)
 - `Script Tabs Visible` = Flag to control whether the script tabs should be visible or not (default=true)
 - `Script Tabs Position Top` = Flag to control whether the script tabs should be on the top or on the bottom (default=true)
+- `Script Tabs Close Button Always` = Flag to control whether the script tabs should always have the close button or only the select tab (default=false)
 - `Auto Navigate in FileSystem Dock` = Flag to control whether the script that is currently edited should be automatically selected in the Filesystem Dock (default=true)
 - `Open Quick Search Popup` = Shortcut to control how the Quick Search Popup should be triggered (default=Shift+Shift, double press behavior is hardcoded for now)
 - `Open Override Popup` = Shortcut to control how the Override Popup should be triggered (default=Alt+Ins)
