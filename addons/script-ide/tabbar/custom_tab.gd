@@ -60,10 +60,18 @@ func _get_drag_data(at_position: Vector2) -> Variant:
 
 	set_drag_preview(preview)
 
-	return get_index()
+	var drag_data: Dictionary[String, Variant]
+	drag_data["type"] = "script_list_element"
+	drag_data["script_list_element"] = EditorInterface.get_script_editor().get_current_editor()
+	drag_data["index"] = get_index()
+
+	return drag_data
 
 func _can_drop_data(at_position: Vector2, data: Variant) -> bool:
-	var can_drop: bool = data is int && data != get_index()
+	if !(data is Dictionary):
+		return false
+
+	var can_drop: bool = data.has("index")
 
 	if (can_drop):
 		dragged_over.emit()
@@ -74,4 +82,4 @@ func _drop_data(at_position: Vector2, data: Variant) -> void:
 	if (!_can_drop_data(at_position, data)):
 		return
 
-	dropped.emit(data, get_index())
+	dropped.emit(data["index"], get_index())
