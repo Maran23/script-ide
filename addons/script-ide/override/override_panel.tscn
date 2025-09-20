@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://bb1n82qxlqanh"]
 
-[ext_resource type="Script" uid="uid://chc6jwpxj1ig8" path="res://addons/script-ide/override/override_panel.gd" id="1_c3eqr"]
+[ext_resource type="Script" uid="uid://c4w55j4jswg2t" path="res://addons/script-ide/override/override_panel.gd" id="1_c3eqr"]
 
 [node name="OverridePanel" type="PopupPanel"]
 size = Vector2i(551, 194)
