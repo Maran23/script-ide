@@ -139,7 +139,10 @@ func _shortcut_input(event: InputEvent) -> void:
 		tab.button_pressed = true
 
 func _can_drop_data(at_position: Vector2, data: Variant) -> bool:
-	var can_drop: bool = data is int && data != get_tab_count() - 1
+	if !(data is Dictionary):
+		return false
+
+	var can_drop: bool = data.has("index") && data["index"] != get_tab_count() - 1
 
 	if (can_drop):
 		on_drag_over(get_tab(get_tab_count() - 1))
@@ -150,7 +153,7 @@ func _drop_data(at_position: Vector2, data: Variant) -> void:
 	if (!_can_drop_data(at_position, data)):
 		return
 
-	on_drag_drop(data, get_tab_count() - 1)
+	on_drag_drop(data["index"], get_tab_count() - 1)
 #endregion
 
 func schedule_update():
