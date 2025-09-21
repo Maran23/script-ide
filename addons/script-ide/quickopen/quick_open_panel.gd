@@ -69,7 +69,12 @@ func open_file(index: int):
 
 	if (ResourceLoader.exists(file)):
 		var res: Resource = load(file)
-		EditorInterface.edit_resource(res)
+
+		if (res is Script):
+			EditorInterface.edit_script(res)
+			EditorInterface.set_main_screen_editor.call_deferred("Script")
+		else:
+			EditorInterface.edit_resource(res)
 
 		if (res is PackedScene):
 			EditorInterface.open_scene_from_path(file)
@@ -80,9 +85,15 @@ func open_file(index: int):
 				EditorInterface.set_main_screen_editor.call_deferred("3D")
 			else:
 				EditorInterface.set_main_screen_editor.call_deferred("2D")
+	else:
+		# Text files (.txt, .md) will not be recognized, which seems to be a very bad
+		# limitation from the Engine. The methods called by the Engine are also not exposed.
+		# So we just select the file, which is better than nothing.
+		EditorInterface.select_file(file)
 
-	# Deferred as otherwise we get weird errors,
-	# probably due to this beeing called in a signal and auto unparent is true.
+	# Deferred as otherwise we get weird errors in the console.
+	# Probably due to this beeing called in a signal and auto unparent is true.
+	# 100% Engine bug or at least weird behavior.
 	hide.call_deferred()
 
 func schedule_rebuild():

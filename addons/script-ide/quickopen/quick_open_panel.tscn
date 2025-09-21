@@ -75,6 +75,7 @@ data = {
 image = SubResource("Image_sj6hy")
 
 [node name="QuickOpenPanel" type="PopupPanel"]
+oversampling_override = 1.0
 size = Vector2i(624, 100)
 script = ExtResource("1_3tl1s")
 
@@ -82,10 +83,10 @@ script = ExtResource("1_3tl1s")
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 4.0
-offset_top = 4.0
-offset_right = -4.0
-offset_bottom = -4.0
+offset_left = 9.0
+offset_top = 9.0
+offset_right = -9.0
+offset_bottom = -9.0
 grow_horizontal = 2
 grow_vertical = 2
 size_flags_horizontal = 3

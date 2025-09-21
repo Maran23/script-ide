@@ -13,6 +13,7 @@ var plugin: EditorPlugin
 var selections: Dictionary[String, bool] = {} # Used as Set.
 var class_to_functions: Dictionary[StringName, PackedStringArray]
 
+#region Plugin Processing
 func _ready() -> void:
 	filter_txt.text_changed.connect(update_tree_filter.unbind(1))
 
@@ -26,6 +27,8 @@ func _ready() -> void:
 
 	if (plugin != null):
 		filter_txt.gui_input.connect(navigate_on_tree)
+
+#endregion
 
 func navigate_on_tree(event: InputEvent):
 	if (event.is_action_pressed(&"ui_down", true)):
@@ -302,7 +305,10 @@ func generate_functions():
 
 	plugin.goto_line(editor.get_line_count() - 1)
 
-	hide()
+	# Deferred as otherwise we get weird errors in the console.
+	# Probably due to this beeing called in a signal and auto unparent is true.
+	# 100% Engine bug or at least weird behavior.
+	hide.call_deferred()
 
 func get_type(dict: Dictionary) -> String:
 	var type: String = dict[&"class_name"]

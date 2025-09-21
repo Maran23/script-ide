@@ -1,8 +1,9 @@
 [gd_scene load_steps=2 format=3 uid="uid://bb1n82qxlqanh"]
 
-[ext_resource type="Script" uid="uid://chc6jwpxj1ig8" path="res://addons/script-ide/override/override_panel.gd" id="1_c3eqr"]
+[ext_resource type="Script" uid="uid://c4w55j4jswg2t" path="res://addons/script-ide/override/override_panel.gd" id="1_c3eqr"]
 
 [node name="OverridePanel" type="PopupPanel"]
+oversampling_override = 1.0
 size = Vector2i(551, 194)
 script = ExtResource("1_c3eqr")
 
@@ -10,10 +11,10 @@ script = ExtResource("1_c3eqr")
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 4.0
-offset_top = 4.0
-offset_right = -4.0
-offset_bottom = -4.0
+offset_left = 9.0
+offset_top = 9.0
+offset_right = -9.0
+offset_bottom = -9.0
 grow_horizontal = 2
 grow_vertical = 2
 
