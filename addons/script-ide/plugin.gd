@@ -20,6 +20,8 @@ const INLINE: StringName = &"@"
 
 const BUILT_IN_SCRIPT: StringName = &"::GDScript"
 
+const QUICK_OPEN_INTERVAL: int = 400
+
 #region Settings and Shortcuts
 ## Editor setting path
 const SCRIPT_IDE: StringName = &"plugin/script_ide/"
@@ -76,14 +78,16 @@ var class_icon: Texture2D
 #endregion
 
 #region Editor settings
+var outline_order: PackedStringArray
 var is_outline_right: bool = true
-var is_script_list_visible: bool = false
-var hide_private_members: bool = false
-var is_auto_navigate_in_fs: bool = true
+var is_hide_private_members: bool = false
+
 var is_script_tabs_visible: bool = true
 var is_script_tabs_top: bool = true
-var script_tabs_close_button_always: bool = false
-var outline_order: PackedStringArray
+var is_script_tabs_close_button_always: bool = false
+
+var is_auto_navigate_in_fs: bool = true
+var is_script_list_visible: bool = false
 
 var open_outline_popup_shc: Shortcut
 var open_scripts_popup_shc: Shortcut
@@ -137,16 +141,15 @@ var old_script_type: StringName
 
 var selected_tab: int = -1
 var last_tab_hovered: int = -1
-var sync_script_list: bool = false
+var is_script_changed: bool = false
 var file_to_navigate: String = &""
 var suppress_settings_sync: bool = false
 
-const QUICK_OPEN_INTERVAL: int = 400
 var quick_open_tween: Tween
 #endregion
 
 #region Plugin Enter / Exit setup
-## Change the Godot script UI and transform into an IDE like UI
+## Change the Engine script UI and transform into an IDE like UI
 func _enter_tree() -> void:
 	init_icons()
 	init_settings()
@@ -245,7 +248,7 @@ func _enter_tree() -> void:
 
 	on_tab_changed(scripts_tab_bar.current_tab)
 
-## Restore the old Godot script UI and free everything we created
+## Restore the old Engine script UI and free everything we created
 func _exit_tree() -> void:
 	var file_system: EditorFileSystem = EditorInterface.get_resource_filesystem()
 	file_system.filesystem_changed.disconnect(schedule_update)
@@ -389,12 +392,12 @@ func init_icons():
 ## Every setting can be changed while this plugin is active, which will override them.
 func init_settings():
 	is_outline_right = get_setting(OUTLINE_POSITION_RIGHT, is_outline_right)
-	hide_private_members = get_setting(HIDE_PRIVATE_MEMBERS, hide_private_members)
+	is_hide_private_members = get_setting(HIDE_PRIVATE_MEMBERS, is_hide_private_members)
 	is_script_list_visible = get_setting(SCRIPT_LIST_VISIBLE, is_script_list_visible)
 	is_auto_navigate_in_fs = get_setting(AUTO_NAVIGATE_IN_FS, is_auto_navigate_in_fs)
 	is_script_tabs_visible = get_setting(SCRIPT_TABS_VISIBLE, is_script_tabs_visible)
 	is_script_tabs_top = get_setting(SCRIPT_TABS_POSITION_TOP, is_script_tabs_top)
-	script_tabs_close_button_always = get_setting(SCRIPT_TABS_CLOSE_BUTTON_ALWAYS, script_tabs_close_button_always)
+	is_script_tabs_close_button_always = get_setting(SCRIPT_TABS_CLOSE_BUTTON_ALWAYS, is_script_tabs_close_button_always)
 
 	init_outline_order()
 
@@ -554,14 +557,14 @@ func schedule_update():
 func update_editor():
 	update_script_text_filter()
 
-	if (sync_script_list):
+	if (is_script_changed):
 		if (file_to_navigate != &""):
-			EditorInterface.get_file_system_dock().navigate_to_path(file_to_navigate)
+			EditorInterface.select_file(file_to_navigate)
 			EditorInterface.get_script_editor().get_current_editor().get_base_editor().grab_focus()
 			file_to_navigate = &""
 
 		sync_tab_with_script_list()
-		sync_script_list = false
+		is_script_changed = false
 
 	update_tabs()
 	update_outline_cache()
@@ -947,9 +950,9 @@ func sync_settings():
 				update_outline_button_order()
 				update_outline()
 			HIDE_PRIVATE_MEMBERS:
-				var new_hide_private_members: bool = get_setting(HIDE_PRIVATE_MEMBERS, hide_private_members)
-				if (new_hide_private_members != hide_private_members):
-					hide_private_members = new_hide_private_members
+				var new_hide_private_members: bool = get_setting(HIDE_PRIVATE_MEMBERS, is_hide_private_members)
+				if (new_hide_private_members != is_hide_private_members):
+					is_hide_private_members = new_hide_private_members
 
 					update_outline_cache()
 					update_outline()
@@ -972,9 +975,9 @@ func sync_settings():
 
 					update_tabs_position()
 			SCRIPT_TABS_CLOSE_BUTTON_ALWAYS:
-				var new_script_tabs_close_button_always: bool = get_setting(SCRIPT_TABS_CLOSE_BUTTON_ALWAYS, script_tabs_close_button_always)
-				if (new_script_tabs_close_button_always != script_tabs_close_button_always):
-					script_tabs_close_button_always = new_script_tabs_close_button_always
+				var new_script_tabs_close_button_always: bool = get_setting(SCRIPT_TABS_CLOSE_BUTTON_ALWAYS, is_script_tabs_close_button_always)
+				if (new_script_tabs_close_button_always != is_script_tabs_close_button_always):
+					is_script_tabs_close_button_always = new_script_tabs_close_button_always
 
 					update_tabs_close_button()
 			AUTO_NAVIGATE_IN_FS:
@@ -1030,7 +1033,7 @@ func on_tab_changed(index: int):
 
 		old_script_editor_base = script_editor_base
 
-	sync_script_list = true
+	is_script_changed = true
 
 	if (is_auto_navigate_in_fs && script_editor.get_current_script() != null):
 		var file: String = script_editor.get_current_script().get_path()
@@ -1070,7 +1073,7 @@ func update_tabs_position():
 		scripts_tab_container.tabs_position = TabContainer.POSITION_BOTTOM
 
 func update_tabs_close_button():
-	if (script_tabs_close_button_always):
+	if (is_script_tabs_close_button_always):
 		scripts_tab_bar.tab_close_display_policy = TabBar.CloseButtonDisplayPolicy.CLOSE_BUTTON_SHOW_ALWAYS
 	else:
 		scripts_tab_bar.tab_close_display_policy = TabBar.CloseButtonDisplayPolicy.CLOSE_BUTTON_SHOW_ACTIVE_ONLY
@@ -1125,7 +1128,7 @@ func for_each_script_member(script: Script, consumer: Callable):
 		if (keywords.has(func_name)):
 			consumer.call(outline_cache.engine_funcs, func_name)
 		else:
-			if hide_private_members && func_name.begins_with(UNDERSCORE):
+			if (is_hide_private_members && func_name.begins_with(UNDERSCORE)):
 				continue
 
 			# Inline getter/setter will normally be shown as '@...getter', '@...setter'.
@@ -1138,7 +1141,7 @@ func for_each_script_member(script: Script, consumer: Callable):
 	# Properties / Exported variables
 	for dict: Dictionary in script.get_script_property_list():
 		var property: String = dict[&"name"]
-		if hide_private_members && property.begins_with(UNDERSCORE):
+		if (is_hide_private_members && property.begins_with(UNDERSCORE)):
 			continue
 
 		var usage: int = dict[&"usage"]
@@ -1152,7 +1155,7 @@ func for_each_script_member(script: Script, consumer: Callable):
 	# Static variables (are separated for whatever reason)
 	for dict: Dictionary in script.get_property_list():
 		var property: String = dict[&"name"]
-		if hide_private_members && property.begins_with(UNDERSCORE):
+		if (is_hide_private_members && property.begins_with(UNDERSCORE)):
 			continue
 
 		var usage: int = dict[&"usage"]
@@ -1168,7 +1171,7 @@ func for_each_script_member(script: Script, consumer: Callable):
 
 	# Constants / Classes
 	for name_key: String in script.get_script_constant_map():
-		if hide_private_members && name_key.begins_with(UNDERSCORE):
+		if (is_hide_private_members && name_key.begins_with(UNDERSCORE)):
 			continue
 
 		var object: Variant = script.get_script_constant_map().get(name_key)
