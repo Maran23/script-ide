@@ -307,7 +307,7 @@ func generate_functions():
 
 	# Deferred as otherwise we get weird errors in the console.
 	# Probably due to this beeing called in a signal and auto unparent is true.
-	# 100% Godot bug or at least weird behavior.
+	# 100% Engine bug or at least weird behavior.
 	hide.call_deferred()
 
 func get_type(dict: Dictionary) -> String:
