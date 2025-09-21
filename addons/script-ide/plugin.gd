@@ -696,6 +696,9 @@ func get_center_editor_rect() -> Rect2i:
 	return Rect2i(Vector2i(x, y), size)
 
 func open_outline_popup():
+	if (get_current_script() == null):
+		return
+
 	var button_flags: Array[bool] = []
 	for child: Node in filter_box.get_children():
 		var btn: Button = child
@@ -744,6 +747,9 @@ func on_outline_popup_hidden(outline_initially_closed: bool, old_text: String, b
 	update_outline()
 
 func open_scripts_popup():
+	if (scripts_item_list.item_count == 0):
+		return
+
 	scripts_item_list.get_parent().reparent(scripts_popup)
 	scripts_item_list.get_parent().visible = true
 
