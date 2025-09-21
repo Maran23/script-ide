@@ -81,8 +81,9 @@ func open_file(index: int):
 			else:
 				EditorInterface.set_main_screen_editor.call_deferred("2D")
 
-	# Deferred as otherwise we get weird errors,
-	# probably due to this beeing called in a signal and auto unparent is true.
+	# Deferred as otherwise we get weird errors in the console.
+	# Probably due to this beeing called in a signal and auto unparent is true.
+	# 100% Godot bug or at least weird behavior.
 	hide.call_deferred()
 
 func schedule_rebuild():
