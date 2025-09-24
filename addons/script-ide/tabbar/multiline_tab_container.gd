@@ -10,15 +10,19 @@ signal pre_popup_pressed
 @onready var multiline_tab_bar: HFlowContainer = %MultilineTabBar
 @onready var popup_btn: Button = %PopupBtn
 
+var tab_hovered: StyleBoxFlat
+var tab_focus: StyleBoxFlat
+var tab_selected: StyleBoxFlat
+var tab_unselected: StyleBoxFlat
+
+var font_selected_color: Color
+var font_unselected_color: Color
+var font_hovered_color: Color
+
 var show_close_button_always: bool = false : set = set_show_close_button_always
 var is_singleline_tabs: bool = false : set = set_singleline_tabs
 
 var tab_group: ButtonGroup = ButtonGroup.new()
-
-var style_tab_selected: StyleBoxFlat
-var style_tab_unselected: StyleBoxFlat
-var style_tab_hovered: StyleBoxFlat
-var style_tab_focused: StyleBoxFlat
 
 var scripts_item_list: ItemList
 var scripts_tab_container: TabContainer
@@ -26,7 +30,7 @@ var popup: PopupPanel
 
 var plugin: EditorPlugin
 
-var suppress_theme_changed: bool = true
+var suppress_theme_changed: bool
 
 var last_drag_over_tab: CustomTab
 var drag_marker: ColorRect
@@ -38,7 +42,6 @@ func _ready() -> void:
 	tab_group.pressed.connect(on_new_tab_selected)
 
 	set_process(false)
-	add_theme_stylebox_override(&"panel", EditorInterface.get_editor_theme().get_stylebox(&"tabbar_background", &"TabContainer"))
 
 	if (plugin != null):
 		schedule_update()
@@ -48,28 +51,53 @@ func _notification(what: int) -> void:
 		clear_drag_mark()
 		return
 
-	if (suppress_theme_changed):
-		suppress_theme_changed = false
-		return
-
 	if (what == NOTIFICATION_THEME_CHANGED):
-		style_tab_selected = EditorInterface.get_editor_theme().get_stylebox(&"tab_selected", &"TabBar")
-		style_tab_unselected = EditorInterface.get_editor_theme().get_stylebox(&"tab_unselected", &"TabBar")
-		style_tab_hovered = EditorInterface.get_editor_theme().get_stylebox(&"tab_hovered", &"TabBar")
-		style_tab_focused = EditorInterface.get_editor_theme().get_stylebox(&"tab_focus", &"TabBar")
+		if (suppress_theme_changed):
+			return
+
+		suppress_theme_changed = true
+		add_theme_stylebox_override(&"panel", EditorInterface.get_editor_theme().get_stylebox(&"tabbar_background", &"TabContainer"))
+		suppress_theme_changed = false
+
+		tab_hovered = EditorInterface.get_editor_theme().get_stylebox(&"tab_hovered", &"TabContainer")
+		tab_focus = EditorInterface.get_editor_theme().get_stylebox(&"tab_focus", &"TabContainer")
+		tab_selected = EditorInterface.get_editor_theme().get_stylebox(&"tab_selected", &"TabContainer")
+		tab_unselected = EditorInterface.get_editor_theme().get_stylebox(&"tab_unselected", &"TabContainer")
+
+		if (drag_marker == null):
+			drag_marker = ColorRect.new()
+			drag_marker.set_anchors_and_offsets_preset(PRESET_LEFT_WIDE)
+			drag_marker.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			drag_marker.custom_minimum_size.x = 4 *  EditorInterface.get_editor_scale()
+		drag_marker.color = EditorInterface.get_editor_theme().get_color(&"drop_mark_color", &"TabContainer")
+
+		font_hovered_color = EditorInterface.get_editor_theme().get_color(&"font_hovered_color", &"TabContainer")
+		font_selected_color = EditorInterface.get_editor_theme().get_color(&"font_selected_color", &"TabContainer")
+		font_unselected_color = EditorInterface.get_editor_theme().get_color(&"font_unselected_color", &"TabContainer")
 
 		if (plugin == null || multiline_tab_bar == null):
 			return
 
 		for tab: CustomTab in get_tabs():
-			tab.add_theme_stylebox_override(&"normal", style_tab_unselected)
-			tab.add_theme_stylebox_override(&"pressed", style_tab_selected)
-			tab.add_theme_stylebox_override(&"hover_pressed", style_tab_hovered)
-			tab.add_theme_stylebox_override(&"focus", style_tab_focused)
-			tab.add_theme_stylebox_override(&"hover", style_tab_hovered)
+			update_tab_style(tab)
 
-func schedule_update():
-	set_process(true)
+func update_tab_style(tab: CustomTab):
+	tab.add_theme_stylebox_override(&"normal", tab_unselected)
+	tab.add_theme_stylebox_override(&"hover", tab_hovered)
+	tab.add_theme_stylebox_override(&"hover_pressed", tab_hovered)
+	tab.add_theme_stylebox_override(&"focus", tab_focus)
+	tab.add_theme_stylebox_override(&"pressed", tab_selected)
+
+	tab.add_theme_color_override(&"font_color", font_unselected_color)
+	tab.add_theme_color_override(&"font_hover_color", font_hovered_color)
+	tab.add_theme_color_override(&"font_pressed_color", font_selected_color)
+
+func update_icon_color(tab: CustomTab, color: Color):
+	tab.add_theme_color_override(&"icon_normal_color", color)
+	tab.add_theme_color_override(&"icon_hover_color", color)
+	tab.add_theme_color_override(&"icon_hover_pressed_color", color)
+	tab.add_theme_color_override(&"icon_pressed_color", color)
+	tab.add_theme_color_override(&"icon_focus_color", color)
 
 func _process(delta: float) -> void:
 	sync_tabs_with_item_list()
@@ -136,6 +164,9 @@ func _drop_data(at_position: Vector2, data: Variant) -> void:
 	on_drag_drop(data["index"], get_tab_count() - 1)
 #endregion
 
+func schedule_update():
+	set_process(true)
+
 func on_drag_drop(source_index: int, target_index: int):
 	var child: Node = scripts_tab_container.get_child(source_index)
 	scripts_tab_container.move_child(child, target_index);
@@ -143,13 +174,6 @@ func on_drag_drop(source_index: int, target_index: int):
 func on_drag_over(tab: CustomTab):
 	if (last_drag_over_tab == tab):
 		return
-
-	if (drag_marker == null):
-		drag_marker = ColorRect.new()
-		drag_marker.set_anchors_and_offsets_preset(PRESET_LEFT_WIDE)
-		drag_marker.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		drag_marker.color = EditorInterface.get_editor_theme().get_color(&"drop_mark_color", &"TabBar")
-		drag_marker.custom_minimum_size.x = 4 *  EditorInterface.get_editor_scale()
 
 	# The drag marker should always be orphan when here.
 	tab.add_child(drag_marker)
@@ -184,6 +208,8 @@ func update_tab(tab: CustomTab):
 	tab.icon = scripts_item_list.get_item_icon(index)
 	tab.tooltip_text = scripts_item_list.get_item_tooltip(index)
 
+	update_icon_color(tab, scripts_item_list.get_item_icon_modulate(index))
+
 	if (scripts_item_list.is_selected(index)):
 		tab.button_pressed = true
 		tab.text += CLOSE_BTN_SPACER
@@ -206,11 +232,7 @@ func add_tab() -> CustomTab:
 	if (show_close_button_always):
 		tab.show_close_button()
 
-	tab.add_theme_stylebox_override(&"normal", style_tab_unselected)
-	tab.add_theme_stylebox_override(&"pressed", style_tab_selected)
-	tab.add_theme_stylebox_override(&"hover_pressed", style_tab_hovered)
-	tab.add_theme_stylebox_override(&"focus", style_tab_focused)
-	tab.add_theme_stylebox_override(&"hover", style_tab_hovered)
+	update_tab_style(tab)
 
 	tab.close_pressed.connect(on_tab_close_pressed.bind(tab))
 	tab.right_clicked.connect(on_tab_right_click.bind(tab))
