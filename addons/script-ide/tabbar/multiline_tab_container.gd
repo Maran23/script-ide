@@ -91,6 +91,13 @@ func update_tab_style(tab: CustomTab):
 	tab.add_theme_color_override(&"font_hover_color", font_hovered_color)
 	tab.add_theme_color_override(&"font_pressed_color", font_selected_color)
 
+func update_icon_color(tab: CustomTab, color: Color):
+	tab.add_theme_color_override(&"icon_normal_color", color)
+	tab.add_theme_color_override(&"icon_hover_color", color)
+	tab.add_theme_color_override(&"icon_hover_pressed_color", color)
+	tab.add_theme_color_override(&"icon_pressed_color", color)
+	tab.add_theme_color_override(&"icon_focus_color", color)
+
 func _process(delta: float) -> void:
 	sync_tabs_with_item_list()
 
@@ -204,6 +211,8 @@ func update_tab(tab: CustomTab):
 	tab.text = scripts_item_list.get_item_text(index)
 	tab.icon = scripts_item_list.get_item_icon(index)
 	tab.tooltip_text = scripts_item_list.get_item_tooltip(index)
+
+	update_icon_color(tab, scripts_item_list.get_item_icon_modulate(index))
 
 	if (scripts_item_list.is_selected(index)):
 		tab.button_pressed = true
