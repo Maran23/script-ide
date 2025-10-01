@@ -327,11 +327,14 @@ func on_popup_button_pressed() -> void:
 	scripts_item_list.get_parent().reparent(popup)
 	scripts_item_list.get_parent().visible = true
 
-	popup.size = Vector2(scripts_item_list.size.x, get_parent().size.y - size.y)
+	popup.size = Vector2(250 * get_editor_scale(), get_parent().size.y - size.y)
 	popup.position = popup_btn.get_screen_position() - Vector2(popup.size.x, 0)
 	popup.popup()
 
 	script_filter_txt.grab_focus()
+
+func get_editor_scale() -> float:
+	return EditorInterface.get_editor_scale()
 
 func set_show_close_button_always(new_value: bool):
 	if (show_close_button_always == new_value):
