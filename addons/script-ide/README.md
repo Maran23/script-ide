@@ -54,16 +54,16 @@ All settings can be changed in the `Editor Settings` under `Plugin` -> `Script I
 - `Cycle Tab backward` = Shortcut to cycle the script tabs in the backward direction (only works in the 'Script' Editor Tab) (default=CTRL+SHIFT+TAB)
 - All outline visibility settings
 
-![Example of Script-IDE](https://github.com/user-attachments/assets/9834a403-3a6d-40ab-975a-4172393d624e)
+![Example of Script-IDE](https://github.com/Maran23/script-ide/blob/demo/demo/1.png?raw=true)
 
-![Example of the Outline Popup](https://github.com/user-attachments/assets/68030835-2280-409e-a256-3439024336d7)
+![Example of the Outline Popup](https://github.com/Maran23/script-ide/blob/demo/demo/2.png?raw=true)
 
-![Example of the Script Tabs Popup](https://github.com/user-attachments/assets/e12d3f52-f097-4e61-96a7-bdab9a2e36c)
+![Example of the Script Tabs Popup](https://github.com/Maran23/script-ide/blob/demo/demo/3.png?raw=true)
 
-![Example of the Script List Popup](https://github.com/user-attachments/assets/a0ebdb63-961a-4d90-8cc4-3de125e698cc)
+![Example of the Script List Popup](https://github.com/Maran23/script-ide/blob/demo/demo/4.png?raw=true)
 
-![Example of the Quick Search Popup](https://github.com/user-attachments/assets/fa38b315-75da-4098-9f7f-efde5804f8d0)
+![Example of the Quick Search Popup](https://github.com/Maran23/script-ide/blob/demo/demo/5.png?raw=true)
 
-![Example of the Override Popup](https://github.com/user-attachments/assets/acefe6ce-0b9e-4e44-9163-784312d7d81a)
+![Example of the Override Popup](https://github.com/Maran23/script-ide/blob/demo/demo/6.png?raw=true)
 
-![Example of the Plugin Editor Settings](https://github.com/user-attachments/assets/a9a5d317-3d21-41cc-a72a-b7239837e98e)
+![Example of the Plugin Editor Settings](https://github.com/Maran23/script-ide/blob/demo/demo/7.png?raw=true)
