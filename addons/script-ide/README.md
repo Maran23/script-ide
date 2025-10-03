@@ -1,14 +1,14 @@
 # Script IDE
 
 Transforms the Script UI into an IDE like UI.
-Tabs are used for navigating between scripts.
+Multiline Tabs are used for navigating between scripts.
 The default Outline got an overhaul and now shows all members of the script (not just methods) with unique icons for faster navigation.
 Enhanced keyboard navigation for Scripts and Outline.
 Fast quick search functionality.
 Quick function Override functionality.
 
 Features:
-- Scripts are now shown as Tabs inside a TabContainer
+- Scripts are now shown as Multiline Tabs
 - The Outline got an overhaul and shows more than just the methods of the script. It includes the following members with a unique icon:
 	- Classes (Red Square)
 	- Constants (Red Circle)
@@ -23,7 +23,7 @@ Features:
 - A `Right Click` enables only the clicked filter, another `Right Click` will enable all filters again
 - The Outline can be opened in a Popup with a defined shortcut for quick navigation between methods
 - You can navigate through the Outline with the `Arrow` keys (or `Page up/Page down`) and scroll to the selected item by pressing `ENTER`
-- Scripts can be opened in a Popup with a defined shortcut or when clicking the three dots on the top right of the TabContainer for quick navigation between scripts
+- Scripts can be opened in a Popup with a defined shortcut or when clicking the three dots on the top right of the Tabs for quick navigation between scripts
 - The currently edited script is automatically selected in the Filesystem Dock
 - Files can be quickly searched by the Quick Search Popup with `Shift`+`Shift`
 - You can find and quickly override any method from your super classes with `Alt`+`Ins`
@@ -44,6 +44,7 @@ All settings can be changed in the `Editor Settings` under `Plugin` -> `Script I
 - `Hide Private Members` = Flag to control whether private members (methods/variables/constants starting with '_') should be hidden in the Outline or not (default=false)
 - `Open Script Popup` = Shortcut to control how the Script Popup should be triggered (default=CTRL+U or META+U)
 - `Script List Visible` = Flag to control whether the script list should still be visible or not (above the outline) (default=false)
+- `Script Tabs Singleline` = Flag to control whether the script tabs should be in a single line (instead of multiline) (default=false)
 - `Script Tabs Visible` = Flag to control whether the script tabs should be visible or not (default=true)
 - `Script Tabs Position Top` = Flag to control whether the script tabs should be on the top or on the bottom (default=true)
 - `Script Tabs Close Button Always` = Flag to control whether the script tabs should always have the close button or only the select tab (default=false)
@@ -54,14 +55,16 @@ All settings can be changed in the `Editor Settings` under `Plugin` -> `Script I
 - `Cycle Tab backward` = Shortcut to cycle the script tabs in the backward direction (only works in the 'Script' Editor Tab) (default=CTRL+SHIFT+TAB)
 - All outline visibility settings
 
-![Example of the Outline](https://github.com/user-attachments/assets/1729cb2b-01ae-4365-b77a-45edcb94b978)
+![Example of Script-IDE](https://github.com/Maran23/script-ide/blob/demo/demo/1.png?raw=true)
 
-![Example of the Outline Popup](https://github.com/user-attachments/assets/995c721f-9708-40d9-a4e8-57b1a99e9c29)
+![Example of the Outline Popup](https://github.com/Maran23/script-ide/blob/demo/demo/2.png?raw=true)
 
-![Example of the TabContainer Script ItemList Popup](https://github.com/user-attachments/assets/484d498c-bd1c-4c77-a693-ac31a8500fbe)
+![Example of the Script Tabs Popup](https://github.com/Maran23/script-ide/blob/demo/demo/3.png?raw=true)
 
-![Example of the Script ItemList Popup](https://github.com/user-attachments/assets/bb976604-6049-4ce1-a28e-377fc62899f6)
+![Example of the Script List Popup](https://github.com/Maran23/script-ide/blob/demo/demo/4.png?raw=true)
 
-![Example of the Quick Search Popup](https://github.com/user-attachments/assets/01141f05-e07c-4059-8d6f-e4c7490cbd40)
+![Example of the Quick Search Popup](https://github.com/Maran23/script-ide/blob/demo/demo/5.png?raw=true)
 
-![Example of the Plugin Editor Settings](https://github.com/user-attachments/assets/0450e423-bc49-4076-862b-c95a62190df1)
+![Example of the Override Popup](https://github.com/Maran23/script-ide/blob/demo/demo/6.png?raw=true)
+
+![Example of the Plugin Editor Settings](https://github.com/Maran23/script-ide/blob/demo/demo/7.png?raw=true)

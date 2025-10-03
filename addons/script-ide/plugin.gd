@@ -20,6 +20,15 @@ const INLINE: StringName = &"@"
 
 const BUILT_IN_SCRIPT: StringName = &"::GDScript"
 
+const MULTILINE_TAB_CONTAINER_SCENE: PackedScene = preload("tabbar/multiline_tab_container.tscn")
+const MultilineTabContainer := preload("tabbar/multiline_tab_container.gd")
+
+const QUICK_OPEN_SCENE: PackedScene = preload("quickopen/quick_open_panel.tscn")
+const QuickOpenPopup := preload("quickopen/quick_open_panel.gd")
+
+const OVERRIDE_SCENE: PackedScene = preload("override/override_panel.tscn")
+const OverridePopup := preload("override/override_panel.gd")
+
 const QUICK_OPEN_INTERVAL: int = 400
 
 #region Settings and Shortcuts
@@ -44,6 +53,8 @@ const SCRIPT_TABS_VISIBLE: StringName = SCRIPT_IDE + &"script_tabs_visible"
 const SCRIPT_TABS_POSITION_TOP: StringName = SCRIPT_IDE + &"script_tabs_position_top"
 ## Editor setting to control if all script tabs should have close button.
 const SCRIPT_TABS_CLOSE_BUTTON_ALWAYS: StringName = SCRIPT_IDE + &"script_tabs_close_button_always"
+## Editor setting to control if all tabs should be shown in a single line.
+const SCRIPT_TABS_SINGLELINE: StringName = SCRIPT_IDE + &"script_tabs_singleline"
 
 ## Editor setting for the 'Open Outline Popup' shortcut
 const OPEN_OUTLINE_POPUP: StringName = SCRIPT_IDE + &"open_outline_popup"
@@ -88,6 +99,7 @@ var is_hide_private_members: bool = false
 var is_script_tabs_visible: bool = true
 var is_script_tabs_top: bool = true
 var is_script_tabs_close_button_always: bool = false
+var is_script_tabs_singleline: bool = false
 
 var is_auto_navigate_in_fs: bool = true
 var is_script_list_visible: bool = false
@@ -103,13 +115,14 @@ var tab_cycle_backward_shc: Shortcut
 #region Existing controls we modify
 var outline_container: Control
 var outline_parent: Control
-var scripts_tab_container: TabContainer
-var scripts_tab_bar: TabBar
 var script_filter_txt: LineEdit
 var scripts_item_list: ItemList
-var panel_container: VSplitContainer
+var script_panel_split_container: VSplitContainer
 
-var split_container: HSplitContainer
+var old_scripts_tab_container: TabContainer
+var old_scripts_tab_bar: TabBar
+
+var script_editor_split_container: HSplitContainer
 var old_outline: ItemList
 var outline_filter_txt: LineEdit
 var sort_btn: Button
@@ -119,10 +132,11 @@ var sort_btn: Button
 var outline: ItemList
 var outline_popup: PopupPanel
 var filter_box: HBoxContainer
+var multiline_tab_container: MultilineTabContainer
 
 var scripts_popup: PopupPanel
-var quick_open_popup: PopupPanel
-var override_popup: PopupPanel
+var quick_open_popup: QuickOpenPopup
+var override_popup: OverridePopup
 
 var class_btn: Button
 var constant_btn: Button
@@ -137,13 +151,10 @@ var engine_func_btn: Button
 var keywords: Dictionary[String, bool] = {} # Used as Set.
 var outline_type_order: Array[OutlineType] = []
 var outline_cache: OutlineCache
-var tab_state: TabStateCache
 
 var old_script_editor_base: ScriptEditorBase
 var old_script_type: StringName
 
-var selected_tab: int = -1
-var last_tab_hovered: int = -1
 var is_script_changed: bool = false
 var file_to_navigate: String = &""
 var suppress_settings_sync: bool = false
@@ -177,38 +188,32 @@ func _enter_tree() -> void:
 	script_filter_txt = find_or_null(scripts_item_list.get_parent().find_children("*", "LineEdit", true, false))
 	script_filter_txt.gui_input.connect(navigate_on_list.bind(scripts_item_list, select_script))
 
-	# Make tab container visible.
-	scripts_tab_container = find_or_null(script_editor.find_children("*", "TabContainer", true, false))
-	scripts_tab_bar = scripts_tab_container.get_tab_bar()
+	old_scripts_tab_container = find_or_null(script_editor.find_children("*", "TabContainer", true, false))
+	old_scripts_tab_bar = old_scripts_tab_container.get_tab_bar()
 
-	# Save old tab state to restore later.
-	tab_state = TabStateCache.new()
-	tab_state.save(scripts_tab_container, scripts_tab_bar)
+	# When something changed, we need to sync our own tab container.
+	old_scripts_tab_container.child_order_changed.connect(notify_order_changed)
+
+	multiline_tab_container = MULTILINE_TAB_CONTAINER_SCENE.instantiate()
+	multiline_tab_container.plugin = self
+	multiline_tab_container.scripts_item_list = scripts_item_list
+	multiline_tab_container.script_filter_txt = script_filter_txt
+	multiline_tab_container.scripts_tab_container = old_scripts_tab_container
+
+	old_scripts_tab_container.get_parent().add_theme_constant_override(&"separation", 0)
+	old_scripts_tab_container.get_parent().add_child(multiline_tab_container)
+	update_tabs_position()
+	update_tabs_close_button()
+	update_tabs_visibility()
+	update_singleline_tabs()
 
 	# Create and set script popup.
+	script_panel_split_container = scripts_item_list.get_parent().get_parent()
 	create_set_scripts_popup()
 
-	# Configure tab container and bar.
-	scripts_tab_bar.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	scripts_tab_container.tabs_visible = is_script_tabs_visible
-	scripts_tab_container.drag_to_rearrange_enabled = true
-	update_tabs_position()
-
-	update_tabs_close_button()
-	scripts_tab_bar.drag_to_rearrange_enabled = true
-	scripts_tab_bar.select_with_rmb = true
-	scripts_tab_bar.tab_close_pressed.connect(on_tab_close)
-	scripts_tab_bar.tab_rmb_clicked.connect(on_tab_rmb)
-	scripts_tab_bar.tab_hovered.connect(on_tab_hovered)
-	scripts_tab_bar.mouse_exited.connect(on_tab_bar_mouse_exited)
-	scripts_tab_bar.active_tab_rearranged.connect(on_active_tab_rearranged)
-	scripts_tab_bar.gui_input.connect(on_tab_bar_gui_input)
-
-	scripts_tab_bar.tab_changed.connect(on_tab_changed)
-
 	# Remove existing outline and add own outline.
-	split_container = find_or_null(script_editor.find_children("*", "HSplitContainer", true, false))
-	outline_container = split_container.get_child(0)
+	script_editor_split_container = find_or_null(script_editor.find_children("*", "HSplitContainer", true, false))
+	outline_container = script_editor_split_container.get_child(0)
 
 	if (is_outline_right):
 		update_outline_position()
@@ -251,27 +256,24 @@ func _enter_tree() -> void:
 	sort_btn = find_or_null(outline_container.find_children("*", "Button", true, false))
 	sort_btn.pressed.connect(update_outline)
 
-	on_tab_changed(scripts_tab_bar.current_tab)
-	
+	old_scripts_tab_bar.tab_changed.connect(on_tab_changed)
+	on_tab_changed(old_scripts_tab_bar.current_tab)
 
 ## Restore the old Engine script UI and free everything we created
 func _exit_tree() -> void:
 	var file_system: EditorFileSystem = EditorInterface.get_resource_filesystem()
 	file_system.filesystem_changed.disconnect(schedule_update)
 
-	if (old_script_editor_base != null):
-		old_script_editor_base.edited_script_changed.disconnect(update_selected_tab)
-
-	if (split_container != null):
-		if (split_container != outline_container.get_parent()):
-			split_container.add_child(outline_container)
+	if (script_editor_split_container != null):
+		if (script_editor_split_container != outline_container.get_parent()):
+			script_editor_split_container.add_child(outline_container)
 
 		# Try to restore the previous split offset.
 		if (is_outline_right):
-			var split_offset: float = split_container.get_child(1).size.x
-			split_container.split_offset = split_offset
+			var split_offset: float = script_editor_split_container.get_child(1).size.x
+			script_editor_split_container.split_offset = split_offset
 
-		split_container.move_child(outline_container, 0)
+		script_editor_split_container.move_child(outline_container, 0)
 
 		outline_filter_txt.gui_input.disconnect(navigate_on_list)
 		outline_filter_txt.text_changed.disconnect(update_outline)
@@ -287,22 +289,17 @@ func _exit_tree() -> void:
 		filter_box.free()
 		outline.free()
 
-	if (scripts_tab_container != null):
-		tab_state.restore(scripts_tab_container, scripts_tab_bar)
+	if (old_scripts_tab_bar != null):
+		old_scripts_tab_bar.tab_changed.disconnect(on_tab_changed)
 
-		scripts_tab_container.pre_popup_pressed.disconnect(prepare_scripts_popup)
-		scripts_tab_container.set_popup(null)
+	if (old_scripts_tab_container != null):
+		old_scripts_tab_container.child_order_changed.disconnect(notify_order_changed)
+		old_scripts_tab_container.get_parent().remove_theme_constant_override(&"separation")
+		old_scripts_tab_container.get_parent().remove_child(multiline_tab_container)
+
+	if (multiline_tab_container != null):
+		multiline_tab_container.free()
 		scripts_popup.free()
-
-		if (scripts_tab_bar != null):
-			scripts_tab_bar.mouse_exited.disconnect(on_tab_bar_mouse_exited)
-			scripts_tab_bar.gui_input.disconnect(on_tab_bar_gui_input)
-			scripts_tab_bar.tab_close_pressed.disconnect(on_tab_close)
-			scripts_tab_bar.tab_rmb_clicked.disconnect(on_tab_rmb)
-			scripts_tab_bar.tab_hovered.disconnect(on_tab_hovered)
-			scripts_tab_bar.active_tab_rearranged.disconnect(on_active_tab_rearranged)
-
-			scripts_tab_bar.tab_changed.disconnect(on_tab_changed)
 
 	if (scripts_item_list != null):
 		scripts_item_list.allow_reselect = false
@@ -356,21 +353,6 @@ func _shortcut_input(event: InputEvent) -> void:
 	elif (open_override_popup_shc.matches_event(event)):
 		get_viewport().set_input_as_handled()
 		open_override_popup()
-	elif (EditorInterface.get_script_editor().is_visible_in_tree()):
-		if (tab_cycle_forward_shc.matches_event(event)):
-			get_viewport().set_input_as_handled()
-
-			var new_tab: int = scripts_tab_container.current_tab + 1
-			if (new_tab == scripts_tab_container.get_tab_count()):
-				new_tab = 0
-			scripts_tab_container.current_tab = new_tab
-		elif (tab_cycle_backward_shc.matches_event(event)):
-			get_viewport().set_input_as_handled()
-
-			var new_tab: int = scripts_tab_container.current_tab - 1
-			if (new_tab == -1):
-				new_tab = scripts_tab_container.get_tab_count() - 1
-			scripts_tab_container.current_tab = new_tab
 
 ## May cancels the quick search shortcut timer.
 func _input(event: InputEvent) -> void:
@@ -397,7 +379,9 @@ func init_icons():
 ## Initializes all settings.
 ## Every setting can be changed while this plugin is active, which will override them.
 func init_settings():
-	is_outline_visible_at_start = get_setting(OUTLINE_VISIBLE_AT_START, is_outline_visible_at_start)
+	# FIXME: Remove old entry. Should be removed at one point!
+	get_editor_settings().erase("plugin/script_ide/script_tab_position_top")
+  is_outline_visible_at_start = get_setting(OUTLINE_VISIBLE_AT_START, is_outline_visible_at_start)
 	is_outline_right = get_setting(OUTLINE_POSITION_RIGHT, is_outline_right)
 	is_hide_private_members = get_setting(HIDE_PRIVATE_MEMBERS, is_hide_private_members)
 	is_script_list_visible = get_setting(SCRIPT_LIST_VISIBLE, is_script_list_visible)
@@ -405,6 +389,7 @@ func init_settings():
 	is_script_tabs_visible = get_setting(SCRIPT_TABS_VISIBLE, is_script_tabs_visible)
 	is_script_tabs_top = get_setting(SCRIPT_TABS_POSITION_TOP, is_script_tabs_top)
 	is_script_tabs_close_button_always = get_setting(SCRIPT_TABS_CLOSE_BUTTON_ALWAYS, is_script_tabs_close_button_always)
+	is_script_tabs_singleline = get_setting(SCRIPT_TABS_SINGLELINE, is_script_tabs_singleline)
 
 	init_outline_order()
 
@@ -556,26 +541,33 @@ func init_shortcuts():
 	tab_cycle_backward_shc = editor_settings.get_setting(TAB_CYCLE_BACKWARD)
 #endregion
 
-## Schedules an update on the next frame
+## Schedules an update on the next frame.
 func schedule_update():
 	set_process(true)
 
 ## Updates all parts of the editor that are needed to be synchronized with the file system change.
 func update_editor():
-	update_script_text_filter()
+	if (file_to_navigate != &""):
+		EditorInterface.select_file(file_to_navigate)
+		EditorInterface.get_script_editor().get_current_editor().get_base_editor().grab_focus()
+		file_to_navigate = &""
 
 	if (is_script_changed):
-		if (file_to_navigate != &""):
-			EditorInterface.select_file(file_to_navigate)
-			EditorInterface.get_script_editor().get_current_editor().get_base_editor().grab_focus()
-			file_to_navigate = &""
-
-		sync_tab_with_script_list()
+		multiline_tab_container.tab_changed()
 		is_script_changed = false
 
-	update_tabs()
+		var is_script: bool = get_current_script() != null
+		filter_box.visible = is_script
+		outline.visible = is_script
+	else:
+		# We saved / filesystem changed. so need to update everything.
+		multiline_tab_container.update_tabs()
+
 	update_outline_cache()
 	update_outline()
+
+func notify_order_changed():
+	multiline_tab_container.script_order_changed()
 
 func add_to_outline_if_selected(btn: Button, action: Callable):
 	if (btn.button_pressed):
@@ -583,9 +575,9 @@ func add_to_outline_if_selected(btn: Button, action: Callable):
 
 func open_quick_search_popup():
 	if (quick_open_popup == null):
-		quick_open_popup = load_rel("quickopen/quick_open_panel.tscn").instantiate()
-		quick_open_popup.set_unparent_when_invisible(true)
+		quick_open_popup = QUICK_OPEN_SCENE.instantiate()
 		quick_open_popup.plugin = self
+		quick_open_popup.set_unparent_when_invisible(true)
 
 	quick_open_popup.popup_exclusive_on_parent(EditorInterface.get_script_editor(), get_center_editor_rect())
 
@@ -595,9 +587,9 @@ func open_override_popup():
 		return
 
 	if (override_popup == null):
-		override_popup = load_rel("override/override_panel.tscn").instantiate()
-		override_popup.set_unparent_when_invisible(true)
+		override_popup = OVERRIDE_SCENE.instantiate()
 		override_popup.plugin = self
+		override_popup.set_unparent_when_invisible(true)
 
 	override_popup.popup_exclusive_on_parent(EditorInterface.get_script_editor(), get_center_editor_rect())
 
@@ -606,8 +598,6 @@ func hide_scripts_popup():
 		scripts_popup.hide.call_deferred()
 
 func create_set_scripts_popup():
-	panel_container = scripts_item_list.get_parent().get_parent()
-
 	scripts_popup = PopupPanel.new()
 	scripts_popup.popup_hide.connect(restore_scripts_list)
 
@@ -615,25 +605,15 @@ func create_set_scripts_popup():
 	var script_editor: ScriptEditor = EditorInterface.get_script_editor()
 	script_editor.add_child(scripts_popup)
 
-	scripts_tab_container.pre_popup_pressed.connect(prepare_scripts_popup)
-	scripts_tab_container.set_popup(scripts_popup)
-
-func prepare_scripts_popup():
-	scripts_popup.size.x = outline.size.x
-	scripts_popup.size.y = panel_container.size.y - scripts_tab_bar.size.y
-
-	scripts_item_list.get_parent().reparent(scripts_popup)
-	scripts_item_list.get_parent().visible = true
-
-	script_filter_txt.grab_focus()
+	multiline_tab_container.set_popup(scripts_popup)
 
 func restore_scripts_list():
 	script_filter_txt.text = &""
 
 	update_script_list_visibility()
 
-	scripts_item_list.get_parent().reparent(panel_container)
-	panel_container.move_child(scripts_item_list.get_parent(), 0)
+	scripts_item_list.get_parent().reparent(script_panel_split_container)
+	script_panel_split_container.move_child(scripts_item_list.get_parent(), 0)
 
 func navigate_on_list(event: InputEvent, list: ItemList, submit: Callable):
 	if (event.is_action_pressed(&"ui_text_submit")):
@@ -688,22 +668,19 @@ func navigate_list(list: ItemList, index: int, amount: int):
 func get_center_editor_rect() -> Rect2i:
 	var script_editor: ScriptEditor = EditorInterface.get_script_editor()
 
-	var size: Vector2i = Vector2i(400, 500) * get_editor_scale()
-	var x: int
-	var y: int
+	var size: Vector2 = Vector2(400, 500) * get_editor_scale()
+	var position: Vector2
 
 	if (script_editor.get_parent().get_parent() is Window):
 		# Floating editor.
 		var window: Window = script_editor.get_parent().get_parent()
 		var window_rect: Rect2 = window.get_visible_rect()
 
-		x = window_rect.size.x / 2 - size.x / 2
-		y = window_rect.size.y / 2 - size.y / 2
+		position = window_rect.size / 2 - size / 2
 	else:
-		x = script_editor.global_position.x + script_editor.size.x / 2 - size.x / 2
-		y = script_editor.global_position.y + script_editor.size.y / 2 - size.y / 2
+		position = script_editor.global_position + script_editor.size / 2 - size / 2
 
-	return Rect2i(Vector2i(x, y), size)
+	return Rect2i(position, size)
 
 func open_outline_popup():
 	if (get_current_script() == null):
@@ -742,9 +719,9 @@ func on_outline_popup_hidden(outline_initially_closed: bool, old_text: String, b
 	if outline_initially_closed:
 		outline_container.visible = false
 
-	outline_container.reparent(split_container)
+	outline_container.reparent(script_editor_split_container)
 	if (!is_outline_right):
-		split_container.move_child(outline_container, 0)
+		script_editor_split_container.move_child(outline_container, 0)
 
 	outline_filter_txt.text = old_text
 
@@ -768,13 +745,6 @@ func open_scripts_popup():
 	scripts_popup.popup_exclusive_on_parent(EditorInterface.get_script_editor(), get_center_editor_rect())
 
 	script_filter_txt.grab_focus()
-
-## Removes the script filter text and emits the signal so that the tabs stay
-## and we do not break anything there.
-func update_script_text_filter():
-	if (script_filter_txt.text != &""):
-		script_filter_txt.text = &""
-		script_filter_txt.text_changed.emit(&"")
 
 func get_current_script() -> Script:
 	var script_editor: ScriptEditor = EditorInterface.get_script_editor()
@@ -912,11 +882,11 @@ func update_outline_visibility():
 func update_outline_position():
 	if (is_outline_right):
 		# Try to restore the previous split offset.
-		var split_offset: float = split_container.get_child(1).size.x
-		split_container.split_offset = split_offset
-		split_container.move_child(outline_container, 1)
+		var split_offset: float = script_editor_split_container.get_child(1).size.x
+		script_editor_split_container.split_offset = split_offset
+		script_editor_split_container.move_child(outline_container, 1)
 	else:
-		split_container.move_child(outline_container, 0)
+		script_editor_split_container.move_child(outline_container, 0)
 
 func update_script_list_visibility():
 	scripts_item_list.get_parent().visible = is_script_list_visible
@@ -976,9 +946,9 @@ func sync_settings():
 				if (new_script_tabs_visible != is_script_tabs_visible):
 					is_script_tabs_visible = new_script_tabs_visible
 
-					scripts_tab_container.tabs_visible = is_script_tabs_visible
-			SCRIPT_TAB_POSITION_TOP:
-				var new_script_tabs_top: bool = get_setting(SCRIPT_TAB_POSITION_TOP, is_script_tabs_top)
+					update_tabs_visibility()
+			SCRIPT_TABS_POSITION_TOP:
+				var new_script_tabs_top: bool = get_setting(SCRIPT_TABS_POSITION_TOP, is_script_tabs_top)
 				if (new_script_tabs_top != is_script_tabs_top):
 					is_script_tabs_top = new_script_tabs_top
 
@@ -989,6 +959,12 @@ func sync_settings():
 					is_script_tabs_close_button_always = new_script_tabs_close_button_always
 
 					update_tabs_close_button()
+			SCRIPT_TABS_SINGLELINE:
+				var new_script_tabs_singleline: bool = get_setting(SCRIPT_TABS_SINGLELINE, is_script_tabs_singleline)
+				if (new_script_tabs_singleline != is_script_tabs_singleline):
+					is_script_tabs_singleline = new_script_tabs_singleline
+
+					update_singleline_tabs()
 			AUTO_NAVIGATE_IN_FS:
 				is_auto_navigate_in_fs = get_setting(AUTO_NAVIGATE_IN_FS, is_auto_navigate_in_fs)
 			OPEN_OUTLINE_POPUP:
@@ -1028,8 +1004,6 @@ func get_shortcut(property: StringName) -> Shortcut:
 	return get_editor_settings().get_setting(property)
 
 func on_tab_changed(index: int):
-	selected_tab = index;
-
 	if (old_script_editor_base != null):
 		old_script_editor_base.edited_script_changed.disconnect(update_selected_tab)
 		old_script_editor_base = null
@@ -1058,34 +1032,22 @@ func on_tab_changed(index: int):
 	schedule_update()
 
 func update_selected_tab():
-	if (selected_tab == -1):
-		return
-
-	if (scripts_item_list.item_count == 0):
-		return
-
-	update_tab(selected_tab)
-
-func update_tabs():
-	for index: int in scripts_tab_container.get_tab_count():
-		update_tab(index)
-
-func update_tab(index: int):
-	scripts_tab_container.set_tab_title(index, scripts_item_list.get_item_text(index))
-	scripts_tab_container.set_tab_icon(index, scripts_item_list.get_item_icon(index))
-	scripts_tab_container.set_tab_tooltip(index, scripts_item_list.get_item_tooltip(index))
+	multiline_tab_container.update_selected_tab()
 
 func update_tabs_position():
 	if (is_script_tabs_top):
-		scripts_tab_container.tabs_position = TabContainer.POSITION_TOP
+		old_scripts_tab_container.get_parent().move_child(multiline_tab_container, 0)
 	else:
-		scripts_tab_container.tabs_position = TabContainer.POSITION_BOTTOM
+		old_scripts_tab_container.get_parent().move_child(multiline_tab_container, 2)
 
 func update_tabs_close_button():
-	if (is_script_tabs_close_button_always):
-		scripts_tab_bar.tab_close_display_policy = TabBar.CloseButtonDisplayPolicy.CLOSE_BUTTON_SHOW_ALWAYS
-	else:
-		scripts_tab_bar.tab_close_display_policy = TabBar.CloseButtonDisplayPolicy.CLOSE_BUTTON_SHOW_ACTIVE_ONLY
+	multiline_tab_container.show_close_button_always = is_script_tabs_close_button_always
+
+func update_tabs_visibility():
+	multiline_tab_container.visible = is_script_tabs_visible
+
+func update_singleline_tabs():
+	multiline_tab_container.is_singleline_tabs = is_script_tabs_singleline
 
 func update_keywords(script: Script):
 	if (script == null):
@@ -1229,80 +1191,6 @@ func get_func_icon(func_name: String) -> Texture2D:
 
 	return icon
 
-func sync_tab_with_script_list():
-	# For some reason the selected tab is wrong. Looks like a Godot bug.
-	if (selected_tab >= scripts_item_list.item_count):
-		selected_tab = scripts_tab_bar.current_tab
-
-	# Hide filter and outline for non .gd scripts.
-	var is_script: bool = get_current_script() != null
-	filter_box.visible = is_script
-	outline.visible = is_script
-
-	# Sync with script item list.
-	if (selected_tab != -1 && scripts_item_list.item_count > 0 && !scripts_item_list.is_selected(selected_tab)):
-		scripts_item_list.select(selected_tab)
-		scripts_item_list.item_selected.emit(selected_tab)
-
-		scripts_item_list.ensure_current_is_visible()
-
-func on_tab_bar_mouse_exited():
-	last_tab_hovered = -1
-
-func on_tab_hovered(idx: int):
-	last_tab_hovered = idx
-
-func on_tab_bar_gui_input(event: InputEvent):
-	# MIGRATION: This is not needed anymore in Godot 4.5
-	if (Engine.get_version_info()["minor"] > 4):
-		return
-
-	if (last_tab_hovered == -1):
-		return
-
-	if (event is InputEventMouseButton):
-		if event.is_pressed() and event.button_index == MOUSE_BUTTON_MIDDLE:
-			update_script_text_filter()
-			simulate_item_clicked(last_tab_hovered, MOUSE_BUTTON_MIDDLE)
-
-			if (last_tab_hovered >= scripts_tab_bar.tab_count - 1):
-				last_tab_hovered = -1
-
-func on_active_tab_rearranged(idx_to: int):
-	# MIGRATION: This is not needed anymore in Godot 4.5
-	if (Engine.get_version_info()["minor"] > 4):
-		return
-
-	var control: Control = scripts_tab_container.get_tab_control(selected_tab)
-	if (!control):
-		return
-
-	scripts_tab_container.move_child(control, idx_to)
-	scripts_tab_container.current_tab = scripts_tab_container.current_tab
-	selected_tab = scripts_tab_container.current_tab
-
-func get_res_path(idx: int) -> String:
-	var tab_control: Control = scripts_tab_container.get_tab_control(idx)
-	if (tab_control == null):
-		return ''
-
-	var path_var: Variant = tab_control.get(&"metadata/_edit_res_path")
-	if (path_var == null):
-		return ''
-
-	return path_var
-
-func on_tab_rmb(tab_idx: int):
-	update_script_text_filter()
-	simulate_item_clicked(tab_idx, MOUSE_BUTTON_RIGHT)
-
-func on_tab_close(tab_idx: int):
-	update_script_text_filter()
-	simulate_item_clicked(tab_idx, MOUSE_BUTTON_MIDDLE)
-
-func simulate_item_clicked(tab_idx: int, mouse_idx: int):
-	scripts_item_list.item_clicked.emit(tab_idx, scripts_item_list.get_local_mouse_position(), mouse_idx)
-
 func get_editor_scale() -> float:
 	return EditorInterface.get_editor_scale()
 
@@ -1348,33 +1236,3 @@ class OutlineCache:
 class OutlineType:
 	var type_name: StringName
 	var add_to_outline: Callable
-
-## Contains everything we modify on the Tab Control. Used to save and restore the behaviour
-## to keep the Engine in a clean state when the plugin is disabled.
-class TabStateCache:
-	var tabs_visible: bool
-	var drag_to_rearrange_enabled: bool
-	var auto_translate_mode_state: Node.AutoTranslateMode
-	var tab_bar_drag_to_rearrange_enabled: bool
-	var tab_close_display_policy: TabBar.CloseButtonDisplayPolicy
-	var select_with_rmb: bool
-
-	func save(tab_container: TabContainer, tab_bar: TabBar):
-		if (tab_container != null):
-			tabs_visible = tab_container.tabs_visible
-			drag_to_rearrange_enabled = tab_container.drag_to_rearrange_enabled
-		if (tab_bar != null):
-			tab_bar_drag_to_rearrange_enabled = tab_bar.drag_to_rearrange_enabled
-			tab_close_display_policy = tab_bar.tab_close_display_policy
-			select_with_rmb = tab_bar.select_with_rmb
-			auto_translate_mode_state = tab_bar.auto_translate_mode
-
-	func restore(tab_container: TabContainer, tab_bar: TabBar):
-		if (tab_container != null):
-			tab_container.tabs_visible = tabs_visible
-			tab_container.drag_to_rearrange_enabled = drag_to_rearrange_enabled
-		if (tab_bar != null):
-			tab_bar.drag_to_rearrange_enabled = drag_to_rearrange_enabled
-			tab_bar.tab_close_display_policy = tab_close_display_policy
-			tab_bar.select_with_rmb = select_with_rmb
-			tab_bar.auto_translate_mode = auto_translate_mode_state
