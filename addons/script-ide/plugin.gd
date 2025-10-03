@@ -381,7 +381,7 @@ func init_icons():
 func init_settings():
 	# FIXME: Remove old entry. Should be removed at one point!
 	get_editor_settings().erase("plugin/script_ide/script_tab_position_top")
-  is_outline_visible_at_start = get_setting(OUTLINE_VISIBLE_AT_START, is_outline_visible_at_start)
+	is_outline_visible_at_start = get_setting(OUTLINE_VISIBLE_AT_START, is_outline_visible_at_start)
 	is_outline_right = get_setting(OUTLINE_POSITION_RIGHT, is_outline_right)
 	is_hide_private_members = get_setting(HIDE_PRIVATE_MEMBERS, is_hide_private_members)
 	is_script_list_visible = get_setting(SCRIPT_LIST_VISIBLE, is_script_list_visible)
