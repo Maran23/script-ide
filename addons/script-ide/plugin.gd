@@ -34,6 +34,8 @@ const QUICK_OPEN_INTERVAL: int = 400
 #region Settings and Shortcuts
 ## Editor setting path
 const SCRIPT_IDE: StringName = &"plugin/script_ide/"
+## Editor setting to control whether the outline should be visible at the start or not.
+const OUTLINE_VISIBLE_AT_START: StringName = SCRIPT_IDE + &"outline_visible_at_start"
 ## Editor setting for the outline position
 const OUTLINE_POSITION_RIGHT: StringName = SCRIPT_IDE + &"outline_position_right"
 ## Editor setting to control the order of the outline
@@ -89,6 +91,7 @@ var class_icon: Texture2D
 #endregion
 
 #region Editor settings
+var is_outline_visible_at_start: bool = true
 var outline_order: PackedStringArray
 var is_outline_right: bool = true
 var is_hide_private_members: bool = false
@@ -214,6 +217,8 @@ func _enter_tree() -> void:
 
 	if (is_outline_right):
 		update_outline_position()
+
+	update_outline_visibility()
 
 	old_outline = find_or_null(outline_container.find_children("*", "ItemList", true, false), 1)
 	outline_parent = old_outline.get_parent()
@@ -376,7 +381,7 @@ func init_icons():
 func init_settings():
 	# FIXME: Remove old entry. Should be removed at one point!
 	get_editor_settings().erase("plugin/script_ide/script_tab_position_top")
-
+	is_outline_visible_at_start = get_setting(OUTLINE_VISIBLE_AT_START, is_outline_visible_at_start)
 	is_outline_right = get_setting(OUTLINE_POSITION_RIGHT, is_outline_right)
 	is_hide_private_members = get_setting(HIDE_PRIVATE_MEMBERS, is_hide_private_members)
 	is_script_list_visible = get_setting(SCRIPT_LIST_VISIBLE, is_script_list_visible)
@@ -871,6 +876,9 @@ func on_filter_button_pressed(pressed: bool, btn: Button):
 	update_outline()
 	outline_filter_txt.grab_focus()
 
+func update_outline_visibility():
+	outline_container.visible = is_outline_visible_at_start
+
 func update_outline_position():
 	if (is_outline_right):
 		# Try to restore the previous split offset.
@@ -915,7 +923,6 @@ func sync_settings():
 				var new_outline_right: bool = get_setting(OUTLINE_POSITION_RIGHT, is_outline_right)
 				if (new_outline_right != is_outline_right):
 					is_outline_right = new_outline_right
-
 					update_outline_position()
 			OUTLINE_ORDER:
 				update_outline_order()
