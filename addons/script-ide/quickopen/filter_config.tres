@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="QuickOpenFilterConfig" load_steps=2 format=3 uid="uid://ddxqnnl5stevc"]
+
+[ext_resource type="Script" uid="uid://cggwfb8kcwr63" path="res://addons/script-ide/quickopen/filter_config.gd" id="1_config_script"]
+
+[resource]
+script = ExtResource("1_config_script")
+excluded_extensions = PackedStringArray("import")
+excluded_paths = PackedStringArray("res://.godot/")
