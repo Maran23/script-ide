@@ -215,8 +215,8 @@ func _enter_tree() -> void:
 	if (is_outline_right):
 		update_outline_position()
 
-	old_outline = find_or_null(outline_container.find_children("*", "ItemList", true, false), 1)
-	outline_parent = old_outline.get_parent()
+	outline_parent = find_or_null(outline_container.get_children(), 1)
+	old_outline = find_or_null(outline_parent.find_children("*", "ItemList", true, false), 0)
 	outline_parent.remove_child(old_outline)
 
 	outline = ItemList.new()
@@ -279,7 +279,7 @@ func _exit_tree() -> void:
 		outline_parent.remove_child(filter_box)
 		outline_parent.remove_child(outline)
 		outline_parent.add_child(old_outline)
-		outline_parent.move_child(old_outline, 2)
+		outline_parent.move_child(old_outline, 1)
 
 		filter_box.free()
 		outline.free()
@@ -374,9 +374,6 @@ func init_icons():
 ## Initializes all settings.
 ## Every setting can be changed while this plugin is active, which will override them.
 func init_settings():
-	# FIXME: Remove old entry. Should be removed at one point!
-	get_editor_settings().erase("plugin/script_ide/script_tab_position_top")
-
 	is_outline_right = get_setting(OUTLINE_POSITION_RIGHT, is_outline_right)
 	is_hide_private_members = get_setting(HIDE_PRIVATE_MEMBERS, is_hide_private_members)
 	is_script_list_visible = get_setting(SCRIPT_LIST_VISIBLE, is_script_list_visible)
