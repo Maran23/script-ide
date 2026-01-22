@@ -622,6 +622,8 @@ func restore_scripts_list():
 
 func navigate_on_list(event: InputEvent, list: ItemList, submit: Callable):
 	if (event.is_action_pressed(&"ui_text_submit")):
+		list.accept_event()
+
 		var index: int = get_list_index(list)
 		if (index == -1):
 			return

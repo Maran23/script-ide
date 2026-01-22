@@ -31,7 +31,31 @@ func _ready() -> void:
 #endregion
 
 func navigate_on_tree(event: InputEvent):
-	if (event.is_action_pressed(&"ui_down", true)):
+	if (event.is_action_pressed(&"ui_select", true)):
+		var selected: TreeItem = get_selected_tree_item()
+		if (selected == null):
+			return
+
+		class_func_tree.accept_event()
+
+		if (!selected.is_selectable(0)):
+			selected.collapsed = !selected.collapsed
+			return
+
+		if (selected.is_selected(0)):
+			selected.deselect(0)
+			save_selection(false, selected)
+		else:
+			selected.select(0)
+			save_selection(true, selected)
+	elif (event.is_action_pressed(&"ui_text_submit", true)):
+		class_func_tree.accept_event()
+
+		if (selections.size() == 0):
+			return
+
+		generate_functions()
+	elif (event.is_action_pressed(&"ui_down", true)):
 		var selected: TreeItem = get_selected_tree_item()
 		if (selected == null):
 			return
@@ -81,30 +105,6 @@ func navigate_on_tree(event: InputEvent):
 			item = prev
 
 		focus_tree_item(item)
-	elif (event.is_action_pressed(&"ui_select", true)):
-		var selected: TreeItem = get_selected_tree_item()
-		if (selected == null):
-			return
-
-		if (!selected.is_selectable(0)):
-			selected.collapsed = !selected.collapsed
-			class_func_tree.accept_event()
-			return
-
-		if (selected.is_selected(0)):
-			selected.deselect(0)
-			save_selection(false, selected)
-		else:
-			selected.select(0)
-			save_selection(true, selected)
-
-		class_func_tree.accept_event()
-	elif (event.is_action_pressed(&"ui_text_submit", true)):
-		if (selections.size() == 0):
-			return
-
-		generate_functions()
-		class_func_tree.accept_event()
 
 func get_selected_tree_item() -> TreeItem:
 	var selected: TreeItem = class_func_tree.get_selected()
