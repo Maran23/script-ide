@@ -3,17 +3,20 @@ extends PopupPanel
 
 const FUNC_META: StringName = &"func"
 
+const Outline := preload("uid://db0be00ai3tfi")
+
 @onready var filter_txt: LineEdit = %FilterTxt
 @onready var class_func_tree: Tree = %ClassFuncTree
 @onready var ok_btn: Button = %OkBtn
 @onready var cancel_btn: Button = %CancelBtn
 
+# Reference back to the plugin, untyped
 var plugin: EditorPlugin
+var outline: Outline
 
 var selections: Dictionary[String, bool] = {} # Used as Set.
 var class_to_functions: Dictionary[StringName, PackedStringArray]
 
-#region Plugin Processing
 func _ready() -> void:
 	filter_txt.text_changed.connect(update_tree_filter.unbind(1))
 
@@ -25,10 +28,7 @@ func _ready() -> void:
 
 	about_to_popup.connect(on_show)
 
-	if (plugin != null):
-		filter_txt.gui_input.connect(navigate_on_tree)
-
-#endregion
+	filter_txt.gui_input.connect(navigate_on_tree)
 
 func navigate_on_tree(event: InputEvent):
 	if (event.is_action_pressed(&"ui_select", true)):
@@ -140,7 +140,7 @@ func on_show():
 	filter_txt.text = &""
 
 	var script: Script = EditorInterface.get_script_editor().get_current_script()
-	class_to_functions = collect_all_class_functions(script) # [StringName, PackedStringArray]
+	class_to_functions = collect_all_class_functions(script)
 	if (class_to_functions.is_empty()):
 		return
 
@@ -164,18 +164,18 @@ func update_tree():
 				var func_item: TreeItem = class_item.create_child()
 				func_item.set_text(0, function)
 				if (plugin.keywords.has(function.get_slice("(", 0))):
-					func_item.set_icon(0, plugin.engine_func_icon)
+					func_item.set_icon(0, outline.engine_func_icon)
 				else:
-					func_item.set_icon(0, plugin.func_icon)
+					func_item.set_icon(0, outline.func_icon)
 
 				if (is_preselected):
 					func_item.select(0)
 
 func collect_all_class_functions(script: Script) -> Dictionary[StringName, PackedStringArray]:
 	var existing_funcs: Dictionary[String, bool] = {} # Used as Set.
-	for func_str: String in plugin.outline_cache.engine_funcs:
+	for func_str: String in outline.outline_cache.engine_funcs:
 		existing_funcs[func_str] = true
-	for func_str: String in plugin.outline_cache.funcs:
+	for func_str: String in outline.outline_cache.funcs:
 		existing_funcs[func_str] = true
 
 	var class_to_functions: Dictionary[StringName, PackedStringArray] = collect_super_class_functions(script.get_base_script(), existing_funcs)
@@ -217,7 +217,7 @@ func collect_native_class_functions(native_class: StringName, existing_funcs: Di
 
 	return class_to_functions
 
-func collect_class_functions(native_class: StringName, existing_funcs: Dictionary[String, bool]):
+func collect_class_functions(native_class: StringName, existing_funcs: Dictionary[String, bool]) -> PackedStringArray:
 	var functions: PackedStringArray = []
 
 	for method: Dictionary in ClassDB.class_get_method_list(native_class, true):
@@ -335,8 +335,8 @@ func get_type(dict: Dictionary) -> String:
 
 	return type
 
-func is_dictionary(type_hint: int):
+func is_dictionary(type_hint: int) -> bool:
 	return type_hint == 27
 
-func is_array(type_hint: int):
+func is_array(type_hint: int) -> bool:
 	return type_hint == 28

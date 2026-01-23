@@ -2,8 +2,8 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dbwlgnwv5e8kl"
-path="res://.godot/imported/property.svg-9e228499f30651faad74aa99e4499d7e.ctex"
+uid="uid://bnccvnaloqnte"
+path="res://.godot/imported/signal.svg-65741ce388cd0a6b19f1b195a997cce3.ctex"
 metadata={
 "has_editor_variant": true,
 "vram_texture": false
@@ -11,8 +11,8 @@ metadata={
 
 [deps]
 
-source_file="res://addons/script-ide/icon/property.svg"
-dest_files=["res://.godot/imported/property.svg-9e228499f30651faad74aa99e4499d7e.ctex"]
+source_file="res://addons/script-ide/outline/icon/signal.svg"
+dest_files=["res://.godot/imported/signal.svg-65741ce388cd0a6b19f1b195a997cce3.ctex"]
 
 [params]
 

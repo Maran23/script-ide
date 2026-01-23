@@ -2,8 +2,8 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cawc456ja8vf5"
-path="res://.godot/imported/constant.svg-f6e857276565573c7540f3c32801842a.ctex"
+uid="uid://dbwlgnwv5e8kl"
+path="res://.godot/imported/property.svg-a9a1c76c01653424a37bad3c0caee2de.ctex"
 metadata={
 "has_editor_variant": true,
 "vram_texture": false
@@ -11,8 +11,8 @@ metadata={
 
 [deps]
 
-source_file="res://addons/script-ide/icon/constant.svg"
-dest_files=["res://.godot/imported/constant.svg-f6e857276565573c7540f3c32801842a.ctex"]
+source_file="res://addons/script-ide/outline/icon/property.svg"
+dest_files=["res://.godot/imported/property.svg-a9a1c76c01653424a37bad3c0caee2de.ctex"]
 
 [params]
 

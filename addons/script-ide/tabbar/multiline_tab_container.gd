@@ -8,6 +8,7 @@ const CustomTab := preload("custom_tab.gd")
 @onready var multiline_tab_bar: HFlowContainer = %MultilineTabBar
 @onready var popup_btn: Button = %PopupBtn
 
+#region Theme
 var tab_hovered: StyleBoxFlat
 var tab_focus: StyleBoxFlat
 var tab_selected: StyleBoxFlat
@@ -16,17 +17,19 @@ var tab_unselected: StyleBoxFlat
 var font_selected_color: Color
 var font_unselected_color: Color
 var font_hovered_color: Color
+#endregion
 
 var show_close_button_always: bool = false : set = set_show_close_button_always
 var is_singleline_tabs: bool = false : set = set_singleline_tabs
 
 var tab_group: ButtonGroup = ButtonGroup.new()
 
+# Existing components, set from the plugin
 var script_filter_txt: LineEdit
 var scripts_item_list: ItemList
 var scripts_tab_container: TabContainer
 var popup: PopupPanel
-
+# Reference back to the plugin, untyped
 var plugin: EditorPlugin
 
 var suppress_theme_changed: bool

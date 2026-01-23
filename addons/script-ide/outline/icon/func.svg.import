@@ -2,8 +2,8 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://csik7oxvt7tq3"
-path="res://.godot/imported/class.svg-e6f2816a1f06041fb421c2af52817a4a.ctex"
+uid="uid://rni04cl446ov"
+path="res://.godot/imported/func.svg-d034576bf2eed84b270a8dc1d6d64df6.ctex"
 metadata={
 "has_editor_variant": true,
 "vram_texture": false
@@ -11,8 +11,8 @@ metadata={
 
 [deps]
 
-source_file="res://addons/script-ide/icon/class.svg"
-dest_files=["res://.godot/imported/class.svg-e6f2816a1f06041fb421c2af52817a4a.ctex"]
+source_file="res://addons/script-ide/outline/icon/func.svg"
+dest_files=["res://.godot/imported/func.svg-d034576bf2eed84b270a8dc1d6d64df6.ctex"]
 
 [params]
 
