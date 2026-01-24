@@ -116,6 +116,8 @@ var multiline_tab_container: MultilineTabContainer
 var scripts_popup: PopupPanel
 var quick_open_popup: QuickOpenPopup
 var override_popup: OverridePopup
+
+var tab_splitter: HSplitContainer
 #endregion
 
 #region Plugin variables
@@ -196,6 +198,15 @@ func _enter_tree() -> void:
 	old_scripts_tab_container = find_or_null(script_editor.find_children("*", "TabContainer", true, false))
 	old_scripts_tab_bar = old_scripts_tab_container.get_tab_bar()
 
+	var tab_container_parent: Control = old_scripts_tab_container.get_parent()
+	tab_splitter = HSplitContainer.new()
+	tab_splitter.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tab_splitter.size_flags_vertical = Control.SIZE_EXPAND_FILL
+
+	tab_container_parent.add_child(tab_splitter)
+	tab_container_parent.move_child(tab_splitter, 0)
+	old_scripts_tab_container.reparent(tab_splitter)
+
 	# When something changed, we need to sync our own tab container.
 	old_scripts_tab_container.child_order_changed.connect(notify_order_changed)
 
@@ -205,8 +216,10 @@ func _enter_tree() -> void:
 	multiline_tab_container.script_filter_txt = script_filter_txt
 	multiline_tab_container.scripts_tab_container = old_scripts_tab_container
 
-	old_scripts_tab_container.get_parent().add_theme_constant_override(&"separation", 0)
-	old_scripts_tab_container.get_parent().add_child(multiline_tab_container)
+	tab_container_parent.add_theme_constant_override(&"separation", 0)
+	tab_container_parent.add_child(multiline_tab_container)
+
+	multiline_tab_container.split_btn.toggled.connect(toggle_split_view.unbind(1))
 	update_tabs_position()
 	update_tabs_close_button()
 	update_tabs_visibility()
@@ -225,6 +238,12 @@ func _exit_tree() -> void:
 	var file_system: EditorFileSystem = EditorInterface.get_resource_filesystem()
 	file_system.filesystem_changed.disconnect(schedule_update)
 	get_editor_settings().settings_changed.disconnect(sync_settings)
+
+	if (tab_splitter != null):
+		var tab_container_parent: Control = tab_splitter.get_parent()
+		old_scripts_tab_container.reparent(tab_container_parent)
+		tab_container_parent.move_child(old_scripts_tab_container, 1)
+		tab_splitter.free()
 
 	if (script_editor_split_container != null):
 		if (script_editor_split_container != files_panel.get_parent()):
@@ -456,6 +475,9 @@ func on_tab_changed(index: int):
 
 		old_script_editor_base = script_editor_base
 
+	if (!multiline_tab_container.is_split()):
+		multiline_tab_container.split_btn.disabled = script_editor_base == null
+
 	is_script_changed = true
 
 	if (is_auto_navigate_in_fs && script_editor.get_current_script() != null):
@@ -470,6 +492,32 @@ func on_tab_changed(index: int):
 		file_to_navigate = &""
 
 	schedule_update()
+
+func toggle_split_view():
+	var script_editor: ScriptEditor = EditorInterface.get_script_editor()
+	var split_script_editor_base: ScriptEditorBase = script_editor.get_current_editor()
+
+	if (!multiline_tab_container.is_split()):
+		if (split_script_editor_base == null):
+			return
+
+		multiline_tab_container.set_split(true)
+
+		var editor: CodeEdit = split_script_editor_base.get_base_editor().duplicate()
+		editor.editable = false
+
+		var container: PanelContainer = PanelContainer.new()
+		container.custom_minimum_size.x = 256
+		container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+		container.add_child(editor)
+		tab_splitter.add_child(container)
+	else:
+		multiline_tab_container.set_split(false)
+		tab_splitter.remove_child(tab_splitter.get_child(tab_splitter.get_child_count() - 1))
+
+		if (split_script_editor_base == null):
+			multiline_tab_container.split_btn.disabled = true
 
 func notify_order_changed():
 	multiline_tab_container.script_order_changed()
@@ -787,10 +835,11 @@ func update_selected_tab():
 	multiline_tab_container.update_selected_tab()
 
 func update_tabs_position():
+	var tab_container_parent: Control = multiline_tab_container.get_parent()
 	if (is_script_tabs_top):
-		old_scripts_tab_container.get_parent().move_child(multiline_tab_container, 0)
+		tab_container_parent.move_child(multiline_tab_container, 0)
 	else:
-		old_scripts_tab_container.get_parent().move_child(multiline_tab_container, 2)
+		tab_container_parent.move_child(multiline_tab_container, tab_container_parent.get_child_count() - 1)
 
 func update_tabs_close_button():
 	multiline_tab_container.show_close_button_always = is_script_tabs_close_button_always

@@ -9,7 +9,6 @@ signal dropped(source_index: int, target_index: int)
 var close_button: Button
 
 func _ready() -> void:
-	icon_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	alignment = HORIZONTAL_ALIGNMENT_LEFT
 	action_mode = ACTION_MODE_BUTTON_PRESS
 	auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
@@ -53,7 +52,6 @@ func _get_drag_data(at_position: Vector2) -> Variant:
 	var preview: Button = Button.new()
 	preview.text = text
 	preview.icon = icon
-	preview.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	preview.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	preview.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	preview.add_theme_stylebox_override(&"normal", get_theme_stylebox(&"normal"))

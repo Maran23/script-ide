@@ -6,6 +6,7 @@ const CLOSE_BTN_SPACER: String = "    "
 const CustomTab := preload("custom_tab.gd")
 
 @onready var multiline_tab_bar: HFlowContainer = %MultilineTabBar
+@onready var split_btn: Button = %SplitBtn
 @onready var popup_btn: Button = %PopupBtn
 
 #region Theme
@@ -34,6 +35,8 @@ var plugin: EditorPlugin
 
 var suppress_theme_changed: bool
 
+var split: bool
+var split_icon: Texture2D
 var last_drag_over_tab: CustomTab
 var drag_marker: ColorRect
 var current_tab: CustomTab
@@ -44,11 +47,29 @@ func _init() -> void:
 #region Plugin and related tab handling processing
 func _ready() -> void:
 	popup_btn.pressed.connect(show_popup)
+	split_icon = split_btn.icon
 
 	set_process(false)
 
 	if (plugin != null):
 		schedule_update()
+
+func set_split(value: bool) -> void:
+	split = value
+
+	if (split):
+		split_btn.icon = split_icon
+
+		var text: String = scripts_item_list.get_item_text(current_tab.get_index())
+		var icon: Texture2D = scripts_item_list.get_item_icon(current_tab.get_index())
+		split_btn.text = text
+		split_btn.icon = icon
+	else:
+		split_btn.icon = split_icon
+		split_btn.text = ""
+
+func is_split() -> bool:
+	return split
 
 func _notification(what: int) -> void:
 	if (what == NOTIFICATION_DRAG_END || what == NOTIFICATION_MOUSE_EXIT):

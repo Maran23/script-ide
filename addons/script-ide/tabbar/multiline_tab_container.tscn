@@ -2,8 +2,12 @@
 
 [ext_resource type="Script" uid="uid://l1rdargfn67o" path="res://addons/script-ide/tabbar/multiline_tab_container.gd" id="1_8jr3v"]
 
+[sub_resource type="DPITexture" id="DPITexture_split"]
+_source = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\"><path fill=\"#e0e0e0\" d=\"M7.5 0v16h1V0z\"/></svg>
+"
+
 [sub_resource type="DPITexture" id="DPITexture_p4126"]
-_source = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\"><path fill=\"#e0e0e0\" fill-opacity=\".4\" d=\"M8 0a2 2 0 0 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 0 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 0 0 0 4 2 2 0 0 0 0-4z\"/></svg>
+_source = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\"><path fill=\"#e0e0e0\" d=\"M8 0a2 2 0 0 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 0 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 0 0 0 4 2 2 0 0 0 0-4z\"/></svg>
 "
 saturation = 1.8
 color_map = {
@@ -31,6 +35,14 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/h_separation = 0
 theme_override_constants/v_separation = 0
+
+[node name="SplitBtn" type="Button" parent="HBoxContainer" unique_id=813915450]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 8
+toggle_mode = true
+icon = SubResource("DPITexture_split")
+alignment = 0
 
 [node name="PopupBtn" type="Button" parent="HBoxContainer" unique_id=1586924518]
 unique_name_in_owner = true
