@@ -280,6 +280,7 @@ func _exit_tree() -> void:
 		old_scripts_tab_container.get_parent().remove_child(multiline_tab_bar)
 
 	if (multiline_tab_bar != null):
+		multiline_tab_bar.free_tabs()
 		multiline_tab_bar.free()
 		scripts_popup.free()
 
