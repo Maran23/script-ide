@@ -322,7 +322,7 @@ func sync_tabs_with_item_list() -> void:
 				current_tab = null
 
 			multiline_tab_bar.remove_child(tab)
-			tab.free()
+			free_tab(tab)
 
 	for index: int in scripts_item_list.item_count:
 		var tab: CustomTab = get_tab(index)
@@ -380,6 +380,16 @@ func set_show_close_button_always(new_value: bool):
 				tab.hide_close_button()
 			else:
 				tab.text += CLOSE_BTN_SPACER
+
+func free_tabs():
+	drag_marker.free()
+	for tab: CustomTab in get_tabs():
+		free_tab(tab)
+
+func free_tab(tab: CustomTab):
+	if (tab.close_button != null):
+		tab.close_button.free()
+	tab.free()
 
 #region Singeline handling
 func set_singleline_tabs(new_value: bool):
