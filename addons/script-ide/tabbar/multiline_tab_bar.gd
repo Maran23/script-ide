@@ -36,7 +36,7 @@ var plugin: EditorPlugin
 
 var suppress_theme_changed: bool
 
-var split: bool
+var split_script: Script
 var split_icon: Texture2D
 var last_drag_over_tab: CustomTab
 var drag_marker: ColorRect
@@ -48,29 +48,13 @@ func _init() -> void:
 #region Plugin and related tab handling processing
 func _ready() -> void:
 	popup_btn.pressed.connect(show_popup)
+	split_btn.gui_input.connect(on_right_click)
 	split_icon = split_btn.icon
 
 	set_process(false)
 
 	if (plugin != null):
 		schedule_update()
-
-func set_split(value: bool) -> void:
-	split = value
-
-	if (split):
-		split_btn.icon = split_icon
-
-		var text: String = scripts_item_list.get_item_text(current_tab.get_index())
-		var icon: Texture2D = scripts_item_list.get_item_icon(current_tab.get_index())
-		split_btn.text = text
-		split_btn.icon = icon
-	else:
-		split_btn.icon = split_icon
-		split_btn.text = ""
-
-func is_split() -> bool:
-	return split
 
 func _notification(what: int) -> void:
 	if (what == NOTIFICATION_DRAG_END || what == NOTIFICATION_MOUSE_EXIT):
@@ -106,24 +90,6 @@ func _notification(what: int) -> void:
 
 		for tab: CustomTab in get_tabs():
 			update_tab_style(tab)
-
-func update_tab_style(tab: CustomTab):
-	tab.add_theme_stylebox_override(&"normal", tab_unselected)
-	tab.add_theme_stylebox_override(&"hover", tab_hovered)
-	tab.add_theme_stylebox_override(&"hover_pressed", tab_hovered)
-	tab.add_theme_stylebox_override(&"focus", tab_focus)
-	tab.add_theme_stylebox_override(&"pressed", tab_selected)
-
-	tab.add_theme_color_override(&"font_color", font_unselected_color)
-	tab.add_theme_color_override(&"font_hover_color", font_hovered_color)
-	tab.add_theme_color_override(&"font_pressed_color", font_selected_color)
-
-func update_icon_color(tab: CustomTab, color: Color):
-	tab.add_theme_color_override(&"icon_normal_color", color)
-	tab.add_theme_color_override(&"icon_hover_color", color)
-	tab.add_theme_color_override(&"icon_hover_pressed_color", color)
-	tab.add_theme_color_override(&"icon_pressed_color", color)
-	tab.add_theme_color_override(&"icon_focus_color", color)
 
 func _process(delta: float) -> void:
 	sync_tabs_with_item_list()
@@ -192,6 +158,38 @@ func _drop_data(at_position: Vector2, data: Variant) -> void:
 
 func schedule_update():
 	set_process(true)
+
+func set_split(script: Script) -> void:
+	split_script = script
+
+	if (split_script != null):
+		split_btn.icon = split_icon
+
+		var text: String = scripts_item_list.get_item_text(current_tab.get_index())
+		var icon: Texture2D = scripts_item_list.get_item_icon(current_tab.get_index())
+		split_btn.text = text
+		split_btn.icon = icon
+	else:
+		split_btn.icon = split_icon
+		split_btn.text = ""
+
+func is_split() -> bool:
+	return split_script != null
+
+func on_right_click(event: InputEvent):
+	if (!split_btn.button_pressed):
+		return
+
+	if !(event is InputEventMouseButton):
+		return
+
+	var mouse_event: InputEventMouseButton = event
+
+	if (!mouse_event.is_pressed() || mouse_event.button_index != MOUSE_BUTTON_RIGHT):
+		return
+
+	EditorInterface.edit_script(split_script)
+	split_btn.button_pressed = false
 
 func on_drag_drop(source_index: int, target_index: int):
 	var child: Node = scripts_tab_container.get_child(source_index)
@@ -273,6 +271,25 @@ func add_tab() -> CustomTab:
 
 	multiline_tab_bar.add_child(tab)
 	return tab
+
+func update_tab_style(tab: CustomTab):
+	tab.add_theme_stylebox_override(&"normal", tab_unselected)
+	tab.add_theme_stylebox_override(&"hover", tab_hovered)
+	tab.add_theme_stylebox_override(&"hover_pressed", tab_hovered)
+	tab.add_theme_stylebox_override(&"focus", tab_focus)
+	tab.add_theme_stylebox_override(&"pressed", tab_selected)
+
+	tab.add_theme_color_override(&"font_color", font_unselected_color)
+	tab.add_theme_color_override(&"font_hover_color", font_hovered_color)
+	tab.add_theme_color_override(&"font_pressed_color", font_selected_color)
+
+func update_icon_color(tab: CustomTab, color: Color):
+	tab.add_theme_color_override(&"icon_normal_color", color)
+	tab.add_theme_color_override(&"icon_hover_color", color)
+	tab.add_theme_color_override(&"icon_hover_pressed_color", color)
+	tab.add_theme_color_override(&"icon_pressed_color", color)
+	tab.add_theme_color_override(&"icon_focus_color", color)
+
 
 func on_tab_right_click(tab: CustomTab):
 	var index: int = tab.get_index()

@@ -1,7 +1,7 @@
 # Script IDE
 
 Transforms the Script UI into an IDE like UI.
-Multiline Tabs are used for navigating between scripts. Tab can be split.
+Multiline Tabs are used for navigating between scripts. Tabs can be split.
 The default Outline got an overhaul and now shows all members of the script (not just methods) with unique icons for faster navigation.
 Enhanced keyboard navigation for Scripts and Outline.
 Fast quick search functionality.
@@ -9,17 +9,17 @@ Quick function Override functionality.
 
 Features:
 - Scripts are now shown as Multiline Tabs
-- Script Tab can be split
+- Script Tab can be split – showing the current Script as readonly CodeEdit next to the main one. The original script can be reopened by right clicking.
 - The Outline got an overhaul and showed more than just the methods of the script. It includes the following members with a unique icon:
-    - Classes (Red Square)
-    - Constants (Red Circle)
-    - Signals (Yellow)
-    - Export variables (Orange)
-    - (Static) Variables (Red)
-    - Engine callback functions (Blue)
-    - (Static) Functions (Green)
-        - Setter functions (Green circle, with an arrow inside it pointing to the right)
-        - Getter functions (Green circle, with an arrow inside it pointing to the left)
+	- Classes (Red Square)
+	- Constants (Red Circle)
+	- Signals (Yellow)
+	- Export variables (Orange)
+	- (Static) Variables (Red)
+	- Engine callback functions (Blue)
+	- (Static) Functions (Green)
+		- Setter functions (Green circle, with an arrow inside it pointing to the right)
+		- Getter functions (Green circle, with an arrow inside it pointing to the left)
 - All the different members of the script can be hidden or made visible again by the outline filter. This allows fine control of what should be visible (e.g., only signals, (Godot) functions, ...)
 - A `Right Click` enables only the clicked filter, another `Right Click` will enable all filters again
 - The Outline can be opened in a Popup with a defined shortcut for quick navigation between methods
