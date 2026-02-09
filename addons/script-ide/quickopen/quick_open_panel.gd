@@ -18,6 +18,10 @@ const STRUCTURE_END: StringName = &")"
 
 var plugin: EditorPlugin
 
+const FILTER_CONFIG_PATH: StringName = &"res://addons/script-ide/quickopen/filter_config.tres"
+
+var filter_config: Resource
+
 var scenes: Array[FileData]
 var scripts: Array[FileData]
 var resources: Array[FileData]
@@ -125,6 +129,19 @@ func on_show():
 func rebuild_cache():
 	is_rebuild_cache = false
 
+	if ResourceLoader.exists(FILTER_CONFIG_PATH):
+		filter_config = load(FILTER_CONFIG_PATH)
+	else:
+		# If the configuration gd file does not exist, a default one is created.
+		var QuickOpenFilterConfig = load("res://addons/script-ide/quickopen/filter_config.gd")
+		var new_config = QuickOpenFilterConfig.new()
+		ResourceSaver.save(new_config, FILTER_CONFIG_PATH)
+		filter_config = new_config
+
+	# Connect a signal to automatically rebuild the cache on configuration changes.
+	if filter_config and not filter_config.is_connected(&"config_changed", schedule_rebuild):
+		filter_config.connect(&"config_changed", schedule_rebuild)
+
 	all_files.clear()
 	scenes.clear()
 	scripts.clear()
@@ -162,6 +179,25 @@ func build_file_cache_dir(dir: EditorFileSystemDirectory):
 		var file: String = dir.get_file_path(index)
 		if (search_option_btn.get_selected_id() == 0 && file.begins_with(ADDONS)):
 			continue
+
+		# Exclude files based on configuration files.
+		if filter_config != null:
+			# Check if exclusions are by extension.
+			if filter_config.enable_extension_filter:
+				var extension: String = file.get_extension()
+				if extension in filter_config.excluded_extensions:
+					continue
+
+			# Check if the path is excluded.
+			if filter_config.enable_path_filter:
+				var is_excluded_by_path: bool = false
+				for path in filter_config.excluded_paths:
+					if not path.is_empty() and file.begins_with(path):
+						is_excluded_by_path = true
+						break
+				if is_excluded_by_path:
+					continue
+
 
 		var last_delimiter: int = file.rfind(&"/")
 
