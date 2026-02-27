@@ -506,7 +506,7 @@ func toggle_split_view():
 		if !(base_editor is CodeEdit):
 			return
 
-		multiline_tab_bar.set_split(script_editor.get_current_script())
+		multiline_tab_bar.set_split(true)
 
 		var editor: CodeEdit = SplitCodeEdit.new_from(base_editor)
 
@@ -517,7 +517,7 @@ func toggle_split_view():
 		container.add_child(editor)
 		tab_splitter.add_child(container)
 	else:
-		multiline_tab_bar.set_split(null)
+		multiline_tab_bar.set_split(false)
 		tab_splitter.remove_child(tab_splitter.get_child(tab_splitter.get_child_count() - 1))
 
 		if (split_script_editor_base == null):

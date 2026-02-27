@@ -36,8 +36,10 @@ var plugin: EditorPlugin
 
 var suppress_theme_changed: bool
 
-var split_script: Script
+var split: bool
+var split_path: String
 var split_icon: Texture2D
+
 var last_drag_over_tab: CustomTab
 var drag_marker: ColorRect
 var current_tab: CustomTab
@@ -159,22 +161,22 @@ func _drop_data(at_position: Vector2, data: Variant) -> void:
 func schedule_update():
 	set_process(true)
 
-func set_split(script: Script) -> void:
-	split_script = script
+func set_split(value: bool) -> void:
+	split = value
 
-	if (split_script != null):
-		split_btn.icon = split_icon
+	if (split):
+		var index: int = current_tab.get_index()
+		split_path = scripts_item_list.get_item_tooltip(index)
 
-		var text: String = scripts_item_list.get_item_text(current_tab.get_index())
-		var icon: Texture2D = scripts_item_list.get_item_icon(current_tab.get_index())
-		split_btn.text = text
-		split_btn.icon = icon
+		split_btn.text = scripts_item_list.get_item_text(index)
+		split_btn.icon = scripts_item_list.get_item_icon(index)
+		split_btn.tooltip_text = split_path
 	else:
 		split_btn.icon = split_icon
 		split_btn.text = ""
 
 func is_split() -> bool:
-	return split_script != null
+	return split
 
 func on_right_click(event: InputEvent):
 	if (!split_btn.button_pressed):
@@ -188,8 +190,12 @@ func on_right_click(event: InputEvent):
 	if (!mouse_event.is_pressed() || mouse_event.button_index != MOUSE_BUTTON_RIGHT):
 		return
 
-	EditorInterface.edit_script(split_script)
 	split_btn.button_pressed = false
+
+	if (split_path != null && ResourceLoader.exists(split_path)):
+		var res: Resource = load(split_path)
+
+		EditorInterface.edit_resource(res)
 
 func on_drag_drop(source_index: int, target_index: int):
 	var child: Node = scripts_tab_container.get_child(source_index)
