@@ -1,6 +1,7 @@
-## The outline shows all script members with different color coding, depending of the type.
+## The outline container shows a filter box and
+## all script members with different color coding, depending of the type.
 @tool
-extends ItemList
+extends VBoxContainer
 
 const GETTER: StringName = &"get"
 const SETTER: StringName = &"set"
@@ -8,7 +9,9 @@ const UNDERSCORE: StringName = &"_"
 const INLINE: StringName = &"@"
 const BUILT_IN_SCRIPT: StringName = &"::GDScript"
 
-#region Outline type name and icon
+#region Outline type name
+const TYPE: StringName = &"type"
+
 const ENGINE_FUNCS: StringName = &"Engine Callbacks"
 const FUNCS: StringName = &"Functions"
 const SIGNALS: StringName = &"Signals"
@@ -18,7 +21,20 @@ const CLASSES: StringName = &"Classes"
 const CONSTANTS: StringName = &"Constants"
 
 const DEFAULT_ORDER: PackedStringArray = [ENGINE_FUNCS, FUNCS, SIGNALS, EXPORTED, PROPERTIES, CONSTANTS, CLASSES]
+#endregion
 
+const Plugin := preload("uid://bc0b5v66xdidn")
+
+@onready var filter_box: HBoxContainer = %FilterBox
+@onready var outline: ItemList = %Outline
+
+var plugin: Plugin
+
+#region Existing Engine controls we modify
+var outline_filter_txt: LineEdit
+#endregion
+
+#region Outline icons and buttons
 var engine_func_icon: Texture2D
 var func_icon: Texture2D
 var func_get_icon: Texture2D
@@ -28,18 +44,7 @@ var export_icon: Texture2D
 var signal_icon: Texture2D
 var constant_icon: Texture2D
 var class_icon: Texture2D
-#endregion
 
-var is_hide_private_members: bool = false : set = set_hide_private_members
-var outline_order: PackedStringArray : set = set_outline_order
-
-# Existing components, set from the plugin
-var outline_filter_txt: LineEdit
-
-# Reference back to the plugin, untyped
-var plugin: EditorPlugin
-
-var filter_box: HBoxContainer
 var class_btn: Button
 var constant_btn: Button
 var signal_btn: Button
@@ -47,20 +52,17 @@ var property_btn: Button
 var export_btn: Button
 var func_btn: Button
 var engine_func_btn: Button
+#endregion
+
+var is_hide_private_members: bool = false : set = set_hide_private_members
+var outline_order: PackedStringArray : set = set_outline_order
 
 var outline_type_order: Array[OutlineType] = []
 var outline_cache: OutlineCache
 
 func _ready() -> void:
-	auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	allow_reselect = true
-	size_flags_vertical = Control.SIZE_EXPAND_FILL
-
 	init_icons()
 	init_outline_order()
-
-	# Add a filter box for all kind of members
-	filter_box = HBoxContainer.new()
 
 	engine_func_btn = create_filter_btn(engine_func_icon, ENGINE_FUNCS)
 	func_btn = create_filter_btn(func_icon, FUNCS)
@@ -69,7 +71,10 @@ func _ready() -> void:
 	property_btn = create_filter_btn(property_icon, PROPERTIES)
 	class_btn = create_filter_btn(class_icon, CLASSES)
 	constant_btn = create_filter_btn(constant_icon, CONSTANTS)
+
 	update_outline_button_order()
+
+	outline.item_selected.connect(find_in_outline_and_goto)
 
 func update():
 	update_outline_cache()
@@ -77,10 +82,52 @@ func update():
 
 func tab_changed():
 	var is_script: bool = get_current_script() != null
-	filter_box.visible = is_script
 	visible = is_script
 
 	update()
+
+func find_in_outline_and_goto(selected_idx: int):
+	var script: Script = get_current_script()
+	if (!script):
+		return
+
+	var text: String = outline.get_item_text(selected_idx)
+	var metadata: Dictionary[StringName, StringName] = outline.get_item_metadata(selected_idx)
+	var modifier: StringName = metadata[&"modifier"]
+	var type: StringName = metadata[&"type"]
+
+	var type_with_text: String = type + " " + text
+	if (type == &"func"):
+		type_with_text = type_with_text + "("
+
+	var source_code: String = script.get_source_code()
+	var lines: PackedStringArray = source_code.split("\n")
+
+	var index: int = 0
+	for line: String in lines:
+		# Easy case, like 'var abc'
+		if (line.begins_with(type_with_text)):
+			plugin.goto_line(index)
+			return
+
+		# We have an modifier, e.g. 'static'
+		if (modifier != &"" && line.begins_with(modifier)):
+			if (line.begins_with(modifier + " " + type_with_text)):
+				plugin.goto_line(index)
+				return
+			# Special case: An 'enum' is treated different.
+			elif (modifier == &"enum" && line.contains("enum " + text)):
+				plugin.goto_line(index)
+				return
+
+		# Hard case, probably something like '@onready var abc'
+		if (type == &"var" && line.contains(type_with_text)):
+			plugin.goto_line(index)
+			return
+
+		index += 1
+
+	push_error(type_with_text + " or " + modifier + " not found in source code")
 
 ## Initializes all plugin icons, while respecting the editor settings.
 func init_icons():
@@ -94,15 +141,16 @@ func init_icons():
 	constant_icon = create_editor_texture(load_rel("icon/constant.svg"))
 	class_icon = create_editor_texture(load_rel("icon/class.svg"))
 
-func create_filter_btn(icon: Texture2D, title: StringName) -> Button:
+func create_filter_btn(icon: Texture2D, type: StringName) -> Button:
 	var btn: Button = Button.new()
 	btn.toggle_mode = true
 	btn.icon = icon
 	btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	btn.tooltip_text = title
+	btn.tooltip_text = type
 
-	var property: StringName = plugin.SCRIPT_IDE + title.to_lower().replace(" ", "_")
+	var property: StringName = plugin.SCRIPT_IDE + type.to_lower().replace(" ", "_")
 	btn.set_meta(&"property", property)
+	btn.set_meta(&"type", type)
 	btn.button_pressed = plugin.get_setting(property, true)
 
 	btn.toggled.connect(on_filter_button_pressed.bind(btn))
@@ -217,7 +265,7 @@ func update_outline_button_order():
 		filter_box.add_child(btn)
 
 func sort_buttons_by_outline_order(btn1: Button, btn2: Button) -> bool:
-	return sort_by_outline_order(btn1.tooltip_text, btn2.tooltip_text)
+	return sort_by_outline_order(btn1.get_meta(TYPE), btn2.get_meta(TYPE))
 
 func sort_types_by_outline_order(type1: OutlineType, type2: OutlineType) -> bool:
 	return sort_by_outline_order(type1.type_name, type2.type_name)
@@ -314,7 +362,7 @@ func for_each_script_member(script: Script, consumer: Callable):
 			consumer.call(outline_cache.constants, name_key)
 
 func update_outline():
-	clear()
+	outline.clear()
 
 	if (outline_cache == null):
 		return
@@ -335,13 +383,13 @@ func add_to_outline_ext(items: Array[String], icon_callable: Callable, type: Str
 	for item: String in items:
 		if (text.is_empty() || text.is_subsequence_ofn(item)):
 			var icon: Texture2D = icon_callable.call(item)
-			add_item(item, icon, true)
+			outline.add_item(item, icon, true)
 
 			var dict: Dictionary[StringName, StringName] = {
 				&"type": type,
 				&"modifier": modifier
 			}
-			set_item_metadata(item_count - 1, dict)
+			outline.set_item_metadata(outline.item_count - 1, dict)
 
 func get_func_icon(func_name: String) -> Texture2D:
 	var icon: Texture2D = func_icon

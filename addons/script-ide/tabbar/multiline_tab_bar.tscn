@@ -2,6 +2,14 @@
 
 [ext_resource type="Script" uid="uid://l1rdargfn67o" path="res://addons/script-ide/tabbar/multiline_tab_bar.gd" id="1_8jr3v"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_la2jv"]
+content_margin_left = 0.0
+content_margin_top = 0.0
+content_margin_right = 0.5
+content_margin_bottom = 0.0
+bg_color = Color(0.082627445, 0.082627445, 0.082627445, 1)
+corner_detail = 1
+
 [sub_resource type="DPITexture" id="DPITexture_split"]
 _source = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\"><path fill=\"#e0e0e0\" d=\"M7.5 0v16h1V0z\"/></svg>"
 
@@ -14,6 +22,7 @@ anchor_right = 1.0
 offset_bottom = 28.0
 grow_horizontal = 2
 size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_la2jv")
 script = ExtResource("1_8jr3v")
 
 [node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=932291510]

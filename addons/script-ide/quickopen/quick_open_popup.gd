@@ -9,6 +9,8 @@ const SEPARATOR: StringName = &" - "
 const STRUCTURE_START: StringName = &"("
 const STRUCTURE_END: StringName = &")"
 
+const Plugin := preload("uid://bc0b5v66xdidn")
+
 #region UI
 @onready var filter_bar: TabBar = %FilterBar
 @onready var search_option_btn: OptionButton = %SearchOptionBtn
@@ -16,7 +18,7 @@ const STRUCTURE_END: StringName = &")"
 @onready var files_list: ItemList = %FilesList
 #endregion
 
-var plugin: EditorPlugin
+var plugin: Plugin
 
 var scenes: Array[FileData]
 var scripts: Array[FileData]

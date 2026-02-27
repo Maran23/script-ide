@@ -4,7 +4,8 @@ extends PanelContainer
 
 const CLOSE_BTN_SPACER: String = "    "
 
-const CustomTab := preload("custom_tab.gd")
+const CustomTab := preload("uid://bppomxp4mri2o")
+const Plugin := preload("uid://bc0b5v66xdidn")
 
 @onready var multiline_tab_bar: HFlowContainer = %MultilineTabBar
 @onready var split_btn: Button = %SplitBtn
@@ -21,18 +22,19 @@ var font_unselected_color: Color
 var font_hovered_color: Color
 #endregion
 
+var plugin: Plugin
+
 var show_close_button_always: bool = false : set = set_show_close_button_always
 var is_singleline_tabs: bool = false : set = set_singleline_tabs
 
 var tab_group: ButtonGroup = ButtonGroup.new()
 
-# Existing components, set from the plugin
+# Existing Engine components, set from the plugin
 var script_filter_txt: LineEdit
 var scripts_item_list: ItemList
 var scripts_tab_container: TabContainer
+
 var popup: PopupPanel
-# Reference back to the plugin, untyped
-var plugin: EditorPlugin
 
 var suppress_theme_changed: bool
 

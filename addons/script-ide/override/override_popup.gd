@@ -5,16 +5,17 @@ extends PopupPanel
 
 const FUNC_META: StringName = &"func"
 
-const Outline := preload("uid://db0be00ai3tfi")
+const Plugin := preload("uid://bc0b5v66xdidn")
+const OutlineContainer := preload("uid://db0be00ai3tfi")
 
 @onready var filter_txt: LineEdit = %FilterTxt
 @onready var class_func_tree: Tree = %ClassFuncTree
 @onready var ok_btn: Button = %OkBtn
 @onready var cancel_btn: Button = %CancelBtn
 
-# Reference back to the plugin, untyped
-var plugin: EditorPlugin
-var outline: Outline
+var plugin: Plugin
+
+var outline_container: OutlineContainer
 
 var selections: Dictionary[String, bool] = {} # Used as Set.
 var class_to_functions: Dictionary[StringName, PackedStringArray]
@@ -166,18 +167,18 @@ func update_tree():
 				var func_item: TreeItem = class_item.create_child()
 				func_item.set_text(0, function)
 				if (plugin.keywords.has(function.get_slice("(", 0))):
-					func_item.set_icon(0, outline.engine_func_icon)
+					func_item.set_icon(0, outline_container.engine_func_icon)
 				else:
-					func_item.set_icon(0, outline.func_icon)
+					func_item.set_icon(0, outline_container.func_icon)
 
 				if (is_preselected):
 					func_item.select(0)
 
 func collect_all_class_functions(script: Script) -> Dictionary[StringName, PackedStringArray]:
 	var existing_funcs: Dictionary[String, bool] = {} # Used as Set.
-	for func_str: String in outline.outline_cache.engine_funcs:
+	for func_str: String in outline_container.outline_cache.engine_funcs:
 		existing_funcs[func_str] = true
-	for func_str: String in outline.outline_cache.funcs:
+	for func_str: String in outline_container.outline_cache.funcs:
 		existing_funcs[func_str] = true
 
 	var class_to_functions: Dictionary[StringName, PackedStringArray] = collect_super_class_functions(script.get_base_script(), existing_funcs)

@@ -1,0 +1,22 @@
+[gd_scene format=3 uid="uid://ux3ldi4ka8ji"]
+
+[ext_resource type="Script" uid="uid://db0be00ai3tfi" path="res://addons/script-ide/outline/outline_container.gd" id="1_w4vhe"]
+
+[node name="OutlineContainer" type="VBoxContainer" unique_id=181236283]
+offset_right = 174.0
+offset_bottom = 253.0
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("1_w4vhe")
+
+[node name="FilterBox" type="HBoxContainer" parent="." unique_id=1653721963]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Outline" type="ItemList" parent="." unique_id=160258583]
+unique_name_in_owner = true
+auto_translate_mode = 2
+layout_mode = 2
+size_flags_vertical = 3
+allow_reselect = true

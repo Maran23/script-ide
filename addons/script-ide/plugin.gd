@@ -15,16 +15,18 @@ extends EditorPlugin
 const BUILT_IN_SCRIPT: StringName = &"::GDScript"
 const QUICK_OPEN_INTERVAL: int = 400
 
-const MULTILINE_TAB_BAR: PackedScene = preload("tabbar/multiline_tab_bar.tscn")
-const MultilineTabBar := preload("tabbar/multiline_tab_bar.gd")
+const MULTILINE_TAB_BAR: PackedScene = preload("uid://vjuhunm2uboy")
+const MultilineTabBar := preload("uid://l1rdargfn67o")
 
-const QUICK_OPEN_SCENE: PackedScene = preload("quickopen/quick_open_panel.tscn")
-const QuickOpenPopup := preload("quickopen/quick_open_panel.gd")
+const QUICK_OPEN_SCENE: PackedScene = preload("uid://d2pttchmj3n7q")
+const QuickOpenPopup := preload("uid://cgwp4rl1udqbb")
 
-const OVERRIDE_SCENE: PackedScene = preload("override/override_panel.tscn")
-const OverridePopup := preload("override/override_panel.gd")
+const OVERRIDE_SCENE: PackedScene = preload("uid://bb1n82qxlqanh")
+const OverridePopup := preload("uid://c4w55j4jswg2t")
 
-const Outline := preload("uid://db0be00ai3tfi")
+const OUTLINE_CONTAINER_SCENE: PackedScene = preload("uid://ux3ldi4ka8ji")
+const OutlineContainer := preload("uid://db0be00ai3tfi")
+
 const SplitCodeEdit := preload("uid://boy48rhhyrph")
 
 #region Settings and Shortcuts
@@ -93,7 +95,7 @@ var tab_cycle_forward_shc: Shortcut
 var tab_cycle_backward_shc: Shortcut
 #endregion
 
-#region Existing controls we modify
+#region Existing Engine controls we modify
 var script_editor_split_container: HSplitContainer
 var files_panel: Control
 
@@ -110,7 +112,7 @@ var sort_btn: Button
 #endregion
 
 #region Own controls we add
-var outline: Outline
+var outline_container: OutlineContainer
 var outline_popup: PopupPanel
 var multiline_tab_bar: MultilineTabBar
 var scripts_popup: PopupPanel
@@ -139,14 +141,9 @@ var suppress_settings_sync: bool = false
 func _enter_tree() -> void:
 	init_settings()
 	init_shortcuts()
+	setup_change_listener()
 
-	# Update on filesystem changed (e.g. save operation).
-	var file_system: EditorFileSystem = EditorInterface.get_resource_filesystem()
-	file_system.filesystem_changed.connect(schedule_update)
-
-	# Sync settings changes for this plugin.
-	get_editor_settings().settings_changed.connect(sync_settings)
-
+	# --- Files Panel - Start --- #
 	var script_editor: ScriptEditor = EditorInterface.get_script_editor()
 	script_editor_split_container = find_or_null(script_editor.find_children("*", "HSplitContainer", true, false))
 	files_panel = script_editor_split_container.get_child(0)
@@ -165,26 +162,22 @@ func _enter_tree() -> void:
 	# Add script filter navigation.
 	script_filter_txt = find_or_null(scripts_item_list.get_parent().find_children("*", "LineEdit", true, false))
 	script_filter_txt.gui_input.connect(navigate_on_list.bind(scripts_item_list, select_script))
+	# --- Files Panel - End --- #
 
-	# --- Outline Start --- #
+	# --- Outline - Start --- #
 	old_outline = find_or_null(lower_files_panel.find_children("*", "ItemList", true, false))
 	lower_files_panel.remove_child(old_outline)
 
-	outline = Outline.new()
-	outline.plugin = self
+	outline_container = OUTLINE_CONTAINER_SCENE.instantiate()
+	outline_container.plugin = self
 
 	# Add navigation to the filter and text filtering.
 	outline_filter_txt = find_or_null(lower_files_panel.find_children("*", "LineEdit", true, false))
-	outline_filter_txt.gui_input.connect(navigate_on_list.bind(outline, scroll_outline))
+	outline_filter_txt.gui_input.connect(navigate_on_list.bind(outline_container.outline, outline_container.find_in_outline_and_goto))
 	outline_filter_txt.text_changed.connect(update_outline.unbind(1))
 
-	outline.outline_filter_txt = outline_filter_txt
-	lower_files_panel.add_child(outline)
-
-	outline.item_selected.connect(scroll_outline)
-
-	outline.get_parent().add_child(outline.filter_box)
-	outline.get_parent().move_child(outline.filter_box, outline.get_index())
+	outline_container.outline_filter_txt = outline_filter_txt
+	lower_files_panel.add_child(outline_container)
 
 	# Add callback when the sorting changed.
 	sort_btn = find_or_null(lower_files_panel.find_children("*", "Button", true, false))
@@ -192,11 +185,12 @@ func _enter_tree() -> void:
 
 	update_outline_order()
 	update_outline_position()
-	# --- Outline End --- #
+	# --- Outline - End --- #
 
-	# --- Tabs Start --- #
+	# --- Tabs - Start --- #
 	old_scripts_tab_container = find_or_null(script_editor.find_children("*", "TabContainer", true, false))
 	old_scripts_tab_bar = old_scripts_tab_container.get_tab_bar()
+	old_scripts_tab_bar.tab_changed.connect(on_tab_changed)
 
 	var tab_container_parent: Control = old_scripts_tab_container.get_parent()
 	tab_splitter = HSplitContainer.new()
@@ -228,9 +222,8 @@ func _enter_tree() -> void:
 	# Create and set script popup.
 	script_panel_split_container = scripts_item_list.get_parent().get_parent()
 	create_set_scripts_popup()
-	# --- Tabs End --- #
+	# --- Tabs - End --- #
 
-	old_scripts_tab_bar.tab_changed.connect(on_tab_changed)
 	on_tab_changed(old_scripts_tab_bar.current_tab)
 
 ## Restore the old Engine script UI and free everything we created
@@ -260,16 +253,12 @@ func _exit_tree() -> void:
 		outline_filter_txt.text_changed.disconnect(update_outline)
 		sort_btn.pressed.disconnect(update_outline)
 
-		outline.item_selected.disconnect(scroll_outline)
-
-		var outline_parent: Control = outline.get_parent()
-		outline_parent.remove_child(outline.filter_box)
-		outline_parent.remove_child(outline)
+		var outline_parent: Control = outline_container.get_parent()
+		outline_parent.remove_child(outline_container)
 		outline_parent.add_child(old_outline)
 		outline_parent.move_child(old_outline, -2)
 
-		outline.filter_box.free()
-		outline.free()
+		outline_container.free()
 
 	if (old_scripts_tab_bar != null):
 		old_scripts_tab_bar.tab_changed.disconnect(on_tab_changed)
@@ -348,6 +337,15 @@ func _input(event: InputEvent) -> void:
 #endregion
 
 #region Settings and Shortcut initialization
+
+## Setups the listener (connect) to the properties we need to react to.
+func setup_change_listener():
+	# Update on filesystem changed (e.g. save operation).
+	var file_system: EditorFileSystem = EditorInterface.get_resource_filesystem()
+	file_system.filesystem_changed.connect(schedule_update)
+
+	# Sync settings changes for this plugin.
+	get_editor_settings().settings_changed.connect(sync_settings)
 
 ## Initializes all settings.
 ## Every setting can be changed while this plugin is active, which will override them.
@@ -456,12 +454,12 @@ func update_editor():
 
 	if (is_script_changed):
 		multiline_tab_bar.tab_changed()
-		outline.tab_changed()
+		outline_container.tab_changed()
 		is_script_changed = false
 	else:
 		# We saved / filesystem changed. so need to update everything.
 		multiline_tab_bar.update_tabs()
-		outline.update()
+		outline_container.update()
 
 func on_tab_changed(index: int):
 	if (old_script_editor_base != null):
@@ -547,7 +545,7 @@ func open_override_popup():
 	if (override_popup == null):
 		override_popup = OVERRIDE_SCENE.instantiate()
 		override_popup.plugin = self
-		override_popup.outline = outline
+		override_popup.outline_container = outline_container
 		override_popup.set_unparent_when_invisible(true)
 		pref_size = Vector2(500, 400) * get_editor_scale()
 	else:
@@ -640,7 +638,7 @@ func open_outline_popup():
 	if (get_current_script() == null):
 		return
 
-	var button_flags: Array[bool] = outline.save_restore_filter()
+	var button_flags: Array[bool] = outline_container.save_restore_filter()
 
 	var old_text: String = outline_filter_txt.text
 	outline_filter_txt.text = &""
@@ -678,7 +676,7 @@ func on_outline_popup_hidden(outline_initially_closed: bool, old_text: String, b
 
 	outline_filter_txt.text = old_text
 
-	outline.restore_filter(button_flags)
+	outline_container.restore_filter(button_flags)
 
 	update_outline()
 
@@ -694,53 +692,10 @@ func select_script(selected_idx: int):
 
 	scripts_item_list.item_selected.emit(selected_idx)
 
-func scroll_outline(selected_idx: int):
+func goto_line(index: int):
 	if (outline_popup != null && outline_popup.visible):
 		outline_popup.hide.call_deferred()
 
-	var script: Script = get_current_script()
-	if (!script):
-		return
-
-	var text: String = outline.get_item_text(selected_idx)
-	var metadata: Dictionary[StringName, StringName] = outline.get_item_metadata(selected_idx)
-	var modifier: StringName = metadata[&"modifier"]
-	var type: StringName = metadata[&"type"]
-
-	var type_with_text: String = type + " " + text
-	if (type == &"func"):
-		type_with_text = type_with_text + "("
-
-	var source_code: String = script.get_source_code()
-	var lines: PackedStringArray = source_code.split("\n")
-
-	var index: int = 0
-	for line: String in lines:
-		# Easy case, like 'var abc'
-		if (line.begins_with(type_with_text)):
-			goto_line(index)
-			return
-
-		# We have an modifier, e.g. 'static'
-		if (modifier != &"" && line.begins_with(modifier)):
-			if (line.begins_with(modifier + " " + type_with_text)):
-				goto_line(index)
-				return
-			# Special case: An 'enum' is treated different.
-			elif (modifier == &"enum" && line.contains("enum " + text)):
-				goto_line(index)
-				return
-
-		# Hard case, probably something like '@onready var abc'
-		if (type == &"var" && line.contains(type_with_text)):
-			goto_line(index)
-			return
-
-		index += 1
-
-	push_error(type_with_text + " or " + modifier + " not found in source code")
-
-func goto_line(index: int):
 	var script_editor: ScriptEditor = EditorInterface.get_script_editor()
 	script_editor.goto_line(index)
 
@@ -762,7 +717,7 @@ func sync_settings():
 	var changed_settings: PackedStringArray = get_editor_settings().get_changed_settings()
 	for setting: String in changed_settings:
 		if (setting == ICON_SATURATION):
-			outline.reset_icons()
+			outline_container.reset_icons()
 		elif (setting == SHOW_MEMBERS):
 			show_members = get_setting(SHOW_MEMBERS, true)
 			if (!show_members):
@@ -789,7 +744,7 @@ func sync_settings():
 				if (new_hide_private_members != is_hide_private_members):
 					is_hide_private_members = new_hide_private_members
 
-					outline.update()
+					outline_container.update()
 			SCRIPT_LIST_VISIBLE:
 				var new_script_list_visible: bool = get_setting(SCRIPT_LIST_VISIBLE, is_script_list_visible)
 				if (new_script_list_visible != is_script_list_visible):
@@ -833,7 +788,7 @@ func sync_settings():
 			TAB_CYCLE_BACKWARD:
 				tab_cycle_backward_shc = get_shortcut(TAB_CYCLE_BACKWARD)
 			_:
-				outline.update_filter_buttons()
+				outline_container.update_filter_buttons()
 
 func update_selected_tab():
 	multiline_tab_bar.update_selected_tab()
@@ -855,7 +810,7 @@ func update_singleline_tabs():
 	multiline_tab_bar.is_singleline_tabs = is_script_tabs_singleline
 
 func update_outline():
-	outline.update_outline()
+	outline_container.update_outline()
 
 func update_outline_position():
 	if (is_outline_right):
@@ -867,7 +822,7 @@ func update_outline_position():
 		script_editor_split_container.move_child(files_panel, 0)
 
 func update_outline_order():
-	outline.outline_order = outline_order
+	outline_container.outline_order = outline_order
 
 func update_keywords():
 	var script: Script = get_current_script()
@@ -917,7 +872,7 @@ func get_outline_order() -> PackedStringArray:
 	if (editor_settings.has_setting(OUTLINE_ORDER)):
 		new_outline_order = editor_settings.get_setting(OUTLINE_ORDER)
 	else:
-		new_outline_order = Outline.DEFAULT_ORDER
+		new_outline_order = OutlineContainer.DEFAULT_ORDER
 		editor_settings.set_setting(OUTLINE_ORDER, outline_order)
 
 	return new_outline_order
