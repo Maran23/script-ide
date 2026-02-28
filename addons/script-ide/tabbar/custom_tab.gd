@@ -9,7 +9,7 @@ signal dropped(source_index: int, target_index: int)
 
 var close_button: Button
 
-func _ready() -> void:
+func _init() -> void:
 	alignment = HORIZONTAL_ALIGNMENT_LEFT
 	action_mode = ACTION_MODE_BUTTON_PRESS
 	auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED

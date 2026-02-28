@@ -46,16 +46,19 @@ var last_drag_over_tab: CustomTab
 var drag_marker: ColorRect
 var current_tab: CustomTab
 
+#region Plugin and related tab handling processing
 func _init() -> void:
 	tab_group.pressed.connect(on_new_tab_selected)
 
-#region Plugin and related tab handling processing
 func _ready() -> void:
 	popup_btn.pressed.connect(show_popup)
 	split_btn.gui_input.connect(on_right_click)
 	split_icon = split_btn.icon
 
 	set_process(false)
+
+	if (plugin == null):
+		return
 
 	schedule_update()
 
@@ -224,7 +227,7 @@ func clear_drag_mark():
 		drag_marker.get_parent().remove_child(drag_marker)
 
 func update_tabs():
-	update_script_text_filter()
+	on_scripts_changed()
 
 	for tab: CustomTab in get_tabs():
 		update_tab(tab)
@@ -336,9 +339,6 @@ func on_tab_close_pressed(tab: CustomTab) -> void:
 	scripts_item_list.item_clicked.emit(tab.get_index(), scripts_item_list.get_local_mouse_position(), MOUSE_BUTTON_MIDDLE)
 
 func sync_tabs_with_item_list() -> void:
-	if (plugin == null):
-		return
-
 	if (get_tab_count() > scripts_item_list.item_count):
 		for index: int in range(get_tab_count() - 1, scripts_item_list.item_count - 1, -1):
 			var tab: CustomTab = get_tab(index)
@@ -357,11 +357,17 @@ func sync_tabs_with_item_list() -> void:
 		update_tab(tab)
 
 func tab_changed():
+	on_scripts_changed()
 	update_script_text_filter()
 
 	# When the tab change was not triggered by our component,
 	# we need to sync the selection.
 	update_tab(get_tab(scripts_tab_container.current_tab))
+
+func on_scripts_changed():
+	update_script_text_filter()
+
+	popup_btn.text = "(" + str(scripts_item_list.item_count) + ")"
 
 func script_order_changed() -> void:
 	schedule_update()
