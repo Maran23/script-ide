@@ -63,6 +63,7 @@ var outline_cache: OutlineCache
 func _ready() -> void:
 	init_icons()
 	init_outline_order()
+	outline.item_selected.connect(find_in_outline_and_goto)
 
 	engine_func_btn = create_filter_btn(engine_func_icon, ENGINE_FUNCS)
 	func_btn = create_filter_btn(func_icon, FUNCS)
@@ -73,8 +74,6 @@ func _ready() -> void:
 	constant_btn = create_filter_btn(constant_icon, CONSTANTS)
 
 	update_outline_button_order()
-
-	outline.item_selected.connect(find_in_outline_and_goto)
 
 func update():
 	update_outline_cache()
@@ -156,20 +155,12 @@ func create_filter_btn(icon: Texture2D, type: StringName) -> Button:
 	btn.toggled.connect(on_filter_button_pressed.bind(btn))
 	btn.gui_input.connect(on_right_click.bind(btn))
 
+	btn.add_theme_stylebox_override(&"normal", StyleBoxEmpty.new())
+
 	btn.add_theme_color_override(&"icon_pressed_color", Color.WHITE)
 	btn.add_theme_color_override(&"icon_hover_color", Color.WHITE)
 	btn.add_theme_color_override(&"icon_hover_pressed_color", Color.WHITE)
 	btn.add_theme_color_override(&"icon_focus_color", Color.WHITE)
-
-	var style_box_empty: StyleBoxEmpty = StyleBoxEmpty.new()
-	btn.add_theme_stylebox_override(&"normal", style_box_empty)
-
-	var style_box: StyleBoxFlat = StyleBoxFlat.new()
-	style_box.draw_center = false
-	style_box.border_color = get_editor_accent_color()
-	style_box.set_border_width_all(1 * get_editor_scale())
-	style_box.set_corner_radius_all(get_editor_corner_radius() * get_editor_scale())
-	btn.add_theme_stylebox_override(&"focus", style_box)
 
 	return btn
 
@@ -203,7 +194,6 @@ func on_filter_button_pressed(pressed: bool, btn: Button):
 	plugin.set_setting(btn.get_meta(&"property"), pressed)
 
 	update_outline()
-	outline_filter_txt.grab_focus()
 
 ## Initializes the outline type structure and sorts it based off the outline order.
 func init_outline_order():
@@ -420,6 +410,9 @@ func restore_filter(button_flags: Array[bool]):
 func set_outline_order(new_outline_order: PackedStringArray):
 	outline_order = new_outline_order
 
+	if (filter_box == null):
+		return
+
 	outline_type_order.sort_custom(sort_types_by_outline_order)
 
 	update_outline_button_order()
@@ -428,6 +421,10 @@ func set_outline_order(new_outline_order: PackedStringArray):
 func set_hide_private_members(new_value: bool):
 	is_hide_private_members = new_value
 
+	if (filter_box == null):
+		return
+
+	update_outline_cache()
 	update_outline()
 
 func update_filter_buttons():

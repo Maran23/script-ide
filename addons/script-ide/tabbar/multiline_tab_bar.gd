@@ -57,8 +57,7 @@ func _ready() -> void:
 
 	set_process(false)
 
-	if (plugin != null):
-		schedule_update()
+	schedule_update()
 
 func _notification(what: int) -> void:
 	if (what == NOTIFICATION_DRAG_END || what == NOTIFICATION_MOUSE_EXIT):
@@ -89,7 +88,8 @@ func _notification(what: int) -> void:
 		font_selected_color = EditorInterface.get_editor_theme().get_color(&"font_selected_color", &"TabContainer")
 		font_unselected_color = EditorInterface.get_editor_theme().get_color(&"font_unselected_color", &"TabContainer")
 
-		if (plugin == null || multiline_tab_bar == null):
+		# If this is called too early.
+		if (multiline_tab_bar == null):
 			return
 
 		for tab: CustomTab in get_tabs():
@@ -407,7 +407,9 @@ func set_show_close_button_always(new_value: bool):
 				tab.text += CLOSE_BTN_SPACER
 
 func free_tabs():
-	drag_marker.free()
+	if (drag_marker != null):
+		drag_marker.free()
+
 	for tab: CustomTab in get_tabs():
 		free_tab(tab)
 

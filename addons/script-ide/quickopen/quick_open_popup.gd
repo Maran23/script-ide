@@ -43,8 +43,10 @@ func _ready() -> void:
 	var file_system: EditorFileSystem = EditorInterface.get_resource_filesystem()
 	file_system.filesystem_changed.connect(schedule_rebuild)
 
-	if (plugin != null):
-		filter_txt.gui_input.connect(plugin.navigate_on_list.bind(files_list, open_file))
+	filter_txt.gui_input.connect(navigate_in_files_list)
+
+func navigate_in_files_list(event: InputEvent):
+	plugin.navigate_on_list(event, files_list, open_file)
 
 func _shortcut_input(event: InputEvent) -> void:
 	if (!event.is_pressed() || event.is_echo()):

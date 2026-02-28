@@ -75,17 +75,10 @@ var show_members: bool = true
 
 #region Editor settings
 var is_outline_right: bool = true
-var is_hide_private_members: bool = false
-
-var is_script_tabs_visible: bool = true
 var is_script_tabs_top: bool = true
-var is_script_tabs_close_button_always: bool = false
-var is_script_tabs_singleline: bool = false
 
 var is_auto_navigate_in_fs: bool = true
 var is_script_list_visible: bool = false
-
-var outline_order: PackedStringArray
 
 var open_outline_popup_shc: Shortcut
 var open_scripts_popup_shc: Shortcut
@@ -173,17 +166,19 @@ func _enter_tree() -> void:
 
 	# Add navigation to the filter and text filtering.
 	outline_filter_txt = find_or_null(lower_files_panel.find_children("*", "LineEdit", true, false))
-	outline_filter_txt.gui_input.connect(navigate_on_list.bind(outline_container.outline, outline_container.find_in_outline_and_goto))
+	outline_filter_txt.gui_input.connect(navigate_in_outline)
 	outline_filter_txt.text_changed.connect(update_outline.unbind(1))
-
 	outline_container.outline_filter_txt = outline_filter_txt
+
 	lower_files_panel.add_child(outline_container)
 
 	# Add callback when the sorting changed.
 	sort_btn = find_or_null(lower_files_panel.find_children("*", "Button", true, false))
 	sort_btn.pressed.connect(update_outline)
 
-	update_outline_order()
+	outline_container.is_hide_private_members = get_setting(HIDE_PRIVATE_MEMBERS, outline_container.is_hide_private_members)
+	outline_container.outline_order = get_outline_order()
+
 	update_outline_position()
 	# --- Outline - End --- #
 
@@ -214,10 +209,12 @@ func _enter_tree() -> void:
 	tab_container_parent.add_child(multiline_tab_bar)
 
 	multiline_tab_bar.split_btn.toggled.connect(toggle_split_view.unbind(1))
+
+	multiline_tab_bar.show_close_button_always = get_setting(SCRIPT_TABS_CLOSE_BUTTON_ALWAYS, multiline_tab_bar.show_close_button_always)
+	multiline_tab_bar.is_singleline_tabs = get_setting(SCRIPT_TABS_SINGLELINE, multiline_tab_bar.is_singleline_tabs)
+	multiline_tab_bar.visible = get_setting(SCRIPT_TABS_VISIBLE, true)
+
 	update_tabs_position()
-	update_tabs_close_button()
-	update_tabs_visibility()
-	update_singleline_tabs()
 
 	# Create and set script popup.
 	script_panel_split_container = scripts_item_list.get_parent().get_parent()
@@ -249,7 +246,7 @@ func _exit_tree() -> void:
 
 		script_editor_split_container.move_child(files_panel, 0)
 
-		outline_filter_txt.gui_input.disconnect(navigate_on_list)
+		outline_filter_txt.gui_input.disconnect(navigate_in_outline)
 		outline_filter_txt.text_changed.disconnect(update_outline)
 		sort_btn.pressed.disconnect(update_outline)
 
@@ -350,16 +347,10 @@ func setup_change_listener():
 ## Initializes all settings.
 ## Every setting can be changed while this plugin is active, which will override them.
 func init_settings():
-	is_outline_right = get_setting(OUTLINE_POSITION_RIGHT, is_outline_right)
-	is_hide_private_members = get_setting(HIDE_PRIVATE_MEMBERS, is_hide_private_members)
 	is_script_list_visible = get_setting(SCRIPT_LIST_VISIBLE, is_script_list_visible)
-	is_auto_navigate_in_fs = get_setting(AUTO_NAVIGATE_IN_FS, is_auto_navigate_in_fs)
-	is_script_tabs_visible = get_setting(SCRIPT_TABS_VISIBLE, is_script_tabs_visible)
 	is_script_tabs_top = get_setting(SCRIPT_TABS_POSITION_TOP, is_script_tabs_top)
-	is_script_tabs_close_button_always = get_setting(SCRIPT_TABS_CLOSE_BUTTON_ALWAYS, is_script_tabs_close_button_always)
-	is_script_tabs_singleline = get_setting(SCRIPT_TABS_SINGLELINE, is_script_tabs_singleline)
-
-	outline_order = get_outline_order()
+	is_outline_right = get_setting(OUTLINE_POSITION_RIGHT, is_outline_right)
+	is_auto_navigate_in_fs = get_setting(AUTO_NAVIGATE_IN_FS, is_auto_navigate_in_fs)
 
 	# Users may disabled this, but with this plugin, we want to show the new Outline.
 	# So we need to reenable it, but restore the old value on exit.
@@ -520,6 +511,9 @@ func toggle_split_view():
 
 		if (split_script_editor_base == null):
 			multiline_tab_bar.split_btn.disabled = true
+
+func navigate_in_outline(event: InputEvent):
+	navigate_on_list(event, outline_container.outline, outline_container.find_in_outline_and_goto)
 
 func notify_order_changed():
 	multiline_tab_bar.script_order_changed()
@@ -735,16 +729,10 @@ func sync_settings():
 					update_outline_position()
 			OUTLINE_ORDER:
 				var new_outline_order: PackedStringArray = get_outline_order()
-				if (new_outline_order != outline_order):
-					outline_order = new_outline_order
-
-					update_outline_order()
+				outline_container.outline_order = new_outline_order
 			HIDE_PRIVATE_MEMBERS:
-				var new_hide_private_members: bool = get_setting(HIDE_PRIVATE_MEMBERS, is_hide_private_members)
-				if (new_hide_private_members != is_hide_private_members):
-					is_hide_private_members = new_hide_private_members
-
-					outline_container.update()
+				var new_value: bool = get_setting(HIDE_PRIVATE_MEMBERS, outline_container.is_hide_private_members)
+				outline_container.is_hide_private_members = new_value
 			SCRIPT_LIST_VISIBLE:
 				var new_script_list_visible: bool = get_setting(SCRIPT_LIST_VISIBLE, is_script_list_visible)
 				if (new_script_list_visible != is_script_list_visible):
@@ -752,11 +740,8 @@ func sync_settings():
 
 					update_script_list_visibility()
 			SCRIPT_TABS_VISIBLE:
-				var new_script_tabs_visible: bool = get_setting(SCRIPT_TABS_VISIBLE, is_script_tabs_visible)
-				if (new_script_tabs_visible != is_script_tabs_visible):
-					is_script_tabs_visible = new_script_tabs_visible
-
-					update_tabs_visibility()
+				var new_value: bool = get_setting(SCRIPT_TABS_VISIBLE, multiline_tab_bar.visible)
+				multiline_tab_bar.visible = new_value
 			SCRIPT_TABS_POSITION_TOP:
 				var new_script_tabs_top: bool = get_setting(SCRIPT_TABS_POSITION_TOP, is_script_tabs_top)
 				if (new_script_tabs_top != is_script_tabs_top):
@@ -764,17 +749,11 @@ func sync_settings():
 
 					update_tabs_position()
 			SCRIPT_TABS_CLOSE_BUTTON_ALWAYS:
-				var new_script_tabs_close_button_always: bool = get_setting(SCRIPT_TABS_CLOSE_BUTTON_ALWAYS, is_script_tabs_close_button_always)
-				if (new_script_tabs_close_button_always != is_script_tabs_close_button_always):
-					is_script_tabs_close_button_always = new_script_tabs_close_button_always
-
-					update_tabs_close_button()
+				var new_value: bool = get_setting(SCRIPT_TABS_CLOSE_BUTTON_ALWAYS, multiline_tab_bar.show_close_button_always)
+				multiline_tab_bar.show_close_button_always = new_value
 			SCRIPT_TABS_SINGLELINE:
-				var new_script_tabs_singleline: bool = get_setting(SCRIPT_TABS_SINGLELINE, is_script_tabs_singleline)
-				if (new_script_tabs_singleline != is_script_tabs_singleline):
-					is_script_tabs_singleline = new_script_tabs_singleline
-
-					update_singleline_tabs()
+				var new_value: bool = get_setting(SCRIPT_TABS_SINGLELINE, multiline_tab_bar.is_singleline_tabs)
+				multiline_tab_bar.is_singleline_tabs = new_value
 			AUTO_NAVIGATE_IN_FS:
 				is_auto_navigate_in_fs = get_setting(AUTO_NAVIGATE_IN_FS, is_auto_navigate_in_fs)
 			OPEN_OUTLINE_POPUP:
@@ -800,15 +779,6 @@ func update_tabs_position():
 	else:
 		tab_container_parent.move_child(multiline_tab_bar, tab_container_parent.get_child_count() - 1)
 
-func update_tabs_close_button():
-	multiline_tab_bar.show_close_button_always = is_script_tabs_close_button_always
-
-func update_tabs_visibility():
-	multiline_tab_bar.visible = is_script_tabs_visible
-
-func update_singleline_tabs():
-	multiline_tab_bar.is_singleline_tabs = is_script_tabs_singleline
-
 func update_outline():
 	outline_container.update_outline()
 
@@ -820,9 +790,6 @@ func update_outline_position():
 		script_editor_split_container.move_child(files_panel, 1)
 	else:
 		script_editor_split_container.move_child(files_panel, 0)
-
-func update_outline_order():
-	outline_container.outline_order = outline_order
 
 func update_keywords():
 	var script: Script = get_current_script()
@@ -873,7 +840,7 @@ func get_outline_order() -> PackedStringArray:
 		new_outline_order = editor_settings.get_setting(OUTLINE_ORDER)
 	else:
 		new_outline_order = OutlineContainer.DEFAULT_ORDER
-		editor_settings.set_setting(OUTLINE_ORDER, outline_order)
+		editor_settings.set_setting(OUTLINE_ORDER, new_outline_order)
 
 	return new_outline_order
 
