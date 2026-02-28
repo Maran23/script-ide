@@ -9,6 +9,12 @@ const SEPARATOR: StringName = &" - "
 const STRUCTURE_START: StringName = &"("
 const STRUCTURE_END: StringName = &")"
 
+const ORDER: Dictionary[StringName, int] = {
+	&"PackedScene": 0,
+	&"GDScript": 1,
+	&"Object": 2
+}
+
 const Plugin := preload("uid://bc0b5v66xdidn")
 
 #region UI
@@ -153,6 +159,11 @@ func build_file_cache():
 	var dir: EditorFileSystemDirectory = EditorInterface.get_resource_filesystem().get_filesystem()
 	build_file_cache_dir(dir)
 
+	scenes.sort_custom(sort_by_filter)
+	scripts.sort_custom(sort_by_filter)
+	resources.sort_custom(sort_by_filter)
+	others.sort_custom(sort_by_filter)
+
 	all_files.append_array(scenes)
 	all_files.append_array(scripts)
 	all_files.append_array(resources)
@@ -200,19 +211,21 @@ func fill_files_list():
 	files_list.clear()
 
 	if (filter_bar.current_tab == 0):
-		fill_files_list_with(all_files)
+		fill_files_list_with(all_files, sort_by_order_filter)
 	elif (filter_bar.current_tab == 1):
-		fill_files_list_with(scenes)
+		fill_files_list_with(scenes, sort_by_filter)
 	elif (filter_bar.current_tab == 2):
-		fill_files_list_with(scripts)
+		fill_files_list_with(scripts, sort_by_filter)
 	elif (filter_bar.current_tab == 3):
-		fill_files_list_with(resources)
+		fill_files_list_with(resources, sort_by_filter)
 	elif (filter_bar.current_tab == 4):
-		fill_files_list_with(others)
+		fill_files_list_with(others, sort_by_filter)
 
-func fill_files_list_with(files: Array[FileData]):
+func fill_files_list_with(files: Array[FileData], comparator: Callable):
 	var filter_text: String = filter_txt.text
-	files.sort_custom(sort_by_filter)
+
+	if (!filter_text.is_empty()):
+		files.sort_custom(comparator)
 
 	for file_data: FileData in files:
 		var file: String = file_data.file
@@ -223,8 +236,18 @@ func fill_files_list_with(files: Array[FileData]):
 			files_list.set_item_metadata(files_list.item_count - 1, file)
 			files_list.set_item_tooltip(files_list.item_count - 1, file)
 
+func sort_by_order_filter(file_data1: FileData, file_data2: FileData) -> bool:
+	var order1: int = ORDER.get(file_data1.file_type, ORDER.size())
+	var order2: int = ORDER.get(file_data2.file_type, ORDER.size())
+
+	if (order1 != order2):
+		return order1 < order2
+
+	return sort_by_filter(file_data1, file_data2)
+
 func sort_by_filter(file_data1: FileData, file_data2: FileData) -> bool:
 	var filter_text: String = filter_txt.text
+
 	var name1: String = file_data1.file_name
 	var name2: String = file_data2.file_name
 
@@ -232,11 +255,11 @@ func sort_by_filter(file_data1: FileData, file_data2: FileData) -> bool:
 		var a_oob: bool = index >= name1.length()
 		var b_oob: bool = index >= name2.length()
 
-		if (a_oob):
-			if (b_oob):
-				return false;
+		if (a_oob && b_oob):
+			return false
+		elif (a_oob):
 			return true
-		if (b_oob):
+		elif (b_oob):
 			return false
 
 		var char: String = filter_text[index]
@@ -245,8 +268,7 @@ func sort_by_filter(file_data1: FileData, file_data2: FileData) -> bool:
 
 		if (a_match && !b_match):
 			return true
-
-		if (b_match && !a_match):
+		elif (b_match && !a_match):
 			return false
 
 	return name1 < name2
