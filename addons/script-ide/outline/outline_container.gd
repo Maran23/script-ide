@@ -10,6 +10,7 @@ const INLINE: StringName = &"@"
 const BUILT_IN_SCRIPT: StringName = &"::GDScript"
 
 #region Outline type name
+const PROPERTY: StringName = &"property"
 const TYPE: StringName = &"type"
 
 const ENGINE_FUNCS: StringName = &"Engine Callbacks"
@@ -22,6 +23,8 @@ const CONSTANTS: StringName = &"Constants"
 
 const DEFAULT_ORDER: PackedStringArray = [ENGINE_FUNCS, FUNCS, SIGNALS, EXPORTED, PROPERTIES, CONSTANTS, CLASSES]
 #endregion
+
+const OutlineButton := preload("uid://c4fvj2xt46lgx")
 
 const Plugin := preload("uid://bc0b5v66xdidn")
 
@@ -65,6 +68,9 @@ func _ready() -> void:
 	init_outline_order()
 	outline.item_selected.connect(find_in_outline_and_goto)
 
+	if (plugin == null):
+		return
+
 	engine_func_btn = create_filter_btn(engine_func_icon, ENGINE_FUNCS)
 	func_btn = create_filter_btn(func_icon, FUNCS)
 	signal_btn = create_filter_btn(signal_icon, SIGNALS)
@@ -72,8 +78,6 @@ func _ready() -> void:
 	property_btn = create_filter_btn(property_icon, PROPERTIES)
 	class_btn = create_filter_btn(class_icon, CLASSES)
 	constant_btn = create_filter_btn(constant_icon, CONSTANTS)
-
-	update_outline_button_order()
 
 func update():
 	update_outline_cache()
@@ -93,7 +97,7 @@ func find_in_outline_and_goto(selected_idx: int):
 	var text: String = outline.get_item_text(selected_idx)
 	var metadata: Dictionary[StringName, StringName] = outline.get_item_metadata(selected_idx)
 	var modifier: StringName = metadata[&"modifier"]
-	var type: StringName = metadata[&"type"]
+	var type: StringName = metadata[TYPE]
 
 	var type_with_text: String = type + " " + text
 	if (type == &"func"):
@@ -141,38 +145,21 @@ func init_icons():
 	class_icon = create_editor_texture(load_rel("icon/class.svg"))
 
 func create_filter_btn(icon: Texture2D, type: StringName) -> Button:
-	var btn: Button = Button.new()
-	btn.toggle_mode = true
+	var btn: OutlineButton = OutlineButton.new()
 	btn.icon = icon
-	btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	btn.tooltip_text = type
 
 	var property: StringName = plugin.SCRIPT_IDE + type.to_lower().replace(" ", "_")
-	btn.set_meta(&"property", property)
-	btn.set_meta(&"type", type)
+	btn.set_meta(PROPERTY, property)
+	btn.set_meta(TYPE, type)
 	btn.button_pressed = plugin.get_setting(property, true)
 
 	btn.toggled.connect(on_filter_button_pressed.bind(btn))
-	btn.gui_input.connect(on_right_click.bind(btn))
-
-	btn.add_theme_stylebox_override(&"normal", StyleBoxEmpty.new())
-
-	btn.add_theme_color_override(&"icon_pressed_color", Color.WHITE)
-	btn.add_theme_color_override(&"icon_hover_color", Color.WHITE)
-	btn.add_theme_color_override(&"icon_hover_pressed_color", Color.WHITE)
-	btn.add_theme_color_override(&"icon_focus_color", Color.WHITE)
+	btn.right_clicked.connect(on_right_click.bind(btn))
 
 	return btn
 
-func on_right_click(event: InputEvent, btn: Button):
-	if !(event is InputEventMouseButton):
-		return
-
-	var mouse_event: InputEventMouseButton = event
-
-	if (!mouse_event.is_pressed() || mouse_event.button_index != MOUSE_BUTTON_RIGHT):
-		return
-
+func on_right_click(btn: OutlineButton):
 	btn.button_pressed = true
 
 	var pressed_state: bool = false
@@ -191,7 +178,7 @@ func on_right_click(event: InputEvent, btn: Button):
 	outline_filter_txt.grab_focus()
 
 func on_filter_button_pressed(pressed: bool, btn: Button):
-	plugin.set_setting(btn.get_meta(&"property"), pressed)
+	plugin.set_setting(btn.get_meta(PROPERTY), pressed)
 
 	update_outline()
 
@@ -376,7 +363,7 @@ func add_to_outline_ext(items: Array[String], icon_callable: Callable, type: Str
 			outline.add_item(item, icon, true)
 
 			var dict: Dictionary[StringName, StringName] = {
-				&"type": type,
+				TYPE: type,
 				&"modifier": modifier
 			}
 			outline.set_item_metadata(outline.item_count - 1, dict)
@@ -431,7 +418,7 @@ func update_filter_buttons():
 	# Update filter buttons.
 	for btn_node: Node in filter_box.get_children():
 		var btn: Button = btn_node
-		var property: StringName = btn.get_meta(&"property")
+		var property: StringName = btn.get_meta(PROPERTY)
 
 		btn.button_pressed = plugin.get_setting(property, btn.button_pressed)
 
@@ -458,15 +445,6 @@ func load_rel(path: String) -> Variant:
 
 func is_sorted() -> bool:
 	return EditorInterface.get_editor_settings().get_setting("text_editor/script_list/sort_members_outline_alphabetically")
-
-func get_editor_scale() -> float:
-	return EditorInterface.get_editor_scale()
-
-func get_editor_corner_radius() -> int:
-	return EditorInterface.get_editor_settings().get_setting("interface/theme/corner_radius")
-
-func get_editor_accent_color() -> Color:
-	return EditorInterface.get_editor_settings().get_setting("interface/theme/accent_color")
 
 func get_editor_icon_saturation() -> float:
 	return EditorInterface.get_editor_settings().get_setting("interface/theme/icon_saturation")
