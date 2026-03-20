@@ -56,14 +56,22 @@ const SCRIPT_TABS_SINGLELINE: StringName = SCRIPT_IDE + &"script_tabs_singleline
 const OPEN_OUTLINE_POPUP: StringName = SCRIPT_IDE + &"open_outline_popup"
 ## Editor setting for the 'Open Scripts Popup' shortcut
 const OPEN_SCRIPTS_POPUP: StringName = SCRIPT_IDE + &"open_scripts_popup"
-## Editor setting for the 'Open Scripts Popup' shortcut
-const OPEN_QUICK_SEARCH_POPUP: StringName = SCRIPT_IDE + &"open_quick_search_popup"
+
 ## Editor setting for the 'Open Override Popup' shortcut
 const OPEN_OVERRIDE_POPUP: StringName = SCRIPT_IDE + &"open_override_popup"
 ## Editor setting for the 'Tab cycle forward' shortcut
 const TAB_CYCLE_FORWARD: StringName = SCRIPT_IDE + &"tab_cycle_forward"
 ## Editor setting for the 'Tab cycle backward' shortcut
 const TAB_CYCLE_BACKWARD: StringName = SCRIPT_IDE + &"tab_cycle_backward"
+
+## Editor setting for the 'Open Quick Search Popup (All)' shortcut
+const OPEN_QUICK_SEARCH_POPUP: StringName = SCRIPT_IDE + &"open_quick_search_popup"
+## Editor setting for the 'Open Quick Search Popup (Scenes)' shortcut
+const OPEN_QUICK_SEARCH_POPUP_SCENES: StringName = SCRIPT_IDE + &"open_quick_search_popup_scenes"
+## Editor setting for the 'Open Quick Search Popup (Scripts)' shortcut
+const OPEN_QUICK_SEARCH_POPUP_GDSCRIPTS: StringName = SCRIPT_IDE + &"open_quick_search_popup_scripts"
+## Editor setting for the 'Open Quick Search Popup (Resources)' shortcut
+const OPEN_QUICK_SEARCH_POPUP_RESOURCES: StringName = SCRIPT_IDE + &"open_quick_search_popup_resources"
 
 ## Engine editor setting for the icon saturation, so our icons can react.
 const ICON_SATURATION: StringName = &"interface/theme/icon_saturation"
@@ -83,6 +91,9 @@ var is_script_list_visible: bool = false
 var open_outline_popup_shc: Shortcut
 var open_scripts_popup_shc: Shortcut
 var open_quick_search_popup_shc: Shortcut
+var open_quick_search_popup_scenes_shc: Shortcut
+var open_quick_search_popup_gdscripts_shc: Shortcut
+var open_quick_search_popup_resources_shc: Shortcut
 var open_override_popup_shc: Shortcut
 var tab_cycle_forward_shc: Shortcut
 var tab_cycle_backward_shc: Shortcut
@@ -323,6 +334,12 @@ func _shortcut_input(event: InputEvent) -> void:
 	elif (open_override_popup_shc.matches_event(event)):
 		get_viewport().set_input_as_handled()
 		open_override_popup()
+	elif (open_quick_search_popup_scenes_shc.matches_event(event)):
+		open_quick_search_popup(QuickOpenPopup.Category.SCENES)
+	elif (open_quick_search_popup_gdscripts_shc.matches_event(event)):
+		open_quick_search_popup(QuickOpenPopup.Category.GDSCRIPTS)
+	elif (open_quick_search_popup_resources_shc.matches_event(event)):
+		open_quick_search_popup(QuickOpenPopup.Category.RESOURCES)
 
 ## May cancels the quick search shortcut timer.
 func _input(event: InputEvent) -> void:
@@ -391,6 +408,39 @@ func init_shortcuts():
 		shortcut.events = [ event ]
 		editor_settings.set_setting(OPEN_QUICK_SEARCH_POPUP, shortcut)
 
+	if (!editor_settings.has_setting(OPEN_QUICK_SEARCH_POPUP_SCENES)):
+		var shortcut: Shortcut = Shortcut.new()
+		var event: InputEventKey = InputEventKey.new()
+		event.device = -1
+		event.command_or_control_autoremap = true
+		event.keycode = KEY_N
+
+		shortcut.events = [ event ]
+		editor_settings.set_setting(OPEN_QUICK_SEARCH_POPUP_SCENES, shortcut)
+
+	if (!editor_settings.has_setting(OPEN_QUICK_SEARCH_POPUP_GDSCRIPTS)):
+		var shortcut: Shortcut = Shortcut.new()
+		var event: InputEventKey = InputEventKey.new()
+		event.device = -1
+		event.command_or_control_autoremap = true
+		event.shift_pressed = true
+		event.keycode = KEY_N
+
+		shortcut.events = [ event ]
+		editor_settings.set_setting(OPEN_QUICK_SEARCH_POPUP_GDSCRIPTS, shortcut)
+
+	if (!editor_settings.has_setting(OPEN_QUICK_SEARCH_POPUP_RESOURCES)):
+		var shortcut: Shortcut = Shortcut.new()
+		var event: InputEventKey = InputEventKey.new()
+		event.device = -1
+		event.command_or_control_autoremap = true
+		event.alt_pressed = true
+		event.shift_pressed = true
+		event.keycode = KEY_N
+
+		shortcut.events = [ event ]
+		editor_settings.set_setting(OPEN_QUICK_SEARCH_POPUP_RESOURCES, shortcut)
+
 	if (!editor_settings.has_setting(OPEN_OVERRIDE_POPUP)):
 		var shortcut: Shortcut = Shortcut.new()
 		var event: InputEventKey = InputEventKey.new()
@@ -425,6 +475,9 @@ func init_shortcuts():
 	open_outline_popup_shc = editor_settings.get_setting(OPEN_OUTLINE_POPUP)
 	open_scripts_popup_shc = editor_settings.get_setting(OPEN_SCRIPTS_POPUP)
 	open_quick_search_popup_shc = editor_settings.get_setting(OPEN_QUICK_SEARCH_POPUP)
+	open_quick_search_popup_scenes_shc = editor_settings.get_setting(OPEN_QUICK_SEARCH_POPUP_SCENES)
+	open_quick_search_popup_gdscripts_shc = editor_settings.get_setting(OPEN_QUICK_SEARCH_POPUP_GDSCRIPTS)
+	open_quick_search_popup_resources_shc = editor_settings.get_setting(OPEN_QUICK_SEARCH_POPUP_RESOURCES)
 	open_override_popup_shc = editor_settings.get_setting(OPEN_OVERRIDE_POPUP)
 	tab_cycle_forward_shc = editor_settings.get_setting(TAB_CYCLE_FORWARD)
 	tab_cycle_backward_shc = editor_settings.get_setting(TAB_CYCLE_BACKWARD)
@@ -518,7 +571,7 @@ func navigate_in_outline(event: InputEvent):
 func notify_order_changed():
 	multiline_tab_bar.script_order_changed()
 
-func open_quick_search_popup():
+func open_quick_search_popup(category: QuickOpenPopup.Category = QuickOpenPopup.Category.ALL):
 	var pref_size: Vector2
 	if (quick_open_popup == null):
 		quick_open_popup = QUICK_OPEN_SCENE.instantiate()
@@ -529,6 +582,7 @@ func open_quick_search_popup():
 		pref_size = quick_open_popup.size
 
 	quick_open_popup.popup_exclusive_on_parent(EditorInterface.get_script_editor(), get_center_editor_rect(pref_size))
+	quick_open_popup.set_category(category)
 
 func open_override_popup():
 	var script: Script = get_current_script()
@@ -760,6 +814,14 @@ func sync_settings():
 				open_outline_popup_shc = get_shortcut(OPEN_OUTLINE_POPUP)
 			OPEN_SCRIPTS_POPUP:
 				open_scripts_popup_shc = get_shortcut(OPEN_SCRIPTS_POPUP)
+			OPEN_QUICK_SEARCH_POPUP:
+				open_quick_search_popup_shc = get_shortcut(OPEN_QUICK_SEARCH_POPUP)
+			OPEN_QUICK_SEARCH_POPUP_SCENES:
+				open_quick_search_popup_scenes_shc = get_shortcut(OPEN_QUICK_SEARCH_POPUP_SCENES)
+			OPEN_QUICK_SEARCH_POPUP_GDSCRIPTS:
+				open_quick_search_popup_gdscripts_shc = get_shortcut(OPEN_QUICK_SEARCH_POPUP_GDSCRIPTS)
+			OPEN_QUICK_SEARCH_POPUP_RESOURCES:
+				open_quick_search_popup_resources_shc = get_shortcut(OPEN_QUICK_SEARCH_POPUP_RESOURCES)
 			OPEN_OVERRIDE_POPUP:
 				open_override_popup_shc = get_shortcut(OPEN_OVERRIDE_POPUP)
 			TAB_CYCLE_FORWARD:

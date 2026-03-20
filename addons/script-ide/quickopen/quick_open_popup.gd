@@ -17,6 +17,10 @@ const ORDER: Dictionary[StringName, int] = {
 
 const Plugin := preload("uid://bc0b5v66xdidn")
 
+enum Category {
+	ALL = 0, SCENES = 1, GDSCRIPTS = 2, RESOURCES = 3
+}
+
 #region UI
 @onready var filter_bar: TabBar = %FilterBar
 @onready var search_option_btn: OptionButton = %SearchOptionBtn
@@ -51,9 +55,6 @@ func _ready() -> void:
 
 	filter_txt.gui_input.connect(navigate_in_files_list)
 
-func navigate_in_files_list(event: InputEvent):
-	plugin.navigate_on_list(event, files_list, open_file)
-
 func _shortcut_input(event: InputEvent) -> void:
 	if (!event.is_pressed() || event.is_echo()):
 		return
@@ -73,6 +74,14 @@ func _shortcut_input(event: InputEvent) -> void:
 			new_tab = filter_bar.get_tab_count() - 1
 		filter_bar.current_tab = new_tab
 #endregion
+
+func navigate_in_files_list(event: InputEvent):
+	plugin.navigate_on_list(event, files_list, open_file)
+
+func set_category(category: Category):
+	filter_bar.current_tab = category
+
+	focus_and_select_first()
 
 func open_file(index: int):
 	var file: String = files_list.get_item_metadata(index)
@@ -115,22 +124,10 @@ func on_show():
 
 		is_rebuild_cache = true
 
-	var rebuild_ui: bool = false
-	var all_tab_not_pressed: bool = filter_bar.current_tab != 0
-	rebuild_ui = is_rebuild_cache || all_tab_not_pressed
-
 	if (is_rebuild_cache):
 		rebuild_cache()
 
-	if (rebuild_ui):
-		if (all_tab_not_pressed):
-			# Triggers the ui update.
-			filter_bar.current_tab = 0
-		else:
-			fill_files_list()
-
 	filter_txt.select_all()
-	focus_and_select_first()
 
 func rebuild_cache():
 	is_rebuild_cache = false
