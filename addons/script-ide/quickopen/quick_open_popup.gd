@@ -79,7 +79,12 @@ func navigate_in_files_list(event: InputEvent):
 	plugin.navigate_on_list(event, files_list, open_file)
 
 func set_category(category: Category):
+	var old_tab: int = filter_bar.current_tab
 	filter_bar.current_tab = category
+
+	# We need to manually trigger this when there is no tab change.
+	if (old_tab == category):
+		fill_files_list()
 
 	focus_and_select_first()
 
