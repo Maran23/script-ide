@@ -77,6 +77,9 @@ const OPEN_QUICK_SEARCH_POPUP_RESOURCES: StringName = SCRIPT_IDE + &"open_quick_
 const ICON_SATURATION: StringName = &"interface/theme/icon_saturation"
 ## Engine editor setting for the show members functionality.
 const SHOW_MEMBERS: StringName = &"text_editor/script_list/show_members_overview"
+## Engine editor setting if monospace font should be used for the outline.
+const MONOSPACE_OUTLINE: StringName = &"interface/theme/use_monospace_font_for_editor_symbols"
+
 ## We track the user setting, so we can restore it properly.
 var show_members: bool = true
 #endregion
@@ -190,6 +193,7 @@ func _enter_tree() -> void:
 	outline_container.is_hide_private_members = get_setting(HIDE_PRIVATE_MEMBERS, outline_container.is_hide_private_members)
 	outline_container.outline_order = get_outline_order()
 
+	update_outline_font()
 	update_outline_position()
 	# --- Outline - End --- #
 
@@ -770,6 +774,8 @@ func sync_settings():
 			show_members = get_setting(SHOW_MEMBERS, true)
 			if (!show_members):
 				set_setting(SHOW_MEMBERS, true)
+		elif (setting == MONOSPACE_OUTLINE):
+			update_outline_font()
 
 		if (!setting.begins_with(SCRIPT_IDE)):
 			continue
@@ -781,33 +787,33 @@ func sync_settings():
 					is_outline_right = new_outline_right
 
 					update_outline_position()
-			OUTLINE_ORDER:
-				var new_outline_order: PackedStringArray = get_outline_order()
-				outline_container.outline_order = new_outline_order
-			HIDE_PRIVATE_MEMBERS:
-				var new_value: bool = get_setting(HIDE_PRIVATE_MEMBERS, outline_container.is_hide_private_members)
-				outline_container.is_hide_private_members = new_value
 			SCRIPT_LIST_VISIBLE:
 				var new_script_list_visible: bool = get_setting(SCRIPT_LIST_VISIBLE, is_script_list_visible)
 				if (new_script_list_visible != is_script_list_visible):
 					is_script_list_visible = new_script_list_visible
 
 					update_script_list_visibility()
-			SCRIPT_TABS_VISIBLE:
-				var new_value: bool = get_setting(SCRIPT_TABS_VISIBLE, multiline_tab_bar.visible)
-				multiline_tab_bar.visible = new_value
 			SCRIPT_TABS_POSITION_TOP:
 				var new_script_tabs_top: bool = get_setting(SCRIPT_TABS_POSITION_TOP, is_script_tabs_top)
 				if (new_script_tabs_top != is_script_tabs_top):
 					is_script_tabs_top = new_script_tabs_top
 
 					update_tabs_position()
+			OUTLINE_ORDER:
+				var new_outline_order: PackedStringArray = get_outline_order()
+				outline_container.outline_order = new_outline_order
+			HIDE_PRIVATE_MEMBERS:
+				var new_value: bool = get_setting(HIDE_PRIVATE_MEMBERS, outline_container.is_hide_private_members)
+				outline_container.is_hide_private_members = new_value
 			SCRIPT_TABS_CLOSE_BUTTON_ALWAYS:
 				var new_value: bool = get_setting(SCRIPT_TABS_CLOSE_BUTTON_ALWAYS, multiline_tab_bar.show_close_button_always)
 				multiline_tab_bar.show_close_button_always = new_value
 			SCRIPT_TABS_SINGLELINE:
 				var new_value: bool = get_setting(SCRIPT_TABS_SINGLELINE, multiline_tab_bar.is_singleline_tabs)
 				multiline_tab_bar.is_singleline_tabs = new_value
+			SCRIPT_TABS_VISIBLE:
+				var new_value: bool = get_setting(SCRIPT_TABS_VISIBLE, multiline_tab_bar.visible)
+				multiline_tab_bar.visible = new_value
 			AUTO_NAVIGATE_IN_FS:
 				is_auto_navigate_in_fs = get_setting(AUTO_NAVIGATE_IN_FS, is_auto_navigate_in_fs)
 			OPEN_OUTLINE_POPUP:
@@ -852,6 +858,15 @@ func update_outline_position():
 		script_editor_split_container.move_child(files_panel, 1)
 	else:
 		script_editor_split_container.move_child(files_panel, 0)
+
+func update_outline_font():
+	var monospace_outline: bool = get_setting(MONOSPACE_OUTLINE, true)
+	if (monospace_outline):
+		var font: Font = EditorInterface.get_script_editor().get_theme_font(&"source", &"EditorFonts")
+		print(font)
+		outline_container.outline.add_theme_font_override(&"font", font)
+	else:
+		outline_container.outline.remove_theme_font_override(&"font")
 
 func update_keywords():
 	var script: Script = get_current_script()
