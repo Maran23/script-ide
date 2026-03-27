@@ -231,7 +231,7 @@ func collect_class_functions(native_class: StringName, existing_funcs: Dictionar
 		if (existing_funcs.has(func_name)):
 			continue
 
-		func_name = create_function_signature(method)
+		func_name = outline_container.create_function_signature(method)
 		functions.append(func_name)
 
 	return functions
@@ -246,54 +246,10 @@ func collect_script_functions(super_class: Script, existing_funcs: Dictionary[St
 
 		existing_funcs[func_name] = true
 
-		func_name = create_function_signature(method)
+		func_name = outline_container.create_function_signature(method)
 		functions.append(func_name)
 
 	return functions
-
-func create_function_signature(method: Dictionary) -> String:
-	var func_name: String = method[&"name"]
-	func_name += "("
-
-	var args: Array = method[&"args"]
-	var default_args: Array = method[&"default_args"]
-
-	var arg_index: int = 0
-	var default_arg_index: int = 0
-	var arg_str: String = ""
-	for arg: Dictionary in args:
-		if (arg_str != ""):
-			arg_str += ", "
-
-		arg_str += arg[&"name"]
-		var type: String = get_type(arg)
-		if (type != ""):
-			arg_str += ": " + type
-
-		if (args.size() - arg_index <= default_args.size()):
-			var default_arg: Variant = default_args[default_arg_index]
-			if (!default_arg):
-				var type_hint: int = arg[&"type"]
-				if (is_dictionary(type_hint)):
-					default_arg = {}
-				elif (is_array(type_hint)):
-					default_arg = []
-
-			arg_str += " = " + var_to_str(default_arg)
-
-			default_arg_index += 1
-
-		arg_index += 1
-
-	func_name += arg_str + ")"
-
-	var return_str: String = get_type(method[&"return"])
-	if (return_str == ""):
-		return_str = "void"
-
-	func_name += " -> " + return_str
-
-	return func_name
 
 func generate_functions():
 	if (selections.size() == 0):
@@ -301,6 +257,8 @@ func generate_functions():
 
 	var generated_text: String = ""
 	for function: String in selections.keys():
+		if (function.ends_with(")")):
+			function = function + " -> void"
 		generated_text += "\nfunc " + function + ":\n\tpass\n"
 
 	var editor: CodeEdit = EditorInterface.get_script_editor().get_current_editor().get_base_editor()
@@ -312,34 +270,3 @@ func generate_functions():
 	# Probably due to this beeing called in a signal and auto unparent is true.
 	# 100% Engine bug or at least weird behavior.
 	hide.call_deferred()
-
-func get_type(dict: Dictionary) -> String:
-	var type: String = dict[&"class_name"]
-	if (type != &""):
-		return type
-
-	var type_hint: int = dict[&"type"]
-	if (type_hint == 0):
-		return &""
-
-	type = type_string(type_hint)
-
-	if (is_dictionary(type_hint)):
-		var generic: String = dict[&"hint_string"]
-		if (generic != &""):
-			var generic_parts: PackedStringArray = generic.split(";")
-			if (generic_parts.size() == 2):
-				return type + "[" + generic_parts[0] + ", " + generic_parts[1] + "]"
-
-	if (is_array(type_hint)):
-		var generic: String = dict[&"hint_string"]
-		if (generic != &""):
-			return type + "[" + generic + "]"
-
-	return type
-
-func is_dictionary(type_hint: int) -> bool:
-	return type_hint == 27
-
-func is_array(type_hint: int) -> bool:
-	return type_hint == 28

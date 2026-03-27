@@ -101,7 +101,7 @@ func find_in_outline_and_goto(selected_idx: int):
 
 	var type_with_text: String = type + " " + text
 	if (type == &"func"):
-		type_with_text = type_with_text + "("
+		type_with_text = type_with_text.substr(0, type_with_text.find("("))
 
 	var source_code: String = script.get_source_code()
 	var lines: PackedStringArray = source_code.split("\n")
@@ -283,6 +283,7 @@ func for_each_script_member(script: Script, consumer: Callable):
 		var func_name: String = dict[&"name"]
 
 		if (plugin.keywords.has(func_name)):
+			func_name = create_function_signature(dict)
 			consumer.call(outline_cache.engine_funcs, func_name)
 		else:
 			if (is_hide_private_members && func_name.begins_with(UNDERSCORE)):
@@ -293,6 +294,7 @@ func for_each_script_member(script: Script, consumer: Callable):
 			if (func_name.begins_with(INLINE)):
 				continue
 
+			func_name = create_function_signature(dict)
 			consumer.call(outline_cache.funcs, func_name)
 
 	# Properties / Exported variables
@@ -421,6 +423,83 @@ func update_filter_buttons():
 		var property: StringName = btn.get_meta(PROPERTY)
 
 		btn.button_pressed = plugin.get_setting(property, btn.button_pressed)
+
+func create_function_signature(method: Dictionary) -> String:
+	var func_name: String = method[&"name"]
+	func_name += "("
+
+	var args: Array = method[&"args"]
+	var default_args: Array = method[&"default_args"]
+
+	var arg_index: int = 0
+	var default_arg_index: int = 0
+	var arg_str: String = ""
+	for arg: Dictionary in args:
+		if (arg_str != ""):
+			arg_str += ", "
+
+		arg_str += arg[&"name"]
+		var type: String = get_type(arg)
+		if (type != ""):
+			arg_str += ": " + type
+
+		if (args.size() - arg_index <= default_args.size()):
+			var default_arg: Variant = default_args[default_arg_index]
+			if (!default_arg):
+				var type_hint: int = arg[&"type"]
+				if (is_dictionary(type_hint)):
+					default_arg = {}
+				elif (is_array(type_hint)):
+					default_arg = []
+
+			arg_str += " = " + var_to_str(default_arg)
+
+			default_arg_index += 1
+
+		arg_index += 1
+
+	func_name += arg_str + ")"
+
+	var return_str: String = get_type(method[&"return"])
+	if (return_str == ""):
+		return func_name
+
+	func_name += " -> " + return_str
+
+	return func_name
+
+func get_type(dict: Dictionary) -> String:
+	var type: String = dict[&"class_name"]
+	if (type != &""):
+		if (type.begins_with(&"res://")):
+			type = type.substr(type.rfind(&".") + 1)
+		return type
+
+	var type_hint: int = dict[&"type"]
+	if (type_hint == 0):
+		return &""
+
+	type = type_string(type_hint)
+
+	if (is_dictionary(type_hint)):
+		var generic: String = dict[&"hint_string"]
+		if (generic != &""):
+			var generic_parts: PackedStringArray = generic.split(";")
+			if (generic_parts.size() == 2):
+				return type + "[" + generic_parts[0] + ", " + generic_parts[1] + "]"
+
+	if (is_array(type_hint)):
+		var generic: String = dict[&"hint_string"]
+		if (generic != &""):
+			return type + "[" + generic + "]"
+
+	return type
+
+func is_dictionary(type_hint: int) -> bool:
+	return type_hint == 27
+
+func is_array(type_hint: int) -> bool:
+	return type_hint == 28
 
 func reset_icons():
 	init_icons()
