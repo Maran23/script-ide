@@ -13,7 +13,7 @@
 extends EditorPlugin
 
 const BUILT_IN_SCRIPT: StringName = &"::GDScript"
-const QUICK_OPEN_INTERVAL: int = 400
+const QUICK_OPEN_INTERVAL: float = 400.0
 
 const MULTILINE_TAB_BAR: PackedScene = preload("uid://vjuhunm2uboy")
 const MultilineTabBar := preload("uid://l1rdargfn67o")
@@ -328,7 +328,7 @@ func _shortcut_input(event: InputEvent) -> void:
 				quick_open_tween.kill()
 
 			quick_open_tween = create_tween()
-			quick_open_tween.tween_interval(0.1)
+			quick_open_tween.tween_interval(0.2)
 			quick_open_tween.tween_callback(open_quick_search_popup)
 			quick_open_tween.tween_callback(func(): quick_open_tween = null)
 		else:
