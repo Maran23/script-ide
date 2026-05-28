@@ -7,6 +7,8 @@ const CLOSE_BTN_SPACER: String = "    "
 const CustomTab := preload("uid://bppomxp4mri2o")
 const Plugin := preload("uid://bc0b5v66xdidn")
 
+signal split_toggled
+
 @onready var multiline_tab_bar: HFlowContainer = %MultilineTabBar
 @onready var split_btn: Button = %SplitBtn
 @onready var popup_btn: Button = %PopupBtn
@@ -53,6 +55,7 @@ func _init() -> void:
 func _ready() -> void:
 	popup_btn.pressed.connect(show_popup)
 	split_btn.gui_input.connect(on_right_click)
+	split_btn.toggled.connect(toggle_split.unbind(1))
 	split_icon = split_btn.icon
 
 	set_process(false)
@@ -102,7 +105,7 @@ func _process(delta: float) -> void:
 	sync_tabs_with_item_list()
 
 	if (is_singleline_tabs):
-		shift_singleline_tabs_to(current_tab)
+		shift_singleline_tabs()
 
 	set_process(false)
 
@@ -182,6 +185,12 @@ func set_split(value: bool) -> void:
 
 func is_split() -> bool:
 	return split
+
+func toggle_split():
+	split_toggled.emit()
+
+func set_split_disabled(value: bool):
+	split_btn.disabled = value
 
 func on_right_click(event: InputEvent):
 	if (!split_btn.button_pressed):
@@ -432,71 +441,63 @@ func set_singleline_tabs(new_value: bool):
 	is_singleline_tabs = new_value
 
 	if (is_singleline_tabs):
-		item_rect_changed.connect(update_singleline_tabs_width)
-		tab_group.pressed.connect(ensure_singleline_tab_visible.unbind(1))
+		multiline_tab_bar.item_rect_changed.connect(shift_singleline_tabs)
+		tab_group.pressed.connect(shift_singleline_tabs.unbind(1))
 
-		if (multiline_tab_bar == null):
-			return
-
-		shift_singleline_tabs_to(current_tab)
+		shift_singleline_tabs()
 	else:
-		item_rect_changed.disconnect(update_singleline_tabs_width)
-		tab_group.pressed.disconnect(ensure_singleline_tab_visible)
-
-		if (multiline_tab_bar == null):
-			return
+		multiline_tab_bar.item_rect_changed.disconnect(shift_singleline_tabs)
+		tab_group.pressed.disconnect(shift_singleline_tabs)
 
 		for tab: CustomTab in get_tabs():
 			tab.visible = true
 
-func ensure_singleline_tab_visible():
-	if (current_tab != null && current_tab.visible):
+func shift_singleline_tabs():
+	if (current_tab == null):
 		return
 
-	shift_singleline_tabs_to(current_tab)
-
-func update_singleline_tabs_width():
-	if (current_tab != null && !current_tab.visible):
-		shift_singleline_tabs_to(current_tab)
+	var tabs: Array[Node] = get_tabs()
+	var tab_count: int = tabs.size()
+	if (tab_count == 0):
 		return
 
-	for tab: CustomTab in get_tabs():
-		if (tab.visible):
-			shift_singleline_tabs_to(tab)
-			break
-
-func shift_singleline_tabs_to(start_tab: CustomTab):
-	var start: bool
 	var tab_bar_width: float = multiline_tab_bar.size.x
-	var tabs_width: float
-	var one_fit: bool = true
+	var current_index: int = current_tab.get_index()
+	var first: int = current_index
+	var last: int = current_index
+	var used_width: float = current_tab.size.x
 
-	for tab: CustomTab in get_tabs():
-		if (start_tab == null || tab == start_tab):
-			start = true
+	# Pass 1: Expand through already-visible tabs first
+	while (first > 0):
+		var prev_tab: Node = tabs[first - 1]
+		if (!prev_tab.visible || used_width + prev_tab.size.x > tab_bar_width):
+			break
+		first -= 1
+		used_width += prev_tab.size.x
 
-		if (start):
-			tabs_width += tab.size.x
+	while (last < tab_count - 1):
+		var next_tab: Node = tabs[last + 1]
+		if (!next_tab.visible || used_width + next_tab.size.x > tab_bar_width):
+			break
+		last += 1
+		used_width += next_tab.size.x
 
-			tab.visible = tabs_width <= tab_bar_width
-			one_fit = one_fit || tab.visible
-		else:
-			tab.visible = false
+	# Pass 2: Fill remaining space with any tabs
+	while (first > 0):
+		var prev_tab: Node = tabs[first - 1]
+		if (used_width + prev_tab.size.x > tab_bar_width):
+			break
+		first -= 1
+		used_width += prev_tab.size.x
 
-	if (current_tab != null && !current_tab.visible):
-		if (start_tab != current_tab):
-			shift_singleline_tabs_to(current_tab)
-			return
+	while (last < tab_count - 1):
+		var next_tab: Node = tabs[last + 1]
+		if (used_width + next_tab.size.x > tab_bar_width):
+			break
+		last += 1
+		used_width += next_tab.size.x
 
-	if (start_tab == null):
-		return
-
-	for index: int in range(start_tab.get_index() - 1, -1, -1):
-		var tab: CustomTab = get_tabs().get(index)
-
-		tabs_width += tab.size.x
-		if (tabs_width > tab_bar_width):
-			return
-
-		tab.visible = true
+	for index: int in tab_count:
+		var tab: Node = tabs.get(index)
+		tab.visible = index >= first && index <= last
 #endregion

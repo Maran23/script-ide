@@ -223,7 +223,7 @@ func _enter_tree() -> void:
 	tab_container_parent.add_theme_constant_override(&"separation", 0)
 	tab_container_parent.add_child(multiline_tab_bar)
 
-	multiline_tab_bar.split_btn.toggled.connect(toggle_split_view.unbind(1))
+	multiline_tab_bar.split_toggled.connect(toggle_split_view)
 
 	multiline_tab_bar.show_close_button_always = get_setting(SCRIPT_TABS_CLOSE_BUTTON_ALWAYS, multiline_tab_bar.show_close_button_always)
 	multiline_tab_bar.is_singleline_tabs = get_setting(SCRIPT_TABS_SINGLELINE, multiline_tab_bar.is_singleline_tabs)
@@ -523,7 +523,7 @@ func on_tab_changed(index: int):
 		old_script_editor_base = script_editor_base
 
 	if (!multiline_tab_bar.is_split()):
-		multiline_tab_bar.split_btn.disabled = script_editor_base == null
+		multiline_tab_bar.set_split_disabled(script_editor_base == null)
 
 	is_script_changed = true
 
@@ -567,7 +567,7 @@ func toggle_split_view():
 		tab_splitter.remove_child(tab_splitter.get_child(tab_splitter.get_child_count() - 1))
 
 		if (split_script_editor_base == null):
-			multiline_tab_bar.split_btn.disabled = true
+			multiline_tab_bar.set_split_disabled(true)
 
 func navigate_in_outline(event: InputEvent):
 	navigate_on_list(event, outline_container.outline, outline_container.find_in_outline_and_goto)
