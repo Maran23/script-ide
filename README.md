@@ -69,3 +69,5 @@ All settings can be changed in the `Editor Settings` under `Plugin` -> `Script I
 ![Example of the Override Popup](https://github.com/Maran23/script-ide/blob/demo/demo/override.webp?raw=true)
 
 ![Example of Script Splitting](https://github.com/Maran23/script-ide/blob/demo/demo/script_split.webp?raw=true)
+
+![Example of the Settings](https://github.com/Maran23/script-ide/blob/demo/demo/settings.webp?raw=true)

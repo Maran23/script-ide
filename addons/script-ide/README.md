@@ -58,16 +58,16 @@ All settings can be changed in the `Editor Settings` under `Plugin` -> `Script I
 - `Cycle Tab backward` = Shortcut to cycle the script tabs in the backward direction (only works in the 'Script' Editor Tab) (default=CTRL+SHIFT+TAB)
 - All outline visibility settings
 
-![Example of Script-IDE](https://github.com/Maran23/script-ide/blob/demo/demo/1.png?raw=true)
+![Example of Script-IDE](https://github.com/Maran23/script-ide/blob/demo/demo/editor.webp?raw=true)
 
-![Example of the Outline Popup](https://github.com/Maran23/script-ide/blob/demo/demo/2.png?raw=true)
+![Example of the Outline Popup](https://github.com/Maran23/script-ide/blob/demo/demo/outline.webp?raw=true)
 
-![Example of the Script Tabs Popup](https://github.com/Maran23/script-ide/blob/demo/demo/3.png?raw=true)
+![Example of the Script Tabs Popup](https://github.com/Maran23/script-ide/blob/demo/demo/tab_scripts.webp?raw=true)
 
-![Example of the Script List Popup](https://github.com/Maran23/script-ide/blob/demo/demo/4.png?raw=true)
+![Example of the Quick Search Popup](https://github.com/Maran23/script-ide/blob/demo/demo/quick_search.webp?raw=true)
 
-![Example of the Quick Search Popup](https://github.com/Maran23/script-ide/blob/demo/demo/5.png?raw=true)
+![Example of the Override Popup](https://github.com/Maran23/script-ide/blob/demo/demo/override.webp?raw=true)
 
-![Example of the Override Popup](https://github.com/Maran23/script-ide/blob/demo/demo/6.png?raw=true)
+![Example of Script Splitting](https://github.com/Maran23/script-ide/blob/demo/demo/script_split.webp?raw=true)
 
-![Example of the Plugin Editor Settings](https://github.com/Maran23/script-ide/blob/demo/demo/7.png?raw=true)
+![Example of the Settings](https://github.com/Maran23/script-ide/blob/demo/demo/settings.webp?raw=true)
