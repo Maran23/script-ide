@@ -748,6 +748,8 @@ func goto_line(index: int):
 	if (outline_popup != null && outline_popup.visible):
 		outline_popup.hide.call_deferred()
 
+	EditorInterface.set_main_screen_editor("Script")
+
 	var script_editor: ScriptEditor = EditorInterface.get_script_editor()
 	script_editor.goto_line(index)
 
