@@ -3,25 +3,25 @@
 extends CodeEdit
 
 var last_v_scroll: float
-static var pause_text_changed = false
+var pause_text_changed = false
 
 func _ready() -> void:
 	editable = true
 	caret_draw_when_editable_disabled = true
-	set_v_scroll.call_deferred(last_v_scroll)
+	set_v_scroll.call_deferred(last_v_scroll)	
 
 static func new_from(from_code_edit: CodeEdit) -> CodeEdit:
 	var new_code_edit: CodeEdit = new()
 
-	if not from_code_edit.tree_exiting.is_connected(exit_tree.bind(new_code_edit)):
-		from_code_edit.tree_exiting.connect(exit_tree.bind(new_code_edit))
+	if not from_code_edit.tree_exiting.is_connected(new_code_edit.exit_tree.bind(new_code_edit)):
+		from_code_edit.tree_exiting.connect(new_code_edit.exit_tree.bind(new_code_edit))
 
 	new_code_edit.text = from_code_edit.text
 	new_code_edit.set_caret_line(from_code_edit.get_caret_line())
-	if not new_code_edit.text_changed.is_connected(to_changed.bind(from_code_edit,new_code_edit)):
-		new_code_edit.text_changed.connect(to_changed.bind(from_code_edit,new_code_edit))
-	if not from_code_edit.text_changed.is_connected(from_changed.bind(from_code_edit,new_code_edit)):
-		from_code_edit.text_changed.connect(from_changed.bind(from_code_edit,new_code_edit))
+	if not new_code_edit.text_changed.is_connected(new_code_edit.to_changed.bind(from_code_edit,new_code_edit)):
+		new_code_edit.text_changed.connect(new_code_edit.to_changed.bind(from_code_edit,new_code_edit))
+	if not from_code_edit.text_changed.is_connected(new_code_edit.from_changed.bind(from_code_edit,new_code_edit)):
+		from_code_edit.text_changed.connect(new_code_edit.from_changed.bind(from_code_edit,new_code_edit))
 
 	new_code_edit.syntax_highlighter = from_code_edit.syntax_highlighter
 	new_code_edit.highlight_all_occurrences = from_code_edit.highlight_all_occurrences
@@ -56,7 +56,7 @@ static func new_from(from_code_edit: CodeEdit) -> CodeEdit:
 
 	return new_code_edit
 
-static func from_changed(from:CodeEdit,to:CodeEdit) -> void:
+func from_changed(from:CodeEdit,to:CodeEdit) -> void:
 	if not pause_text_changed:
 		pause_text_changed = true
 		var pos = to.get_caret_line()
@@ -66,7 +66,7 @@ static func from_changed(from:CodeEdit,to:CodeEdit) -> void:
 		to.scroll_vertical = scroll
 		pause_text_changed = false
 
-static func to_changed(from:CodeEdit,to:CodeEdit) -> void:
+func to_changed(from:CodeEdit,to:CodeEdit) -> void:
 	if not pause_text_changed:
 		pause_text_changed = true
 		var pos = from.get_caret_line()
@@ -76,7 +76,7 @@ static func to_changed(from:CodeEdit,to:CodeEdit) -> void:
 		from.scroll_vertical = scroll
 		pause_text_changed = false
 
-static func exit_tree(to:CodeEdit) -> void:
+func exit_tree(to:CodeEdit) -> void:
 	if to:
 		to.get_parent().remove_child(to)
 		to.queue_free()
