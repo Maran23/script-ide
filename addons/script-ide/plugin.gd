@@ -113,7 +113,7 @@ var script_filter_txt: LineEdit
 var scripts_item_list: ItemList
 var script_panel_split_container: VSplitContainer
 
-var old_outline: ItemList
+var old_outline: Control
 var outline_filter_txt: LineEdit
 var sort_btn: Button
 #endregion
@@ -172,7 +172,12 @@ func _enter_tree() -> void:
 	# --- Files Panel - End --- #
 
 	# --- Outline - Start --- #
-	old_outline = find_or_null(lower_files_panel.find_children("*", "ItemList", true, false))
+	var item_lists: Array[Node] = lower_files_panel.find_children("*", "ItemList", true, false)
+	if (item_lists.is_empty()):
+		# Godot >= 4.8.dev4, outline is a Tree now.
+		old_outline = find_or_null(lower_files_panel.find_children("*", "Tree", true, false))
+	else:
+		old_outline = find_or_null(item_lists)
 	lower_files_panel.remove_child(old_outline)
 
 	outline_container = OUTLINE_CONTAINER_SCENE.instantiate()
@@ -268,7 +273,7 @@ func _exit_tree() -> void:
 		var outline_parent: Control = outline_container.get_parent()
 		outline_parent.remove_child(outline_container)
 		outline_parent.add_child(old_outline)
-		outline_parent.move_child(old_outline, -2)
+		outline_parent.move_child(old_outline, outline_filter_txt.get_index() + 1)
 
 		outline_container.free()
 
