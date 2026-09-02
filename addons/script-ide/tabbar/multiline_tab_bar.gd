@@ -2,15 +2,13 @@
 @tool
 extends PanelContainer
 
-const CLOSE_BTN_SPACER: String = "    "
-
 const CustomTab := preload("uid://bppomxp4mri2o")
-const Plugin := preload("uid://bc0b5v66xdidn")
+const SplitView := preload("uid://dixntmagth35c")
 
 signal split_toggled
 
 @onready var multiline_tab_bar: HFlowContainer = %MultilineTabBar
-@onready var split_btn: Button = %SplitBtn
+@onready var split_btn: CustomTab = %SplitBtn
 @onready var popup_btn: Button = %PopupBtn
 
 #region Theme
@@ -24,24 +22,25 @@ var font_unselected_color: Color
 var font_hovered_color: Color
 #endregion
 
-var plugin: Plugin
-
 var show_close_button_always: bool = false : set = set_show_close_button_always
 var is_singleline_tabs: bool = false : set = set_singleline_tabs
 
 var tab_group: ButtonGroup = ButtonGroup.new()
 
-# Existing Engine components, set from the plugin
+# Existing Engine components, set from the plugin.
+var split_view: SplitView
 var script_filter_txt: LineEdit
 var scripts_item_list: ItemList
 var scripts_tab_container: TabContainer
+
+var tab_cycle_forward_shc: Shortcut
+var tab_cycle_backward_shc: Shortcut
 
 var popup: PopupPanel
 
 var suppress_theme_changed: bool
 
 var split: bool
-var split_path: String
 var split_icon: Texture2D
 
 var last_drag_over_tab: CustomTab
@@ -54,13 +53,16 @@ func _init() -> void:
 
 func _ready() -> void:
 	popup_btn.pressed.connect(show_popup)
-	split_btn.gui_input.connect(on_right_click)
+	
+	split_btn.reorderable = false
+	split_btn.right_clicked.connect(close_split_script)
+	split_btn.close_pressed.connect(move_split_to_main)
 	split_btn.toggled.connect(toggle_split.unbind(1))
 	split_icon = split_btn.icon
 
 	set_process(false)
 
-	if (plugin == null):
+	if (scripts_item_list == null):
 		return
 
 	schedule_update()
@@ -98,6 +100,8 @@ func _notification(what: int) -> void:
 		if (multiline_tab_bar == null):
 			return
 
+		update_tab_style(split_btn)
+
 		for tab: CustomTab in get_tabs():
 			update_tab_style(tab)
 
@@ -119,7 +123,7 @@ func _shortcut_input(event: InputEvent) -> void:
 	if (current_tab == null):
 		return
 
-	if (plugin.tab_cycle_forward_shc.matches_event(event)):
+	if (tab_cycle_forward_shc.matches_event(event)):
 		get_viewport().set_input_as_handled()
 
 		var tab_count: int = get_tab_count()
@@ -133,7 +137,7 @@ func _shortcut_input(event: InputEvent) -> void:
 
 		var tab: CustomTab = get_tab(new_tab)
 		tab.button_pressed = true
-	elif (plugin.tab_cycle_backward_shc.matches_event(event)):
+	elif (tab_cycle_backward_shc.matches_event(event)):
 		get_viewport().set_input_as_handled()
 
 		var tab_count: int = get_tab_count()
@@ -172,19 +176,56 @@ func schedule_update():
 func set_split(value: bool) -> void:
 	split = value
 
-	if (split):
-		var index: int = current_tab.get_index()
-		split_path = scripts_item_list.get_item_tooltip(index)
+	split_btn.set_pressed_no_signal(split)
 
-		split_btn.text = scripts_item_list.get_item_text(index)
-		split_btn.icon = scripts_item_list.get_item_icon(index)
-		split_btn.tooltip_text = split_path
+	if (split):
+		split_btn.show_close_button()
+		update_split()
 	else:
+		split_btn.hide_close_button()
+
 		split_btn.icon = split_icon
-		split_btn.text = ""
+		split_btn.set_tab_text("")
+		split_btn.tooltip_text = ""
+		update_icon_color(split_btn, Color.WHITE)
+
+	# Will remove the split tab from the tab bar.
+	schedule_update()
+
+## Syncs the split tab with the script of the split view,
+## so that changes (like the unsaved marker '(*)') are visible there as well.
+func update_split() -> void:
+	var index: int = get_split_index()
+	if (index == -1):
+		return
+
+	split_btn.set_tab_text(scripts_item_list.get_item_text(index))
+	split_btn.icon = scripts_item_list.get_item_icon(index)
+	split_btn.tooltip_text = scripts_item_list.get_item_tooltip(index)
+
+	update_icon_color(split_btn, scripts_item_list.get_item_icon_modulate(index))
 
 func is_split() -> bool:
 	return split
+
+## The index of the split script, which is the same for the tabs, the script list and the Engine.
+func get_split_index() -> int:
+	if (!split):
+		return -1
+
+	var editor_base: ScriptEditorBase = split_view.get_split_editor_base()
+	if (editor_base == null):
+		return -1
+
+	var index: int = editor_base.get_index()
+	if (index < 0 || index >= scripts_item_list.item_count):
+		return -1
+
+	return index
+
+## Closes the split view, e.g. when the script that is shown there was closed.
+func close_split() -> void:
+	split_btn.button_pressed = false
 
 func toggle_split():
 	split_toggled.emit()
@@ -192,24 +233,22 @@ func toggle_split():
 func set_split_disabled(value: bool):
 	split_btn.disabled = value
 
-func on_right_click(event: InputEvent):
-	if (!split_btn.button_pressed):
-		return
+## Closes the script of the split view, which closes the split view along with it.
+func close_split_script():
+	var index: int = get_split_index()
+	if (index != -1):
+		close_script(index)
 
-	if !(event is InputEventMouseButton):
-		return
+## Closes the split view and shows its script in the main view again.
+## The script is still open, so its tab can simply be selected.
+func move_split_to_main():
+	var index: int = get_split_index()
 
-	var mouse_event: InputEventMouseButton = event
+	close_split()
 
-	if (!mouse_event.is_pressed() || mouse_event.button_index != MOUSE_BUTTON_RIGHT):
-		return
-
-	split_btn.button_pressed = false
-
-	if (split_path != null && ResourceLoader.exists(split_path)):
-		var res: Resource = load(split_path)
-
-		EditorInterface.edit_resource(res)
+	var tab: CustomTab = get_tab(index)
+	if (tab != null):
+		tab.button_pressed = true
 
 func on_drag_drop(source_index: int, target_index: int):
 	var child: Node = scripts_tab_container.get_child(source_index)
@@ -237,6 +276,7 @@ func clear_drag_mark():
 
 func update_tabs():
 	on_scripts_changed()
+	update_split()
 
 	for tab: CustomTab in get_tabs():
 		update_tab(tab)
@@ -246,6 +286,8 @@ func get_tabs() -> Array[Node]:
 
 func update_selected_tab():
 	update_tab(tab_group.get_pressed_button())
+	# The split script is not the selected one, but can still be the edited one.
+	update_split()
 
 func update_tab(tab: CustomTab):
 	if (tab == null):
@@ -253,17 +295,19 @@ func update_tab(tab: CustomTab):
 
 	var index: int = tab.get_index()
 
-	tab.text = scripts_item_list.get_item_text(index)
+	tab.set_tab_text(scripts_item_list.get_item_text(index))
 	tab.icon = scripts_item_list.get_item_icon(index)
 	tab.tooltip_text = scripts_item_list.get_item_tooltip(index)
 
 	update_icon_color(tab, scripts_item_list.get_item_icon_modulate(index))
 
-	if (scripts_item_list.is_selected(index)):
+	# The split script is shown in the split view, so it has no tab in the main view.
+	# It can still be the current script, but then the tab of the main view stays marked.
+	var is_split_tab: bool = index == get_split_index()
+	tab.visible = !is_split_tab
+
+	if (!is_split_tab && scripts_item_list.is_selected(index)):
 		tab.button_pressed = true
-		tab.text += CLOSE_BTN_SPACER
-	elif (show_close_button_always):
-		tab.text += CLOSE_BTN_SPACER
 
 func get_tab(index: int) -> CustomTab:
 	if (index < 0 || index >= get_tab_count()):
@@ -298,6 +342,7 @@ func update_tab_style(tab: CustomTab):
 	tab.add_theme_stylebox_override(&"hover_pressed", tab_hovered)
 	tab.add_theme_stylebox_override(&"focus", tab_focus)
 	tab.add_theme_stylebox_override(&"pressed", tab_selected)
+	tab.add_theme_stylebox_override(&"disabled", tab_unselected)
 
 	tab.add_theme_color_override(&"font_color", font_unselected_color)
 	tab.add_theme_color_override(&"font_hover_color", font_hovered_color)
@@ -310,8 +355,9 @@ func update_icon_color(tab: CustomTab, color: Color):
 	tab.add_theme_color_override(&"icon_pressed_color", color)
 	tab.add_theme_color_override(&"icon_focus_color", color)
 
-
 func on_tab_right_click(tab: CustomTab):
+	tab.button_pressed = true
+
 	var index: int = tab.get_index()
 	scripts_item_list.item_clicked.emit(index, scripts_item_list.get_local_mouse_position(), MOUSE_BUTTON_RIGHT)
 
@@ -332,9 +378,6 @@ func on_new_tab_selected(tab: CustomTab):
 		scripts_item_list.item_selected.emit(index)
 		scripts_item_list.ensure_current_is_visible()
 
-	# Remove spacing from previous tab.
-	if (!show_close_button_always && current_tab != null):
-		update_tab(current_tab)
 	current_tab = tab
 
 ## Removes the script filter text and emits the signal so that the tabs stay
@@ -345,7 +388,11 @@ func update_script_text_filter():
 		script_filter_txt.text_changed.emit(&"")
 
 func on_tab_close_pressed(tab: CustomTab) -> void:
-	scripts_item_list.item_clicked.emit(tab.get_index(), scripts_item_list.get_local_mouse_position(), MOUSE_BUTTON_MIDDLE)
+	close_script(tab.get_index())
+
+## Closes the script the same way the Engine does it, which also asks to save it when needed.
+func close_script(index: int) -> void:
+	scripts_item_list.item_clicked.emit(index, scripts_item_list.get_local_mouse_position(), MOUSE_BUTTON_MIDDLE)
 
 func sync_tabs_with_item_list() -> void:
 	if (get_tab_count() > scripts_item_list.item_count):
@@ -410,20 +457,21 @@ func set_show_close_button_always(new_value: bool):
 		return
 
 	for tab: CustomTab in get_tabs():
-		tab.text = scripts_item_list.get_item_text(tab.get_index())
+		# The selected tab always shows its close button.
+		if (tab.button_pressed):
+			continue
+
 		if (show_close_button_always):
-			tab.text += CLOSE_BTN_SPACER
-			if (!tab.button_pressed):
-				tab.show_close_button()
+			tab.show_close_button()
 		else:
-			if (!tab.button_pressed):
-				tab.hide_close_button()
-			else:
-				tab.text += CLOSE_BTN_SPACER
+			tab.hide_close_button()
 
 func free_tabs():
 	if (drag_marker != null):
 		drag_marker.free()
+
+	if (split_btn.close_button != null):
+		split_btn.close_button.free()
 
 	for tab: CustomTab in get_tabs():
 		free_tab(tab)
@@ -497,7 +545,8 @@ func shift_singleline_tabs():
 		last += 1
 		used_width += next_tab.size.x
 
+	var split_index: int = get_split_index()
 	for index: int in tab_count:
 		var tab: Node = tabs.get(index)
-		tab.visible = index >= first && index <= last
+		tab.visible = index >= first && index <= last && index != split_index
 #endregion
