@@ -1,62 +1,92 @@
 # Script IDE
 
 Transforms the Script UI into an IDE like UI.
-Multiline Tabs are used for navigating between scripts. Tabs can be split.
-The default Outline got an overhaul and now shows all members of the script (not just methods) with unique icons for faster navigation.
-Enhanced keyboard navigation for Scripts and Outline.
-Fast quick search functionality.
-Quick function Override functionality.
+Multiline Tabs, Splitting, Outline with unique icons that shows all members of the script.
+Quick search and function override functionality.
 
-Features:
-- Scripts are now shown as Multiline Tabs
-- Script Tab can be split – showing the current Script as readonly CodeEdit next to the main one. The original script can be reopened by right clicking.
-- The Outline got an overhaul and showed more than just the methods of the script. It includes the following members with a unique icon:
-	- Classes (Red Square)
-	- Constants (Red Circle)
-	- Signals (Yellow)
-	- Export variables (Orange)
-	- (Static) Variables (Red)
-	- Engine callback functions (Blue)
-	- (Static) Functions (Green)
-		- Setter functions (Green circle, with an arrow inside it pointing to the right)
-		- Getter functions (Green circle, with an arrow inside it pointing to the left)
-- All the different members of the script can be hidden or made visible again by the outline filter. This allows fine control of what should be visible (e.g., only signals, (Godot) functions, ...)
-- A `Right Click` enables only the clicked filter, another `Right Click` will enable all filters again
-- The Outline can be opened in a Popup with a defined shortcut for quick navigation between methods
-- You can navigate through the Outline with the `Arrow` keys (or `Page up/Page down`) and scroll to the selected item by pressing `ENTER`
-- Scripts can be opened in a Popup with a defined shortcut or when clicking the three dots on the top right of the Tabs for quick navigation between scripts
+## Features
+
+### Scripts as Tabs
+
+- Scripts are now shown as Multiline Tab
+- Script Tab can be split – showing the current Script as readonly CodeEdit next to the main one.
+  The original script can be reopened by right-clicking it
+- Scripts can be opened in a Popup with a shortcut or when clicking the three dots on the top right of the Tabs for quick navigation between scripts
 - The currently edited script is automatically selected in the Filesystem Dock
+
+### Outline with all members
+
+- The Outline got an overhaul and showed more than just the methods of the script.
+  It includes the following members (types) with a unique icon:
+    - Classes (Red Square)
+    - Constants (Red Circle)
+    - Signals (Yellow)
+    - Export variables (Orange)
+    - (Static) Variables (Red)
+    - Engine callback functions (Blue)
+    - (Static) Functions (Green)
+        - Setter functions (Green circle, with an arrow inside it pointing to the right)
+        - Getter functions (Green circle, with an arrow inside it pointing to the left)
+- All different member types of the script can be hidden or made visible again by the outline filter.
+  This allows fine control of what should be visible (e.g., only signals, (Godot) functions, ...)
+- A `Right Click` enables only the clicked filter, another `Right Click` will enable all filters again
+- The Outline can be opened in a Popup with a shortcut for quick navigation without the mouse
+- You can navigate through the Outline with the `Arrow` keys (or `Page up/Page down`) and scroll to the selected item by pressing `ENTER`
+
+### Quick search / override
+
 - Files can be quickly searched by the Quick Search Popup with `Shift`+`Shift`
 - You can find and quickly override any method from your super classes with `Alt`+`Ins`
-- The plugin is written with performance in mind, there are no unneeded features and works without any lags or stuttering
 
-Customization:
+## Customization
 - The Outline is on the right side (can be changed to be on the left side again)
 - The Outline can be toggled via `File -> Toggle Scripts Panel`. This will hide or show it
 - The order in the Outline can be changed
 - There is also the possibility to hide private members, this is all members starting with a `_`
 - The Script ItemList is not visible by default but can be made visible again
 
-All settings can be changed in the `Editor Settings` under `Plugin` -> `Script Ide`:
-- `Open Outline Popup` = Shortcut to control how the Outline Popup should be triggered (default=CTRL+O or META+O)
-- `Outline Position Right` = Flag to control whether the outline should be on the right or on the left side of the script editor (default=true)
+### Settings
+
+All settings can be changed in the `Editor Settings` under `Plugin` -> `Script Ide`.
+
+- `Open Outline Popup` = Shortcut to control how the Outline Popup should be triggered
+  (default=CTRL+O or META+O)
+- `Outline Position Right` = Flag to control whether the outline should be on the right or on the left side of the script editor
+  (default=true)
 - `Outline Order` = List which specifies the order of all different types in the Outline
-- `Hide Private Members` = Flag to control whether private members (methods/variables/constants starting with '_') should be hidden in the Outline or not (default=false)
-- `Open Script Popup` = Shortcut to control how the Script Popup should be triggered (default=CTRL+U or META+U)
-- `Script List Visible` = Flag to control whether the script list should still be visible or not (above the outline) (default=false)
-- `Script Tabs Singleline` = Flag to control whether the script tabs should be in a single line (instead of multiline) (default=false)
-- `Script Tabs Visible` = Flag to control whether the script tabs should be visible or not (default=true)
-- `Script Tabs Position Top` = Flag to control whether the script tabs should be on the top or on the bottom (default=true)
-- `Script Tabs Close Button Always` = Flag to control whether the script tabs should always have the close button or only the select tab (default=false)
-- `Auto Navigate in FileSystem Dock` = Flag to control whether the script that is currently edited should be automatically selected in the Filesystem Dock (default=true)
-- `Open Quick Search Popup` = Shortcut to control how the Quick Search Popup should be triggered (default=Shift+Shift, double press behavior is hardcoded for now)
-- `Open Quick Search Popup Scenes` = Shortcut to open the Quick Search Popup with the Scene Tab activated (default=CTRL+N or META+N)
-- `Open Quick Search Popup Scripts` = Shortcut to open the Quick Search Popup with the Script Tab activated (default=CTRL+SHIFT+N or META+SHIFT+N)
-- `Open Quick Search Popup Resources` = Shortcut to open the Quick Search Popup with the Resource Tab activated (default=CTRL+SHIFT+ALT+N or META+SHIFT+ALT+N)
-- `Open Override Popup` = Shortcut to control how the Override Popup should be triggered (default=Alt+Ins)
-- `Cycle Tab forward` = Shortcut to cycle the script tabs in the forward direction (only works in the 'Script' Editor Tab) (default=CTRL+TAB)
-- `Cycle Tab backward` = Shortcut to cycle the script tabs in the backward direction (only works in the 'Script' Editor Tab) (default=CTRL+SHIFT+TAB)
+- `Hide Private Members` = Flag to control whether private members (methods/variables/constants starting with '_') should be hidden in the Outline or not
+  (default=false)
+- `Open Script Popup` = Shortcut to control how the Script Popup should be triggered
+  (default=CTRL+U or META+U)
+- `Script List Visible` = Flag to control whether the script list should still be visible or not (above the outline)
+  (default=false)
+- `Script Tabs Singleline` = Flag to control whether the script tabs should be in a single line (instead of multiline)
+  (default=false)
+- `Script Tabs Visible` = Flag to control whether the script tabs should be visible or not
+  (default=true)
+- `Script Tabs Position Top` = Flag to control whether the script tabs should be on the top or on the bottom
+  (default=true)
+- `Script Tabs Close Button Always` = Flag to control whether the script tabs should always have the close button or only the select tab
+  (default=false)
+- `Auto Navigate in FileSystem Dock` = Flag to control whether the script that is currently edited should be automatically selected in the Filesystem Dock
+  (default=true)
+- `Open Quick Search Popup` = Shortcut to control how the Quick Search Popup should be triggered
+  (default=Shift+Shift, double press behavior is hardcoded for now)
+- `Open Quick Search Popup Scenes` = Shortcut to open the Quick Search Popup with the Scene Tab activated
+  (default=CTRL+N or META+N)
+- `Open Quick Search Popup Scripts` = Shortcut to open the Quick Search Popup with the Script Tab activated
+  (default=CTRL+SHIFT+N or META+SHIFT+N)
+- `Open Quick Search Popup Resources` = Shortcut to open the Quick Search Popup with the Resource Tab activated
+  (default=CTRL+SHIFT+ALT+N or META+SHIFT+ALT+N)
+- `Open Override Popup` = Shortcut to control how the Override Popup should be triggered
+  (default=Alt+Ins)
+- `Cycle Tab forward` = Shortcut to cycle the script tabs in the forward direction (only works in the 'Script' Editor Tab)
+  (default=CTRL+TAB)
+- `Cycle Tab backward` = Shortcut to cycle the script tabs in the backward direction (only works in the 'Script' Editor Tab)
+  (default=CTRL+SHIFT+TAB)
 - All outline visibility settings
+
+## Screenshots
 
 ![Example of Script-IDE](https://github.com/Maran23/script-ide/blob/demo/demo/editor.webp?raw=true)
 
@@ -71,3 +101,37 @@ All settings can be changed in the `Editor Settings` under `Plugin` -> `Script I
 ![Example of Script Splitting](https://github.com/Maran23/script-ide/blob/demo/demo/script_split.webp?raw=true)
 
 ![Example of the Settings](https://github.com/Maran23/script-ide/blob/demo/demo/settings.webp?raw=true)
+
+## Videos
+
+[Gamefromscratch](https://www.youtube.com/watch?v=ALshYw7K7Bs)
+
+## Further notes
+
+- This plugin tries to modify as little as possible in the Engine.
+  Since each version can introduce changes in the layout, every change can risk stability.
+- The plugin initialization will fail fast if something is unexpected. A log message is printed and nothing else will be changed.
+- The plugin code is aware of the structure in 'script_editor_plugin.cpp', which is the native part of the script tree structure that this plugin modifies
+- This plugin is written with performance in mind:
+    - Everything that you might not use will also not consume any resources.
+        - Example: The quick open menu will only rebuild (lazily) when you open it
+    - There are no unneeded features.
+        - Example: If the functionality is most likely not relevant for many users, it probably should be its own plugin
+
+### Contributing
+
+In order to open this project in the Engine, you need to create (or copy) a `project.godot` into it.
+Example file:
+```properties
+config_version=5
+
+[application]
+
+config/name="Script-IDE"
+config/features=PackedStringArray("4.7")
+config/icon="uid://eln8vh0yruef"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/script-ide/plugin.cfg")
+```
