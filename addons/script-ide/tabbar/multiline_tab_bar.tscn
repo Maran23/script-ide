@@ -1,6 +1,15 @@
 [gd_scene format=3 uid="uid://vjuhunm2uboy"]
 
 [ext_resource type="Script" uid="uid://l1rdargfn67o" path="res://addons/script-ide/tabbar/multiline_tab_bar.gd" id="1_8jr3v"]
+[ext_resource type="Script" uid="uid://bppomxp4mri2o" path="res://addons/script-ide/tabbar/custom_tab.gd" id="2_split"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_t4k8p"]
+content_margin_left = 0.0
+content_margin_top = 0.0
+content_margin_right = 0.625
+content_margin_bottom = 0.0
+bg_color = Color(0.07888999, 0.07888999, 0.07888999, 1)
+corner_detail = 1
 
 [sub_resource type="DPITexture" id="DPITexture_split"]
 _source = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\"><path fill=\"#e0e0e0\" d=\"M7.5 0v16h1V0z\"/></svg>"
@@ -14,6 +23,7 @@ anchor_right = 1.0
 offset_bottom = 24.0
 grow_horizontal = 2
 size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_t4k8p")
 script = ExtResource("1_8jr3v")
 
 [node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=932291510]
@@ -30,11 +40,14 @@ theme_override_constants/v_separation = 0
 
 [node name="SplitBtn" type="Button" parent="HBoxContainer" unique_id=813915450]
 unique_name_in_owner = true
+auto_translate_mode = 2
 layout_mode = 2
 size_flags_horizontal = 8
 toggle_mode = true
+action_mode = 0
 icon = SubResource("DPITexture_split")
 alignment = 0
+script = ExtResource("2_split")
 
 [node name="PopupBtn" type="Button" parent="HBoxContainer" unique_id=1586924518]
 unique_name_in_owner = true

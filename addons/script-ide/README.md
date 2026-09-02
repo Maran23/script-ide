@@ -9,24 +9,23 @@ Quick search and function override functionality.
 ### Scripts as Tabs
 
 - Scripts are now shown as Multiline Tab
-- Script Tab can be split – showing the current Script as readonly CodeEdit next to the main one.
-  The original script can be reopened by right-clicking it
+- Script Tab can be split – showing the split Script next to the main one.
+  Left-clicking the split script will put it back. Right-clicking it will close it.
 - Scripts can be opened in a Popup with a shortcut or when clicking the three dots on the top right of the Tabs for quick navigation between scripts
 - The currently edited script is automatically selected in the Filesystem Dock
 
 ### Outline with all members
 
 - The Outline got an overhaul and showed more than just the methods of the script.
-  It includes the following members (types) with a unique icon:
-    - Classes (Red Square)
-    - Constants (Red Circle)
-    - Signals (Yellow)
-    - Export variables (Orange)
-    - (Static) Variables (Red)
-    - Engine callback functions (Blue)
-    - (Static) Functions (Green)
-        - Setter functions (Green circle, with an arrow inside it pointing to the right)
-        - Getter functions (Green circle, with an arrow inside it pointing to the left)
+  It includes the following members (types) with a unique icon:- Classes (Red Square)
+  - Constants (Red Circle)
+  - Signals (Yellow)
+  - Export variables (Orange)
+  - (Static) Variables (Red)
+  - Engine callback functions (Blue)
+  - (Static) Functions (Green)
+    - Setter functions (Green circle, with an arrow inside it pointing to the right)
+    - Getter functions (Green circle, with an arrow inside it pointing to the left)
 - All different member types of the script can be hidden or made visible again by the outline filter.
   This allows fine control of what should be visible (e.g., only signals, (Godot) functions, ...)
 - A `Right Click` enables only the clicked filter, another `Right Click` will enable all filters again
@@ -118,10 +117,10 @@ All settings can be changed in the `Editor Settings` under `Plugin` -> `Script I
 - The plugin initialization will fail fast if something is unexpected. A log message is printed and nothing else will be changed.
 - The plugin code is aware of the structure in 'script_editor_plugin.cpp', which is the native part of the script tree structure that this plugin modifies
 - This plugin is written with performance in mind:
-    - Everything that you might not use will also not consume any resources.
-        - Example: The quick open menu will only rebuild (lazily) when you open it
-    - There are no unneeded features.
-        - Example: If the functionality is most likely not relevant for many users, it probably should be its own plugin
+  - Everything that you might not use will also not consume any resources.
+    - Example: The quick open menu will only rebuild (lazily) when you open it
+- There are no unneeded features.
+  - Example: If the functionality is most likely not relevant for many users, it probably should be its own plugin
 
 ### Contributing
 
