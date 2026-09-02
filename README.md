@@ -9,16 +9,15 @@ Quick search and function override functionality.
 ### Scripts as Tabs
 
 - Scripts are now shown as Multiline Tab
-- Script Tab can be split – showing the current Script as readonly CodeEdit next to the main one.
-  The original script can be reopened by right-clicking it
+- Script Tab can be split – showing the split Script next to the main one.
+  Left-clicking the split script will put it back. Right-clicking it will close it.
 - Scripts can be opened in a Popup with a shortcut or when clicking the three dots on the top right of the Tabs for quick navigation between scripts
 - The currently edited script is automatically selected in the Filesystem Dock
 
 ### Outline with all members
 
 - The Outline got an overhaul and showed more than just the methods of the script.
-  It includes the following members (types) with a unique icon:
-    - Classes (Red Square)
+  It includes the following members (types) with a unique icon:- Classes (Red Square)
     - Constants (Red Circle)
     - Signals (Yellow)
     - Export variables (Orange)
@@ -120,8 +119,8 @@ All settings can be changed in the `Editor Settings` under `Plugin` -> `Script I
 - This plugin is written with performance in mind:
     - Everything that you might not use will also not consume any resources.
         - Example: The quick open menu will only rebuild (lazily) when you open it
-    - There are no unneeded features.
-        - Example: If the functionality is most likely not relevant for many users, it probably should be its own plugin
+- There are no unneeded features.
+    - Example: If the functionality is most likely not relevant for many users, it probably should be its own plugin
 
 ### Contributing
 

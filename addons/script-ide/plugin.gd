@@ -27,7 +27,7 @@ const OverridePopup := preload("uid://c4w55j4jswg2t")
 const OUTLINE_CONTAINER_SCENE: PackedScene = preload("uid://ux3ldi4ka8ji")
 const OutlineContainer := preload("uid://db0be00ai3tfi")
 
-const SplitCodeEdit := preload("uid://boy48rhhyrph")
+const SplitView := preload("uid://dixntmagth35c")
 
 #region Settings and Shortcuts
 ## Editor setting path
@@ -126,7 +126,7 @@ var scripts_popup: PopupPanel
 var quick_open_popup: QuickOpenPopup
 var override_popup: OverridePopup
 
-var tab_splitter: HSplitContainer
+var split_view: SplitView
 #endregion
 
 #region Plugin variables
@@ -208,27 +208,31 @@ func _enter_tree() -> void:
 	old_scripts_tab_bar.tab_changed.connect(on_tab_changed)
 
 	var tab_container_parent: Control = old_scripts_tab_container.get_parent()
-	tab_splitter = HSplitContainer.new()
-	tab_splitter.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	tab_splitter.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	split_view = SplitView.new()
+	split_view.scripts_tab_container = old_scripts_tab_container
+	split_view.scripts_item_list = scripts_item_list
 
-	tab_container_parent.add_child(tab_splitter)
-	tab_container_parent.move_child(tab_splitter, 0)
-	old_scripts_tab_container.reparent(tab_splitter)
+	tab_container_parent.add_child(split_view)
+	tab_container_parent.move_child(split_view, 0)
+	old_scripts_tab_container.reparent(split_view)
 
 	# When something changed, we need to sync our own tab container.
 	old_scripts_tab_container.child_order_changed.connect(notify_order_changed)
 
 	multiline_tab_bar = MULTILINE_TAB_BAR.instantiate()
-	multiline_tab_bar.plugin = self
+	multiline_tab_bar.split_view = split_view
 	multiline_tab_bar.scripts_item_list = scripts_item_list
 	multiline_tab_bar.script_filter_txt = script_filter_txt
 	multiline_tab_bar.scripts_tab_container = old_scripts_tab_container
+	multiline_tab_bar.tab_cycle_forward_shc = tab_cycle_forward_shc
+	multiline_tab_bar.tab_cycle_backward_shc = tab_cycle_backward_shc
+
+	split_view.tab_bar = multiline_tab_bar
 
 	tab_container_parent.add_theme_constant_override(&"separation", 0)
 	tab_container_parent.add_child(multiline_tab_bar)
 
-	multiline_tab_bar.split_toggled.connect(toggle_split_view)
+	multiline_tab_bar.split_toggled.connect(split_view.toggle)
 
 	multiline_tab_bar.show_close_button_always = get_setting(SCRIPT_TABS_CLOSE_BUTTON_ALWAYS, multiline_tab_bar.show_close_button_always)
 	multiline_tab_bar.is_singleline_tabs = get_setting(SCRIPT_TABS_SINGLELINE, multiline_tab_bar.is_singleline_tabs)
@@ -245,15 +249,19 @@ func _enter_tree() -> void:
 
 ## Restore the old Engine script UI and free everything we created
 func _exit_tree() -> void:
+	# Needs to be done first, since the Node's are about to be moved and freed.
+	if (split_view != null):
+		split_view.close()
+
 	var file_system: EditorFileSystem = EditorInterface.get_resource_filesystem()
 	file_system.filesystem_changed.disconnect(schedule_update)
 	get_editor_settings().settings_changed.disconnect(sync_settings)
 
-	if (tab_splitter != null):
-		var tab_container_parent: Control = tab_splitter.get_parent()
+	if (split_view != null):
+		var tab_container_parent: Control = split_view.get_parent()
 		old_scripts_tab_container.reparent(tab_container_parent)
 		tab_container_parent.move_child(old_scripts_tab_container, 1)
-		tab_splitter.free()
+		split_view.free()
 
 	if (script_editor_split_container != null):
 		if (script_editor_split_container != files_panel.get_parent()):
@@ -530,8 +538,7 @@ func on_tab_changed(index: int):
 
 		old_script_editor_base = script_editor_base
 
-	if (!multiline_tab_bar.is_split()):
-		multiline_tab_bar.set_split_disabled(script_editor_base == null)
+	split_view.on_tab_changed(script_editor_base)
 
 	is_script_changed = true
 
@@ -548,40 +555,12 @@ func on_tab_changed(index: int):
 
 	schedule_update()
 
-func toggle_split_view():
-	var script_editor: ScriptEditor = EditorInterface.get_script_editor()
-	var split_script_editor_base: ScriptEditorBase = script_editor.get_current_editor()
-
-	if (!multiline_tab_bar.is_split()):
-		if (split_script_editor_base == null):
-			return
-
-		var base_editor: Control = split_script_editor_base.get_base_editor()
-		if !(base_editor is CodeEdit):
-			return
-
-		multiline_tab_bar.set_split(true)
-
-		var editor: CodeEdit = SplitCodeEdit.new_from(base_editor)
-
-		var container: PanelContainer = PanelContainer.new()
-		container.custom_minimum_size.x = 200
-		container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-
-		container.add_child(editor)
-		tab_splitter.add_child(container)
-	else:
-		multiline_tab_bar.set_split(false)
-		tab_splitter.remove_child(tab_splitter.get_child(tab_splitter.get_child_count() - 1))
-
-		if (split_script_editor_base == null):
-			multiline_tab_bar.set_split_disabled(true)
-
 func navigate_in_outline(event: InputEvent):
 	navigate_on_list(event, outline_container.outline, outline_container.find_in_outline_and_goto)
 
 func notify_order_changed():
 	multiline_tab_bar.script_order_changed()
+	split_view.script_order_changed()
 
 func open_quick_search_popup(category: QuickOpenPopup.Category = QuickOpenPopup.Category.ALL):
 	var pref_size: Vector2
@@ -842,8 +821,10 @@ func sync_settings():
 				open_override_popup_shc = get_shortcut(OPEN_OVERRIDE_POPUP)
 			TAB_CYCLE_FORWARD:
 				tab_cycle_forward_shc = get_shortcut(TAB_CYCLE_FORWARD)
+				multiline_tab_bar.tab_cycle_forward_shc = tab_cycle_forward_shc
 			TAB_CYCLE_BACKWARD:
 				tab_cycle_backward_shc = get_shortcut(TAB_CYCLE_BACKWARD)
+				multiline_tab_bar.tab_cycle_backward_shc = tab_cycle_backward_shc
 			_:
 				outline_container.update_filter_buttons()
 
