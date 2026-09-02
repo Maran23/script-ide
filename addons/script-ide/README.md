@@ -104,7 +104,12 @@ All settings can be changed in the `Editor Settings` under `Plugin` -> `Script I
 
 ## Videos
 
-[Gamefromscratch](https://www.youtube.com/watch?v=ALshYw7K7Bs)
+- [Gamefromscratch](https://www.youtube.com/watch?v=ALshYw7K7Bs)
+
+## Links
+
+- [Asset Store](https://store.godotengine.org/asset/maran23/script-ide/)
+- [Asset Library](https://godotengine.org/asset-library/asset/2206)
 
 ## Further notes
 
