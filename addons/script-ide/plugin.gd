@@ -307,6 +307,9 @@ func _exit_tree() -> void:
 
 	if (!show_members):
 		set_setting(SHOW_MEMBERS, show_members)
+
+func _set_window_layout(configuration: ConfigFile):
+	script_editor_split_container.split_offset = configuration.get_value("ScriptEditor", "script_split_offset", 200)
 #endregion
 
 #region Plugin and Shortcut processing
