@@ -9,22 +9,56 @@ signal dropped(source_index: int, target_index: int)
 
 var close_button: Button
 
+## Whether this tab is part of the tab bar and can therefore be reordered by drag and drop.
+var reorderable: bool = true
+
 func _init() -> void:
 	alignment = HORIZONTAL_ALIGNMENT_LEFT
 	action_mode = ACTION_MODE_BUTTON_PRESS
 	auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	toggle_mode = true
 
+func _notification(what: int) -> void:
+	# The size of the close button and of the text follow the theme.
+	if (what == NOTIFICATION_THEME_CHANGED):
+		update_close_space()
+
+func set_tab_text(new_text: String) -> void:
+	text = new_text
+
+	update_close_space()
+
 func show_close_button() -> void:
 	if (close_button == null):
 		close_button = create_close_button()
 
-	add_child(close_button)
-	close_button.set_anchors_and_offsets_preset(Control.PRESET_CENTER_RIGHT)
+	if (!has_close_button()):
+		add_child(close_button)
+		close_button.set_anchors_and_offsets_preset(Control.PRESET_CENTER_RIGHT)
+
+	update_close_space()
 
 func hide_close_button() -> void:
-	if (close_button != null):
+	if (has_close_button()):
 		remove_child(close_button)
+
+	update_close_space()
+
+## Not visible in tree when this tab is hidden, so we check the parent instead.
+func has_close_button() -> bool:
+	return close_button != null && close_button.get_parent() == self
+
+## The close button is drawn on top of the tab, so the tab has to grow by the space it covers.
+func update_close_space() -> void:
+	if (!has_close_button()):
+		custom_minimum_size.x = 0
+		return
+
+	var covered: float = (close_button.get_combined_minimum_size().x + close_button.icon.get_width()) / 2.0
+	covered -= get_theme_stylebox(&"normal").get_margin(SIDE_RIGHT)
+	covered += get_theme_constant(&"h_separation")
+
+	custom_minimum_size.x = get_minimum_size().x + maxf(covered, 0.0)
 
 func create_close_button() -> Button:
 	close_button = Button.new()
@@ -40,7 +74,6 @@ func _gui_input(event: InputEvent) -> void:
 		if event.button_index == MOUSE_BUTTON_MIDDLE:
 			on_close_pressed()
 		elif (event.button_index == MOUSE_BUTTON_RIGHT):
-			button_pressed = true
 			on_right_click()
 
 func on_right_click() -> void:
@@ -50,6 +83,16 @@ func on_close_pressed() -> void:
 	close_pressed.emit()
 
 func _get_drag_data(at_position: Vector2) -> Variant:
+	if (!reorderable):
+		return null
+
+	# Same data as the script list of the Engine, so the script can be dropped onto a node as well.
+	var drag_data: Dictionary[String, Variant]
+	drag_data["type"] = "script_list_element"
+	# The tab is selected on press, so it is always the current one when dragged.
+	drag_data["script_list_element"] = EditorInterface.get_script_editor().get_current_editor()
+	drag_data["index"] = get_index()
+
 	var preview: Button = Button.new()
 	preview.text = text
 	preview.icon = icon
@@ -59,15 +102,10 @@ func _get_drag_data(at_position: Vector2) -> Variant:
 
 	set_drag_preview(preview)
 
-	var drag_data: Dictionary[String, Variant]
-	drag_data["type"] = "script_list_element"
-	drag_data["script_list_element"] = EditorInterface.get_script_editor().get_current_editor()
-	drag_data["index"] = get_index()
-
 	return drag_data
 
 func _can_drop_data(at_position: Vector2, data: Variant) -> bool:
-	if !(data is Dictionary):
+	if (!reorderable || !(data is Dictionary)):
 		return false
 
 	var can_drop: bool = data.has("index")
