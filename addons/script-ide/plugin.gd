@@ -308,7 +308,7 @@ func _exit_tree() -> void:
 	if (!show_members):
 		set_setting(SHOW_MEMBERS, show_members)
 
-func _set_window_layout(configuration: ConfigFile):
+func _set_window_layout(configuration: ConfigFile) -> void:
 	script_editor_split_container.split_offset = configuration.get_value("ScriptEditor", "script_split_offset", 200)
 #endregion
 
@@ -338,11 +338,11 @@ func _shortcut_input(event: InputEvent) -> void:
 			quick_open_tween = create_tween()
 			quick_open_tween.tween_interval(0.2)
 			quick_open_tween.tween_callback(open_quick_search_popup)
-			quick_open_tween.tween_callback(func(): quick_open_tween = null)
+			quick_open_tween.tween_callback(func() -> void: quick_open_tween = null)
 		else:
 			quick_open_tween = create_tween()
 			quick_open_tween.tween_interval(QUICK_OPEN_INTERVAL / 1000.0)
-			quick_open_tween.tween_callback(func(): quick_open_tween = null)
+			quick_open_tween.tween_callback(func() -> void: quick_open_tween = null)
 	elif (open_override_popup_shc.matches_event(event)):
 		get_viewport().set_input_as_handled()
 		open_override_popup()
@@ -365,7 +365,7 @@ func _input(event: InputEvent) -> void:
 #region Settings and Shortcut initialization
 
 ## Setups the listener (connect) to the properties we need to react to.
-func setup_change_listener():
+func setup_change_listener() -> void:
 	# Update on filesystem changed (e.g. save operation).
 	var file_system: EditorFileSystem = EditorInterface.get_resource_filesystem()
 	file_system.filesystem_changed.connect(schedule_update)
@@ -375,7 +375,7 @@ func setup_change_listener():
 
 ## Initializes all settings.
 ## Every setting can be changed while this plugin is active, which will override them.
-func init_settings():
+func init_settings() -> void:
 	is_script_list_visible = get_setting(SCRIPT_LIST_VISIBLE, is_script_list_visible)
 	is_script_tabs_top = get_setting(SCRIPT_TABS_POSITION_TOP, is_script_tabs_top)
 	is_outline_right = get_setting(OUTLINE_POSITION_RIGHT, is_outline_right)
@@ -389,7 +389,7 @@ func init_settings():
 
 ## Initializes all shortcuts.
 ## Every shortcut can be changed while this plugin is active, which will override them.
-func init_shortcuts():
+func init_shortcuts() -> void:
 	var editor_settings: EditorSettings = get_editor_settings()
 	if (!editor_settings.has_setting(OPEN_OUTLINE_POPUP)):
 		var shortcut: Shortcut = Shortcut.new()
@@ -496,11 +496,11 @@ func init_shortcuts():
 #endregion
 
 ## Schedules an update on the next frame.
-func schedule_update():
+func schedule_update() -> void:
 	set_process(true)
 
 ## Updates all parts of the editor that are needed to be synchronized with the file system change.
-func update_editor():
+func update_editor() -> void:
 	if (file_to_navigate != &""):
 		EditorInterface.select_file(file_to_navigate)
 		EditorInterface.get_script_editor().get_current_editor().get_base_editor().grab_focus()
@@ -517,7 +517,7 @@ func update_editor():
 		multiline_tab_bar.update_tabs()
 		outline_container.update()
 
-func on_tab_changed(index: int):
+func on_tab_changed(index: int) -> void:
 	if (old_script_editor_base != null):
 		old_script_editor_base.edited_script_changed.disconnect(update_selected_tab)
 		old_script_editor_base = null
@@ -548,7 +548,7 @@ func on_tab_changed(index: int):
 
 	schedule_update()
 
-func toggle_split_view():
+func toggle_split_view() -> void:
 	var script_editor: ScriptEditor = EditorInterface.get_script_editor()
 	var split_script_editor_base: ScriptEditorBase = script_editor.get_current_editor()
 
@@ -577,13 +577,13 @@ func toggle_split_view():
 		if (split_script_editor_base == null):
 			multiline_tab_bar.set_split_disabled(true)
 
-func navigate_in_outline(event: InputEvent):
+func navigate_in_outline(event: InputEvent) -> void:
 	navigate_on_list(event, outline_container.outline, outline_container.find_in_outline_and_goto)
 
-func notify_order_changed():
+func notify_order_changed() -> void:
 	multiline_tab_bar.script_order_changed()
 
-func open_quick_search_popup(category: QuickOpenPopup.Category = QuickOpenPopup.Category.ALL):
+func open_quick_search_popup(category: QuickOpenPopup.Category = QuickOpenPopup.Category.ALL) -> void:
 	var pref_size: Vector2
 	if (quick_open_popup == null):
 		quick_open_popup = QUICK_OPEN_SCENE.instantiate()
@@ -596,7 +596,7 @@ func open_quick_search_popup(category: QuickOpenPopup.Category = QuickOpenPopup.
 	quick_open_popup.popup_exclusive_on_parent(EditorInterface.get_script_editor(), get_center_editor_rect(pref_size))
 	quick_open_popup.set_category(category)
 
-func open_override_popup():
+func open_override_popup() -> void:
 	var script: Script = get_current_script()
 	if (!script):
 		return
@@ -613,11 +613,11 @@ func open_override_popup():
 
 	override_popup.popup_exclusive_on_parent(EditorInterface.get_script_editor(), get_center_editor_rect(pref_size))
 
-func hide_scripts_popup():
+func hide_scripts_popup() -> void:
 	if (scripts_popup != null && scripts_popup.visible):
 		scripts_popup.hide.call_deferred()
 
-func create_set_scripts_popup():
+func create_set_scripts_popup() -> void:
 	scripts_popup = PopupPanel.new()
 	scripts_popup.popup_hide.connect(restore_scripts_list)
 
@@ -627,7 +627,7 @@ func create_set_scripts_popup():
 
 	multiline_tab_bar.set_popup(scripts_popup)
 
-func restore_scripts_list():
+func restore_scripts_list() -> void:
 	script_filter_txt.text = &""
 
 	update_script_list_visibility()
@@ -635,7 +635,7 @@ func restore_scripts_list():
 	scripts_item_list.get_parent().reparent(script_panel_split_container)
 	script_panel_split_container.move_child(scripts_item_list.get_parent(), 0)
 
-func navigate_on_list(event: InputEvent, list: ItemList, submit: Callable):
+func navigate_on_list(event: InputEvent, list: ItemList, submit: Callable) -> void:
 	if (event.is_action_pressed(&"ui_text_submit")):
 		list.accept_event()
 
@@ -680,7 +680,7 @@ func get_list_index(list: ItemList) -> int:
 
 	return items[0]
 
-func navigate_list(list: ItemList, index: int, amount: int):
+func navigate_list(list: ItemList, index: int, amount: int) -> void:
 	index = clamp(index + amount, 0, list.item_count - 1)
 
 	list.select(index)
@@ -694,7 +694,7 @@ func get_center_editor_rect(pref_size: Vector2) -> Rect2i:
 
 	return Rect2i(position, pref_size)
 
-func open_outline_popup():
+func open_outline_popup() -> void:
 	if (get_current_script() == null):
 		return
 
@@ -724,7 +724,7 @@ func open_outline_popup():
 	update_outline()
 	outline_filter_txt.grab_focus()
 
-func on_outline_popup_hidden(outline_initially_closed: bool, old_text: String, button_flags: Array[bool]):
+func on_outline_popup_hidden(outline_initially_closed: bool, old_text: String, button_flags: Array[bool]) -> void:
 	outline_popup.popup_hide.disconnect(on_outline_popup_hidden)
 
 	if outline_initially_closed:
@@ -740,19 +740,19 @@ func on_outline_popup_hidden(outline_initially_closed: bool, old_text: String, b
 
 	update_outline()
 
-func open_scripts_popup():
+func open_scripts_popup() -> void:
 	multiline_tab_bar.show_popup()
 
 func get_current_script() -> Script:
 	var script_editor: ScriptEditor = EditorInterface.get_script_editor()
 	return script_editor.get_current_script()
 
-func select_script(selected_idx: int):
+func select_script(selected_idx: int) -> void:
 	hide_scripts_popup()
 
 	scripts_item_list.item_selected.emit(selected_idx)
 
-func goto_line(index: int):
+func goto_line(index: int) -> void:
 	if (outline_popup != null && outline_popup.visible):
 		outline_popup.hide.call_deferred()
 
@@ -769,10 +769,10 @@ func goto_line(index: int):
 
 	code_edit.grab_focus()
 
-func update_script_list_visibility():
+func update_script_list_visibility() -> void:
 	scripts_item_list.get_parent().visible = is_script_list_visible
 
-func sync_settings():
+func sync_settings() -> void:
 	if (suppress_settings_sync):
 		return
 
@@ -847,20 +847,20 @@ func sync_settings():
 			_:
 				outline_container.update_filter_buttons()
 
-func update_selected_tab():
+func update_selected_tab() -> void:
 	multiline_tab_bar.update_selected_tab()
 
-func update_tabs_position():
+func update_tabs_position() -> void:
 	var tab_container_parent: Control = multiline_tab_bar.get_parent()
 	if (is_script_tabs_top):
 		tab_container_parent.move_child(multiline_tab_bar, 0)
 	else:
 		tab_container_parent.move_child(multiline_tab_bar, tab_container_parent.get_child_count() - 1)
 
-func update_outline():
+func update_outline() -> void:
 	outline_container.update_outline()
 
-func update_outline_position():
+func update_outline_position() -> void:
 	if (is_outline_right):
 		# Try to restore the previous split offset.
 		var split_offset: float = script_editor_split_container.get_child(1).size.x
@@ -869,7 +869,7 @@ func update_outline_position():
 	else:
 		script_editor_split_container.move_child(files_panel, 0)
 
-func update_outline_font():
+func update_outline_font() -> void:
 	var monospace_outline: bool = get_setting(MONOSPACE_OUTLINE, true)
 	if (monospace_outline):
 		var font: Font = EditorInterface.get_script_editor().get_theme_font(&"source", &"EditorFonts")
@@ -877,7 +877,7 @@ func update_outline_font():
 	else:
 		outline_container.outline.remove_theme_font_override(&"font")
 
-func update_keywords():
+func update_keywords() -> void:
 	var script: Script = get_current_script()
 	if (script == null):
 		return
@@ -890,7 +890,7 @@ func update_keywords():
 		keywords["_static_init"] = true
 		register_virtual_methods(new_script_type)
 
-func register_virtual_methods(clazz: String):
+func register_virtual_methods(clazz: String) -> void:
 	for method: Dictionary in ClassDB.class_get_method_list(clazz):
 		if (method[&"flags"] & METHOD_FLAG_VIRTUAL > 0):
 			keywords[method[&"name"]] = true
@@ -909,7 +909,7 @@ func get_setting(property: StringName, alt: bool) -> bool:
 		editor_settings.set_setting(property, alt)
 		return alt
 
-func set_setting(property: StringName, value: bool):
+func set_setting(property: StringName, value: bool) -> void:
 	var editor_settings: EditorSettings = get_editor_settings()
 
 	suppress_settings_sync = true

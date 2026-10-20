@@ -33,7 +33,7 @@ func _ready() -> void:
 
 	filter_txt.gui_input.connect(navigate_on_tree)
 
-func navigate_on_tree(event: InputEvent):
+func navigate_on_tree(event: InputEvent) -> void:
 	if (event.is_action_pressed(&"ui_select", true)):
 		var selected: TreeItem = get_selected_tree_item()
 		if (selected == null):
@@ -115,7 +115,7 @@ func get_selected_tree_item() -> TreeItem:
 		selected = class_func_tree.get_root()
 	return selected
 
-func focus_tree_item(item: TreeItem):
+func focus_tree_item(item: TreeItem) -> void:
 	var was_selected: bool = item.is_selected(0)
 	item.select(0)
 	item.deselect(0)
@@ -125,10 +125,10 @@ func focus_tree_item(item: TreeItem):
 	class_func_tree.ensure_cursor_is_visible()
 	class_func_tree.accept_event()
 
-func update_tree_filter():
+func update_tree_filter() -> void:
 	update_tree()
 
-func save_selection(selected: bool, item: TreeItem):
+func save_selection(selected: bool, item: TreeItem) -> void:
 	if (selected):
 		selections[item.get_text(0)] = true
 	else:
@@ -136,7 +136,7 @@ func save_selection(selected: bool, item: TreeItem):
 
 	ok_btn.disabled = selections.size() == 0
 
-func on_show():
+func on_show() -> void:
 	class_func_tree.clear()
 	selections.clear()
 	ok_btn.disabled = true
@@ -150,7 +150,7 @@ func on_show():
 	update_tree()
 	filter_txt.grab_focus()
 
-func update_tree():
+func update_tree() -> void:
 	class_func_tree.clear()
 
 	var text: String = filter_txt.text
@@ -251,7 +251,7 @@ func collect_script_functions(super_class: Script, existing_funcs: Dictionary[St
 
 	return functions
 
-func generate_functions():
+func generate_functions() -> void:
 	if (selections.size() == 0):
 		return
 

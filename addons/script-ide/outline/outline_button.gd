@@ -21,5 +21,5 @@ func _gui_input(event: InputEvent) -> void:
 			button_pressed = true
 			on_right_click()
 
-func on_right_click():
+func on_right_click() -> void:
 	right_clicked.emit()

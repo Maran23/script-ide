@@ -75,10 +75,10 @@ func _shortcut_input(event: InputEvent) -> void:
 		filter_bar.current_tab = new_tab
 #endregion
 
-func navigate_in_files_list(event: InputEvent):
+func navigate_in_files_list(event: InputEvent) -> void:
 	plugin.navigate_on_list(event, files_list, open_file)
 
-func set_category(category: Category):
+func set_category(category: Category) -> void:
 	var old_tab: int = filter_bar.current_tab
 	filter_bar.current_tab = category
 
@@ -88,7 +88,7 @@ func set_category(category: Category):
 
 	focus_and_select_first()
 
-func open_file(index: int):
+func open_file(index: int) -> void:
 	var file: String = files_list.get_item_metadata(index)
 
 	if (ResourceLoader.exists(file)):
@@ -120,10 +120,10 @@ func open_file(index: int):
 	# 100% Engine bug or at least weird behavior.
 	hide.call_deferred()
 
-func schedule_rebuild():
+func schedule_rebuild() -> void:
 	is_rebuild_cache = true
 
-func on_show():
+func on_show() -> void:
 	if (search_option_btn.selected != 0):
 		search_option_btn.selected = 0
 
@@ -134,7 +134,7 @@ func on_show():
 
 	filter_txt.select_all()
 
-func rebuild_cache():
+func rebuild_cache() -> void:
 	is_rebuild_cache = false
 
 	all_files.clear()
@@ -145,19 +145,19 @@ func rebuild_cache():
 
 	build_file_cache()
 
-func rebuild_cache_and_ui():
+func rebuild_cache_and_ui() -> void:
 	rebuild_cache()
 	fill_files_list()
 
 	focus_and_select_first()
 
-func focus_and_select_first():
+func focus_and_select_first() -> void:
 	filter_txt.grab_focus()
 
 	if (files_list.item_count > 0):
 		files_list.select(0)
 
-func build_file_cache():
+func build_file_cache() -> void:
 	var dir: EditorFileSystemDirectory = EditorInterface.get_resource_filesystem().get_filesystem()
 	build_file_cache_dir(dir)
 
@@ -171,7 +171,7 @@ func build_file_cache():
 	all_files.append_array(resources)
 	all_files.append_array(others)
 
-func build_file_cache_dir(dir: EditorFileSystemDirectory):
+func build_file_cache_dir(dir: EditorFileSystemDirectory) -> void:
 	for index: int in dir.get_subdir_count():
 		build_file_cache_dir(dir.get_subdir(index))
 
@@ -204,12 +204,12 @@ func build_file_cache_dir(dir: EditorFileSystemDirectory):
 			&"gdshader": resources.append(file_data)
 			_: others.append(file_data)
 
-func change_fill_files_list():
+func change_fill_files_list() -> void:
 	fill_files_list()
 
 	focus_and_select_first()
 
-func fill_files_list():
+func fill_files_list() -> void:
 	files_list.clear()
 
 	if (filter_bar.current_tab == 0):
@@ -223,7 +223,7 @@ func fill_files_list():
 	elif (filter_bar.current_tab == 4):
 		fill_files_list_with(others, sort_by_filter)
 
-func fill_files_list_with(files: Array[FileData], comparator: Callable):
+func fill_files_list_with(files: Array[FileData], comparator: Callable) -> void:
 	var filter_text: String = filter_txt.text
 
 	if (!filter_text.is_empty()):

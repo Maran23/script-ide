@@ -15,14 +15,14 @@ func _init() -> void:
 	auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	toggle_mode = true
 
-func show_close_button():
+func show_close_button() -> void:
 	if (close_button == null):
 		close_button = create_close_button()
 
 	add_child(close_button)
 	close_button.set_anchors_and_offsets_preset(Control.PRESET_CENTER_RIGHT)
 
-func hide_close_button():
+func hide_close_button() -> void:
 	if (close_button != null):
 		remove_child(close_button)
 
@@ -43,7 +43,7 @@ func _gui_input(event: InputEvent) -> void:
 			button_pressed = true
 			on_right_click()
 
-func on_right_click():
+func on_right_click() -> void:
 	right_clicked.emit()
 
 func on_close_pressed() -> void:
